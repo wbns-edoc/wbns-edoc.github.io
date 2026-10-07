@@ -2,9 +2,10 @@
 create extension if not exists pg_cron with schema pg_catalog;
 grant usage on schema cron to postgres;
 grant all privileges on all tables in schema cron to postgres;
-create extension if not exists pg_trgm;
-create index if not exists idx_documents_subject_trgm on public.documents using gin(subject gin_trgm_ops);
-create index if not exists idx_senders_org_trgm on public.senders using gin(organization_name gin_trgm_ops);
+create schema if not exists extensions;
+create extension if not exists pg_trgm with schema extensions;
+create index if not exists idx_documents_subject_trgm on public.documents using gin(subject extensions.gin_trgm_ops);
+create index if not exists idx_senders_org_trgm on public.senders using gin(organization_name extensions.gin_trgm_ops);
 create index if not exists idx_documents_status_urgency_created on public.documents(status,urgency,created_at desc);
 create index if not exists idx_deadlines_assignee_due on public.deadlines(assigned_to,due_at) where status='open';
 create or replace function private.process_deadline_notifications() returns integer language plpgsql security definer set search_path=pg_catalog,public,private as $$
