@@ -1,0 +1,4 @@
+project_id = "iigzzwyfxxtqbgjawyom"
+
+[functions.drive-health]
+verify_jwt = true
