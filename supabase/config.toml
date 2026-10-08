@@ -2,3 +2,6 @@ project_id = "iigzzwyfxxtqbgjawyom"
 
 [functions.drive-health]
 verify_jwt = true
+
+[functions.user-import]
+verify_jwt = true
