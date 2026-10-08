@@ -1,4 +1,4 @@
-import { withSupabase } from "npm:@supabase/server@1";
+import { createSupabaseContext } from "npm:@supabase/server@1";
 
 const headers = {
   "Content-Type": "application/json",
@@ -6,9 +6,10 @@ const headers = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-export default {
-  fetch: withSupabase({ auth: "user" }, async (req, ctx) => {
+Deno.serve(async (req: Request) => {
     if (req.method === "OPTIONS") return new Response("ok", { headers });
+    const { data: ctx, error: authError } = await createSupabaseContext(req, { auth: "user" });
+    if (authError) return new Response(JSON.stringify({ ok:false, code:"unauthorized" }), { status:authError.status, headers });
     try {
       const body = await req.json();
       const rows = Array.isArray(body?.rows) ? body.rows : [];
@@ -157,5 +158,4 @@ export default {
     } catch {
       return new Response(JSON.stringify({ ok:false, code:"internal_error" }), { status:500, headers });
     }
-  }),
-};
+});
