@@ -2,6 +2,8 @@
 
 อัปเดต: 2026-10-08
 
+Release candidate verification checkpoint: GitHub Pages deployment is triggered from main; production acceptance remains dependent on school-controlled VAPID and backup/restore verification.
+
 ระบบ: โรงเรียนวัดบึงน้ำใส  
 Repository: wbns-edoc/wbns-edoc.github.io  
 Supabase project: wbns-edoc / iigzzwyfxxtqbgjawyom
