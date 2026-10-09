@@ -11,8 +11,8 @@ This tracker separates tasks completed by direct evidence from tasks that requir
 
 | Phase | State | Evidence / exit condition |
 |---|---|---|
-| 1. Repository and hosting baseline | Partially verified | Documentation deploy run for commit `49549a792a0da54c427e48170ff62ac54b02954b` completed successfully: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37899457433. This proves workflow completion, not browser-level app flows. |
-| 2. Application/auth smoke tests | Pending human browser test | Login, password reset email, recovery link, reset completion, session refresh and route protection must be tested using a school-controlled mailbox/browser. Do not reuse any previously exposed access/refresh token. |
+| 1. Repository and hosting baseline | Partially verified | Latest Pages workflow for commit `acbe42884d601cddc58a32f25d4c8148f5eb7038` completed successfully: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37901789974. This proves workflow completion, not all browser-level app flows. |
+| 2. Application/auth smoke tests | Partially improved; still pending full acceptance | A blank-screen incident before login was reported. Added a React render-error recovery screen in commit `83a9eeb99e2e7763b13152ae9d9cff9cc381e4e6` and bumped the service-worker cache from `wbns-edoc-v2` to `wbns-edoc-v3` in `acbe42884d601cddc58a32f25d4c8148f5eb7038`. Both deployment workflows succeeded, and the user confirmed the site works again. Still test login, password reset email, recovery link, reset completion, session refresh and route protection using a school-controlled mailbox/browser. |
 | 3. Authorization/RPC security | Open security gate | Security Advisor rechecked at 2026-10-09 07:36 UTC: 10 authenticated SECURITY DEFINER function warnings and leaked-password protection disabled. Live role RPCs are SECURITY DEFINER with fixed search_path; role policy/RPC mismatch and last-admin protection remain unresolved. See SECURITY-REVIEW-2026-10-09.md. |
 | 4. Role-admin safe remediation | Design documented; implementation pending | Latest read-only count: 1 `system_admin` assignment. Need a second school-controlled recovery administrator and an isolated test target before implementing/testing a concurrency-safe guard. Never test by removing the existing assignment. |
 | 5. Migration source/parity | Partial inventory only | Production reports 26 migration entries; repo has 21 SQL files. Some names map as candidates only; source for several base migrations is missing from current repo. Need authoritative applied SQL/deployment records before claiming parity. See MIGRATION-RECONCILIATION-INITIAL-INVENTORY-2026-10-09.md. |
@@ -23,10 +23,9 @@ This tracker separates tasks completed by direct evidence from tasks that requir
 | 10. Production readiness decision | Blocked | Do not declare Production Ready until each release gate has evidence and school owner acceptance. |
 
 ## Current safe actions performed in this review
-- Verified GitHub Actions run `37899457433` completed with conclusion `success`: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37899457433.
-- Re-ran Supabase Security Advisor; it still reports 10 authenticated SECURITY DEFINER function warnings and leaked-password protection disabled.
-- Re-queried live record counts read-only: 0 departments, 1 profile, 0 documents, and 1 `system_admin` assignment.
-- No Production role assignment, application data, schema, Auth settings, or migration history was modified.
+- Verified the latest Pages workflow for the blank-screen mitigation and service-worker cache invalidation completed with conclusion `success`: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37901789974.
+- User confirmed that the website is working again after the mitigation.
+- No Production role assignment, application data, schema, Auth settings, or migration history was modified for this incident.
 
 ## Blockers that cannot be truthfully marked complete by documentation
 1. **Leaked-password protection** must be enabled in Supabase Auth project settings by an authorized operator and then verified.
