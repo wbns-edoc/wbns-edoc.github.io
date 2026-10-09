@@ -58,6 +58,10 @@ Deno.serve(async (req) => {
   const { data: document, error: documentError } = await sb.from("documents").select("id").eq("id", documentId).maybeSingle();
   if (documentError || !document) return out({ ok: false, code: "DOCUMENT_NOT_FOUND_OR_NOT_ACCESSIBLE" }, 404);
 
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!serviceRoleKey) return out({ ok: false, code: "SERVER_DATABASE_CONFIGURATION_MISSING" }, 500);
+  const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
+
   const raw = Deno.env.get("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON");
   const folder = Deno.env.get("GOOGLE_DRIVE_ROOT_FOLDER_ID");
   if (!raw || !folder) return out({ ok: false, code: "GOOGLE_DRIVE_CONFIGURATION_MISSING" }, 500);
@@ -78,11 +82,52 @@ Deno.serve(async (req) => {
       return out({ ok: false, code: "GOOGLE_DRIVE_UPLOAD_FAILED", upstream_status: r.status }, 502);
     }
     const d = await r.json();
+    const driveUrl = d.webViewLink || `https://drive.google.com/open?id=${d.id}`;
+    const metadata = {
+      drive_file_id: String(d.id),
+      drive_url: driveUrl,
+      name: String(d.name || file.name),
+      mime_type: String(d.mimeType || file.type || "application/octet-stream"),
+      size_bytes: Number(d.size || file.size),
+      checksum: d.md5Checksum || null,
+      folder_id: folder,
+      created_by: userData.user.id
+    };
+
+    // Persist Drive metadata server-side; browser clients intentionally have no table INSERT policy.
+    const { data: fileRow, error: metadataError } = await admin
+      .from("google_drive_files")
+      .insert(metadata)
+      .select("id")
+      .single();
+    if (metadataError || !fileRow) {
+      await fetch(`${DRIVE_API}/${encodeURIComponent(String(d.id))}`, {
+        method: "DELETE", headers: { Authorization: `Bearer ${access}` }
+      }).catch(() => null);
+      console.error("Drive metadata insert failed", metadataError?.message || "NO_ROW");
+      return out({ ok: false, code: "FILE_METADATA_SAVE_FAILED" }, 500);
+    }
+
+    // Call with the original user's JWT so auth.uid() and permission checks remain meaningful.
+    const { data: attachment, error: attachmentError } = await sb.rpc("attach_document_file_version", {
+      p_document_id: documentId,
+      p_google_drive_file_id: fileRow.id,
+      p_file_role: "main"
+    });
+    if (attachmentError) {
+      await admin.from("google_drive_files").delete().eq("id", fileRow.id);
+      await fetch(`${DRIVE_API}/${encodeURIComponent(String(d.id))}`, {
+        method: "DELETE", headers: { Authorization: `Bearer ${access}` }
+      }).catch(() => null);
+      console.error("Document file attachment failed", attachmentError.message);
+      return out({ ok: false, code: "DOCUMENT_FILE_ATTACH_FAILED" }, 500);
+    }
+
     return out({ ok: true, document_id: documentId, file: {
-      drive_file_id: d.id, name: d.name, mime_type: d.mimeType,
-      size_bytes: Number(d.size || file.size), checksum: d.md5Checksum || null,
-      drive_url: d.webViewLink || `https://drive.google.com/open?id=${d.id}`, folder_id: folder
-    }});
+      id: fileRow.id, drive_file_id: metadata.drive_file_id, name: metadata.name,
+      mime_type: metadata.mime_type, size_bytes: metadata.size_bytes,
+      checksum: metadata.checksum, drive_url: driveUrl, folder_id: folder
+    }, attachment });
   } catch (e) {
     console.error("Drive upload error", e);
     return out({ ok: false, code: "GOOGLE_DRIVE_UPLOAD_ERROR" }, 500);
