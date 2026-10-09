@@ -1,38 +1,36 @@
-# WBNS e-Document — Static Security Review
+# WBNS e-Document — Live Security Review
 Date: 2026-10-09
-Scope: source review of repository migrations only. This is not a substitute for verifying live grants/function definitions in Production.
+Scope: read-only inspection of live Production function definitions, function configuration and EXECUTE grants, plus Supabase Security Advisor. No Production data or schema was changed by this review.
 
-## Findings
+## Live observations
 
-### 1. Authenticated SECURITY DEFINER advisor findings need per-function triage
-Do not revoke EXECUTE from authenticated as a blanket fix: the frontend intentionally calls these RPCs. Review the live function body, grants, search_path, ownership, and permission gates, then test both allowed and denied callers.
+All 10 functions listed by Security Advisor are live as `SECURITY DEFINER`. Their `search_path` is explicitly set:
+- `pg_catalog, public, private` for the admin, assignment, file-version, deadline and status functions.
+- `pg_catalog, public` for `get_my_permissions()`.
 
-### 2. Functions with positive source evidence
+The inspected EXECUTE grant listing includes `authenticated`, `postgres`, and `service_role` for each of these functions. This confirms why a blanket revoke from `authenticated` would risk breaking legitimate application operations. This read-only review did not independently establish ownership or run positive/negative caller tests.
 
-- `public.admin_set_user_role(uuid,uuid)` checks `private.has_permission('user.manage')` OR `private.has_permission('role.manage')`, validates target profile and role, uses `auth.uid()` for `assigned_by`, and is granted to authenticated. Review whether `role.manage` should independently permit role assignment according to the school’s policy.
-- `public.admin_remove_user_role(uuid,uuid)` checks the same permission alternatives. Additional policy test required: prevent removing the last active `system_admin` and prevent self-lockout if not already enforced elsewhere.
-- `public.get_my_permissions()` is SECURITY DEFINER, has a fixed `search_path = pg_catalog, public`, filters on `ur.user_id = auth.uid()` and active profile, revokes PUBLIC and grants authenticated. Its role is to return the caller’s permissions.
-- Workflow RPCs have separate hardening migrations. `public.update_document_status` enforces actor identity, transition guards, and dedicated permissions for completion/archive; `private.create_approval` checks actor permission and requires an active approver with `document.approve`. Validate these against live definitions because later migrations replace earlier function bodies.
-- The repository includes explicit revokes from `anon` for admin, workflow, file-version, and permission RPCs. Live grants should still be checked in Production.
+### Findings requiring remediation design and further checks
 
-### 3. Items not yet verified
+1. **Last system administrator protection is not visible in `admin_remove_user_role`.** The live body checks `user.manage` OR `role.manage`, then directly deletes the selected `user_roles` row. It contains no explicit last-active-admin or self-lockout guard. Inspect triggers/constraints and test the last-admin case before concluding the invariant is absent. Do not test by removing a real admin in Production.
+2. **File-version RPC relies on a broad permission check.** `attach_document_file_version` checks authentication, `document.update`, document existence and Drive-file existence, but its body does not check object-level visibility/ownership or that the referenced Drive file belongs to the same document. Because it is SECURITY DEFINER, do not assume caller RLS alone protects the body. Review the table relationships and add explicit checks in a forward-only migration if the invariant is not enforced elsewhere.
+3. **Deadline RPC has no visible document status/object-scope check.** `set_document_deadline` checks `document.assign`, document existence, active assignee and future due date; it inserts a deadline without locking/checking document status or proving the caller may assign that specific document. Confirm intended policy and other constraints before remediation.
+4. **Role removal/assignment policy.** `admin_set_user_role` and `admin_remove_user_role` accept either `user.manage` or `role.manage`. Confirm that school policy intentionally allows role-only managers to grant/remove every role, including `system_admin`.
+5. **Department hierarchy constraints.** Create/update department functions check permission, required values and duplicate code, but no explicit validation of parent existence, active state, or cycles is visible in their bodies. Check foreign keys/triggers and add validation if needed.
+6. **Audit coverage.** `admin_set_user_department` records an audit event. The inspected role assignment/removal and department create/update bodies do not visibly write audit rows. Verify triggers/audit coverage before concluding these actions are unlogged.
+7. **Document status RPC.** The live `update_document_status` checks actor identity, uses a row lock, blocks dedicated workflow transitions, checks destination permissions and records history. Keep testing transition edge cases and verify the underlying transition helper.
+8. **Permission introspection.** `get_my_permissions()` filters by `auth.uid()` and active profile, and has a restricted search path; it appears appropriately scoped from the inspected body.
 
-- The current live definitions and grants for all 10 Security Advisor findings.
-- Whether every department RPC checks permission and validates parent/target department constraints.
-- Whether `public.attach_document_file_version` verifies document visibility and `document.update` inside the database function itself, not only in the Edge Function.
-- Protection against removing/demoting the last system administrator.
-- Supabase Auth leaked-password protection setting.
-- RLS negative tests with a normal staff account and an anonymous client.
-- Migration history parity between Production and repository.
+## Security Advisor
+The current live Advisor reports 10 `authenticated_security_definer_function_executable` warnings and one `auth_leaked_password_protection` warning. The latter remains an open project setting; it was not changed in this review. Advisor warnings are triage signals, not proof that every RPC is exploitable.
 
-## Safe remediation order
-
-1. Export/read live function definitions and grants without modifying Production.
-2. Map each function to expected permission codes and caller roles.
-3. Add isolated tests for authorized and unauthorized callers.
-4. Prepare reviewed migration(s) only for demonstrated gaps; do not apply until backup, migration history, and school approval are confirmed.
-5. Enable leaked-password protection in Supabase Auth settings and test the password-reset flow.
-6. Run the Production smoke-test checklist with real school accounts.
+## Safe next steps
+1. Inspect relevant table constraints, triggers, RLS policies and audit triggers read-only.
+2. Define expected authorization policy with the school owner, especially role delegation, document visibility, and last-admin protection.
+3. Prepare narrowly scoped forward-only SQL and tests; do not modify Production until authoritative migration history, backup and approval are confirmed.
+4. Test denied callers in a non-production environment; never probe destructive cases using the only real administrator.
+5. Enable leaked-password protection in Supabase Auth settings, then test sign-in and password recovery with a school-controlled account.
+6. Run the full smoke test and an isolated backup-restore drill.
 
 ## Acceptance rule
-No finding is considered resolved based only on source inspection or a successful frontend build. Record the live verification evidence and smoke-test result.
+This review is not a production security sign-off. No finding is resolved until a safe test and live evidence are recorded. Current release decision remains **NOT YET PRODUCTION READY**.
