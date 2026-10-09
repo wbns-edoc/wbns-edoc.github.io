@@ -1,0 +1,49 @@
+name: Workflow RPC Security CI
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/database/**"
+      - "supabase/config.toml"
+      - ".github/workflows/workflow-rpc-security-ci.yml"
+  push:
+    branches:
+      - fix/drive-upload-metadata-atomicity-2026-10-09
+    paths:
+      - "supabase/migrations/**"
+      - "supabase/tests/database/**"
+      - "supabase/config.toml"
+      - ".github/workflows/workflow-rpc-security-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: workflow-rpc-security-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  local-database-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
+      - name: Start isolated local Supabase services
+        run: supabase start
+
+      - name: Apply repository migrations to the disposable local database
+        run: supabase db reset
+
+      - name: Run workflow RPC security catalog tests
+        run: supabase test db
+
+      - name: Stop local Supabase services
+        if: always()
+        run: supabase stop --no-backup
