@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createClient, type User, FunctionsHttpError, FunctionsFetchError, FunctionsRelayError } from '@supabase/supabase-js';
 import * as XLSX from 'xlsx';
 import './styles.css';
+import { getUploadErrorMessage } from './upload-error';
 
 const supabase=createClient(
   (import.meta.env.VITE_SUPABASE_URL as string|undefined)||'https://iigzzwyfxxtqbgjawyom.supabase.co',
