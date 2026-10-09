@@ -68,8 +68,34 @@ Deno.serve(async (req) => {
   let sa: SA;
   try { sa = JSON.parse(raw); } catch { return out({ ok: false, code: "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_INVALID" }, 500); }
 
+  let driveFileId: string | null = null;
+  let driveAccessToken: string | null = null;
+  let metadataRowId: string | null = null;
+  async function cleanupCreatedResources() {
+    if (metadataRowId) {
+      const { error } = await admin.from("google_drive_files").delete().eq("id", metadataRowId);
+      if (error) console.error("Drive metadata cleanup failed", error.message);
+      else metadataRowId = null;
+    }
+    if (driveFileId && driveAccessToken) {
+      try {
+        const response = await fetch(`${DRIVE_API}/${encodeURIComponent(driveFileId)}`, {
+          method: "DELETE", headers: { Authorization: `Bearer ${driveAccessToken}` }
+        });
+        if (!response.ok && response.status !== 404) {
+          console.error("Google Drive cleanup failed", response.status, (await response.text()).slice(0, 300));
+        } else {
+          driveFileId = null;
+        }
+      } catch (error) {
+        console.error("Google Drive cleanup request failed", error);
+      }
+    }
+  }
+
   try {
     const access = await token(sa);
+    driveAccessToken = access;
     const meta = new Blob([JSON.stringify({ name: file.name, parents: [folder] })], { type: "application/json" });
     const body = new FormData();
     body.append("metadata", meta);
@@ -82,6 +108,11 @@ Deno.serve(async (req) => {
       return out({ ok: false, code: "GOOGLE_DRIVE_UPLOAD_FAILED", upstream_status: r.status }, 502);
     }
     const d = await r.json();
+    if (!d.id || typeof d.id !== "string") {
+      console.error("Google Drive upload response omitted file ID");
+      return out({ ok: false, code: "GOOGLE_DRIVE_RESPONSE_INVALID" }, 502);
+    }
+    driveFileId = d.id;
     const driveUrl = d.webViewLink || `https://drive.google.com/open?id=${d.id}`;
     const metadata = {
       drive_file_id: String(d.id),
@@ -101,12 +132,11 @@ Deno.serve(async (req) => {
       .select("id")
       .single();
     if (metadataError || !fileRow) {
-      await fetch(`${DRIVE_API}/${encodeURIComponent(String(d.id))}`, {
-        method: "DELETE", headers: { Authorization: `Bearer ${access}` }
-      }).catch(() => null);
       console.error("Drive metadata insert failed", metadataError?.message || "NO_ROW");
+      await cleanupCreatedResources();
       return out({ ok: false, code: "FILE_METADATA_SAVE_FAILED" }, 500);
     }
+    metadataRowId = fileRow.id;
 
     // Call with the original user's JWT so auth.uid() and permission checks remain meaningful.
     const { data: attachment, error: attachmentError } = await sb.rpc("attach_document_file_version", {
@@ -114,14 +144,14 @@ Deno.serve(async (req) => {
       p_google_drive_file_id: fileRow.id,
       p_file_role: "main"
     });
-    if (attachmentError) {
-      await admin.from("google_drive_files").delete().eq("id", fileRow.id);
-      await fetch(`${DRIVE_API}/${encodeURIComponent(String(d.id))}`, {
-        method: "DELETE", headers: { Authorization: `Bearer ${access}` }
-      }).catch(() => null);
-      console.error("Document file attachment failed", attachmentError.message);
+    if (attachmentError || !Array.isArray(attachment) || attachment.length === 0) {
+      console.error("Document file attachment failed", attachmentError?.message || "NO_ATTACHMENT_ROW");
+      await cleanupCreatedResources();
       return out({ ok: false, code: "DOCUMENT_FILE_ATTACH_FAILED" }, 500);
     }
+    // Attachment succeeded; resources now belong to the document and must not be compensated.
+    metadataRowId = null;
+    driveFileId = null;
 
     return out({ ok: true, document_id: documentId, file: {
       id: fileRow.id, drive_file_id: metadata.drive_file_id, name: metadata.name,
@@ -130,6 +160,7 @@ Deno.serve(async (req) => {
     }, attachment });
   } catch (e) {
     console.error("Drive upload error", e);
+    await cleanupCreatedResources();
     return out({ ok: false, code: "GOOGLE_DRIVE_UPLOAD_ERROR" }, 500);
   }
 });
