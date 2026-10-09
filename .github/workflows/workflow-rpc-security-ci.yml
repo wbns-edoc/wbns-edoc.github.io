@@ -31,6 +31,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Reject incomplete migration source before starting containers
+        shell: bash
+        run: |
+          if grep -q "Full SQL is maintained in the migration applied to the WBNS Supabase project" supabase/migrations/20261007200000_foundation_schema_rbac_rls.sql; then
+            echo "::error::The foundation migration in the repository is a placeholder, not a reproducible schema migration. Recover and review the actual migration SQL from an authoritative backup/source before running local database tests."
+            exit 1
+          fi
+
       - uses: supabase/setup-cli@v1
         with:
           version: 2.81.3
