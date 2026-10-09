@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { importPKCS8, SignJWT } from "npm:jose@6";
+import { mayDeleteDriveObject, mayDeleteUploadResources } from "./cleanup-policy.ts";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DRIVE_API = "https://www.googleapis.com/drive/v3/files";
@@ -84,7 +85,8 @@ Deno.serve(async (req) => {
         console.error("Attachment state lookup failed; preserving upload for reconciliation", attachmentLookupError.message);
         return;
       }
-      if (attachedRows?.length) {
+      const attachmentState = attachedRows?.length ? "already-attached" : "unattached";
+      if (!mayDeleteUploadResources(attachmentState)) {
         console.error("Cleanup skipped because upload metadata is already attached; reconcile client result");
         metadataRowId = null;
         driveFileId = null;
@@ -92,8 +94,8 @@ Deno.serve(async (req) => {
       }
 
       const { error } = await admin.from("google_drive_files").delete().eq("id", metadataRowId);
-      if (error) {
-        console.error("Drive metadata cleanup failed; preserving Drive object for reconciliation", error.message);
+      if (!mayDeleteDriveObject(Boolean(error))) {
+        console.error("Drive metadata cleanup failed; preserving Drive object for reconciliation", error?.message);
         return;
       }
       metadataRowId = null;
