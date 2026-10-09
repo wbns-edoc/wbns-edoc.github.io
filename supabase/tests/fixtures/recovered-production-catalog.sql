@@ -366,3 +366,927 @@ CREATE INDEX idx_role_permissions_permission ON public.role_permissions USING bt
 CREATE INDEX idx_senders_org_trgm ON public.senders USING gin (organization_name gin_trgm_ops);
 CREATE INDEX idx_user_roles_assigned_by ON public.user_roles USING btree (assigned_by);
 CREATE INDEX idx_user_roles_role ON public.user_roles USING btree (role_id);
+
+
+-- Functions captured from live catalog (not a security approval).
+CREATE OR REPLACE FUNCTION public.admin_create_department(p_code text, p_name text, p_parent_id uuid DEFAULT NULL::uuid)
+ RETURNS departments
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+declare v public.departments;
+begin
+ if not private.has_permission('user.manage') and not private.has_permission('role.manage') then
+   raise exception using errcode='42501',message='insufficient_privilege';
+ end if;
+ if btrim(coalesce(p_code,''))='' or btrim(coalesce(p_name,''))='' then
+   raise exception using errcode='22023',message='department_code_and_name_required';
+ end if;
+ if exists(select 1 from public.departments where lower(code)=lower(btrim(p_code))) then
+   raise exception using errcode='23505',message='department_code_exists';
+ end if;
+ insert into public.departments(code,name,parent_id,is_active)
+ values(btrim(p_code),btrim(p_name),p_parent_id,true)
+ returning * into v;
+ return v;
+end $function$
+
+
+CREATE OR REPLACE FUNCTION public.admin_remove_user_role(p_user_id uuid, p_role_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+begin
+  if not private.has_permission('user.manage') and not private.has_permission('role.manage') then
+    raise exception using errcode='42501',message='insufficient_privilege';
+  end if;
+  delete from public.user_roles where user_id=p_user_id and role_id=p_role_id;
+end $function$
+
+
+CREATE OR REPLACE FUNCTION public.admin_set_user_department(p_user_id uuid, p_department_id uuid DEFAULT NULL::uuid)
+ RETURNS profiles
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+declare
+  v public.profiles;
+  old_department uuid;
+begin
+  if auth.uid() is null then
+    raise exception using errcode='42501',message='authentication_required';
+  end if;
+
+  if not private.has_permission('user.manage') and not private.has_permission('role.manage') then
+    raise exception using errcode='42501',message='insufficient_privilege';
+  end if;
+
+  if not exists(select 1 from public.profiles where id=p_user_id) then
+    raise exception using errcode='22023',message='user_profile_not_found';
+  end if;
+
+  if p_department_id is not null
+     and not exists(select 1 from public.departments where id=p_department_id and is_active=true) then
+    raise exception using errcode='22023',message='active_department_not_found';
+  end if;
+
+  select department_id into old_department
+  from public.profiles
+  where id=p_user_id;
+
+  update public.profiles
+     set department_id=p_department_id,
+         updated_at=now()
+   where id=p_user_id
+   returning * into v;
+
+  insert into public.audit_logs(
+    actor_id,action,entity_type,entity_id,old_data,new_data
+  )
+  values(
+    auth.uid(),
+    'user_department_changed',
+    'profile',
+    p_user_id,
+    jsonb_build_object('department_id',old_department),
+    jsonb_build_object('department_id',p_department_id)
+  );
+
+  return v;
+end
+$function$
+
+
+CREATE OR REPLACE FUNCTION public.admin_set_user_role(p_user_id uuid, p_role_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+begin
+  if not private.has_permission('user.manage') and not private.has_permission('role.manage') then
+    raise exception using errcode='42501',message='insufficient_privilege';
+  end if;
+  if not exists(select 1 from public.profiles where id=p_user_id) then raise exception using errcode='22023',message='user_profile_not_found'; end if;
+  if not exists(select 1 from public.roles where id=p_role_id) then raise exception using errcode='22023',message='role_not_found'; end if;
+  insert into public.user_roles(user_id,role_id,assigned_by)
+  values(p_user_id,p_role_id,auth.uid())
+  on conflict (user_id,role_id) do nothing;
+end $function$
+
+
+CREATE OR REPLACE FUNCTION public.admin_update_department(p_department_id uuid, p_code text, p_name text, p_parent_id uuid, p_is_active boolean)
+ RETURNS departments
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+declare v public.departments;
+begin
+ if not private.has_permission('user.manage') and not private.has_permission('role.manage') then
+   raise exception using errcode='42501',message='insufficient_privilege';
+ end if;
+ if not exists(select 1 from public.departments where id=p_department_id) then
+   raise exception using errcode='22023',message='department_not_found';
+ end if;
+ if btrim(coalesce(p_code,''))='' or btrim(coalesce(p_name,''))='' then
+   raise exception using errcode='22023',message='department_code_and_name_required';
+ end if;
+ if exists(select 1 from public.departments where lower(code)=lower(btrim(p_code)) and id<>p_department_id) then
+   raise exception using errcode='23505',message='department_code_exists';
+ end if;
+ update public.departments
+ set code=btrim(p_code),name=btrim(p_name),parent_id=p_parent_id,is_active=coalesce(p_is_active,true),updated_at=now()
+ where id=p_department_id
+ returning * into v;
+ return v;
+end $function$
+
+
+CREATE OR REPLACE FUNCTION public.assign_document(p_document_id uuid, p_assignee_id uuid, p_instructions text DEFAULT NULL::text, p_due_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+declare v_id uuid; v_actor uuid:=auth.uid(); v_subject text; v_old document_status;
+begin
+ if v_actor is null or not private.has_permission('document.assign') then raise exception 'permission_denied'; end if;
+ if not exists(select 1 from public.documents where id=p_document_id) then raise exception 'document_not_found'; end if;
+ if not exists(select 1 from public.profiles where id=p_assignee_id and is_active=true) then raise exception 'assignee_not_found'; end if;
+ if p_due_at is not null and p_due_at<=now() then raise exception 'deadline_must_be_future'; end if;
+ select status,subject into v_old,v_subject from public.documents where id=p_document_id for update;
+ if v_old<>'registered' then raise exception 'invalid_status_transition'; end if;
+ insert into public.document_assignments(document_id,assignee_id,assigned_by,instructions,assignment_status) values(p_document_id,p_assignee_id,v_actor,p_instructions,'assigned') returning id into v_id;
+ update public.documents set current_owner_id=p_assignee_id,status='assigned' where id=p_document_id;
+ insert into public.document_status_history(document_id,from_status,to_status,changed_by,reason) values(p_document_id,v_old,'assigned',v_actor,'มอบหมายงาน');
+ insert into public.notifications(recipient_id,document_id,type,title,body,priority) values(p_assignee_id,p_document_id,'assignment','ได้รับมอบหมายงาน','คุณได้รับมอบหมายเรื่อง: '||coalesce(v_subject,'ไม่ระบุเรื่อง'),'high');
+ if p_due_at is not null then insert into public.deadlines(document_id,assigned_to,due_at,reminder_at,escalation_at,status) values(p_document_id,p_assignee_id,p_due_at,p_due_at-interval '24 hours',p_due_at,'open'); end if;
+ return v_id;
+end $function$
+
+
+CREATE OR REPLACE FUNCTION public.attach_document_file_version(p_document_id uuid, p_google_drive_file_id uuid, p_file_role text DEFAULT 'main'::text)
+ RETURNS TABLE(id uuid, document_id uuid, google_drive_file_id uuid, file_role text, version_no integer, is_current boolean, uploaded_by uuid, uploaded_at timestamp with time zone)
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+declare
+  v_id uuid;
+  v_version integer;
+begin
+  if auth.uid() is null then
+    raise exception using errcode='42501',message='authentication_required';
+  end if;
+
+  if not private.has_permission('document.update') then
+    raise exception using errcode='42501',message='insufficient_privilege';
+  end if;
+
+  if p_file_role is null or btrim(p_file_role)='' then
+    raise exception using errcode='22023',message='file_role_required';
+  end if;
+
+  if not exists(select 1 from public.documents where id=p_document_id) then
+    raise exception using errcode='22023',message='document_not_found';
+  end if;
+
+  if not exists(select 1 from public.google_drive_files where id=p_google_drive_file_id) then
+    raise exception using errcode='22023',message='google_drive_file_not_found';
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtextextended(p_document_id::text || ':' || p_file_role, 0)
+  );
+
+  select coalesce(max(df.version_no),0)+1
+    into v_version
+  from public.document_files df
+  where df.document_id=p_document_id
+    and df.file_role=p_file_role;
+
+  update public.document_files
+     set is_current=false
+   where document_id=p_document_id
+     and file_role=p_file_role
+     and is_current=true;
+
+  update public.google_drive_files
+     set created_by=coalesce(created_by,auth.uid())
+   where id=p_google_drive_file_id;
+
+  insert into public.document_files(
+    document_id,google_drive_file_id,file_role,version_no,is_current,uploaded_by
+  )
+  values(
+    p_document_id,p_google_drive_file_id,p_file_role,v_version,true,auth.uid()
+  )
+  returning document_files.id into v_id;
+
+  return query
+  select df.id,df.document_id,df.google_drive_file_id,df.file_role,
+         df.version_no,df.is_current,df.uploaded_by,df.uploaded_at
+  from public.document_files df
+  where df.id=v_id;
+end
+$function$
+
+
+CREATE OR REPLACE FUNCTION public.create_approval(p_document_id uuid, p_approver_id uuid, p_approval_step integer DEFAULT 1)
+ RETURNS uuid
+ LANGUAGE sql
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$select private.create_approval($1,$2,$3)$function$
+
+
+CREATE OR REPLACE FUNCTION public.decide_approval(p_approval_id uuid, p_decision approval_decision, p_comment text DEFAULT NULL::text)
+ RETURNS boolean
+ LANGUAGE sql
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$select private.decide_approval($1,$2,$3)$function$
+
+
+CREATE OR REPLACE FUNCTION public.get_my_permissions()
+ RETURNS TABLE(permission_code text)
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+  select distinct p.code
+  from public.user_roles ur
+  join public.role_permissions rp on rp.role_id=ur.role_id
+  join public.permissions p on p.id=rp.permission_id
+  join public.profiles pr on pr.id=ur.user_id
+  where ur.user_id=auth.uid()
+    and pr.is_active=true
+  order by p.code;
+$function$
+
+
+CREATE OR REPLACE FUNCTION public.register_incoming_document(p_subject text, p_sender_id uuid, p_external_document_no text DEFAULT NULL::text, p_external_document_date date DEFAULT NULL::date, p_received_at timestamp with time zone DEFAULT now(), p_urgency urgency_level DEFAULT 'normal'::urgency_level, p_receiving_notes text DEFAULT NULL::text)
+ RETURNS uuid
+ LANGUAGE sql
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$select private.register_incoming_document($1,$2,$3,$4,$5,$6,$7);$function$
+
+
+CREATE OR REPLACE FUNCTION public.register_outgoing_document(p_subject text, p_recipient_name text, p_recipient_address text DEFAULT NULL::text, p_recipient_contact text DEFAULT NULL::text, p_document_date date DEFAULT NULL::date, p_urgency urgency_level DEFAULT 'normal'::urgency_level)
+ RETURNS uuid
+ LANGUAGE sql
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$select private.register_outgoing_document($1,$2,$3,$4,$5,$6);$function$
+
+
+CREATE OR REPLACE FUNCTION public.set_document_deadline(p_document_id uuid, p_assigned_to uuid, p_due_at timestamp with time zone, p_reminder_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+declare v_id uuid; v_actor uuid:=auth.uid();
+begin
+ if v_actor is null or not private.has_permission('document.assign') then raise exception 'permission_denied'; end if;
+ if not exists(select 1 from public.documents where id=p_document_id) then raise exception 'document_not_found'; end if;
+ if not exists(select 1 from public.profiles where id=p_assigned_to and is_active=true) then raise exception 'assignee_not_found'; end if;
+ if p_due_at<=now() then raise exception 'deadline_must_be_future'; end if;
+ if p_reminder_at is not null and p_reminder_at>p_due_at then raise exception 'reminder_must_be_before_deadline'; end if;
+ insert into public.deadlines(document_id,assigned_to,due_at,reminder_at,escalation_at,status) values(p_document_id,p_assigned_to,p_due_at,coalesce(p_reminder_at,p_due_at-interval '24 hours'),p_due_at,'open') returning id into v_id;
+ return v_id;
+end $function$
+
+
+CREATE OR REPLACE FUNCTION public.set_updated_at()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$function$
+
+
+CREATE OR REPLACE FUNCTION public.update_document_status(p_document_id uuid, p_to_status document_status, p_reason text DEFAULT NULL::text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+declare
+  v_actor uuid := auth.uid();
+  v_from public.document_status;
+begin
+  if v_actor is null then
+    raise exception 'permission_denied';
+  end if;
+
+  select status into v_from
+  from public.documents
+  where id = p_document_id
+  for update;
+
+  if v_from is null then
+    raise exception 'document_not_found';
+  end if;
+
+  if v_from = p_to_status then
+    return true;
+  end if;
+
+  -- These transitions have mandatory side effects and must use their dedicated RPCs.
+  if p_to_status in ('pending_approval', 'approved', 'assigned')
+     or (v_from = 'pending_approval' and p_to_status = 'draft') then
+    raise exception 'use_dedicated_workflow_rpc';
+  end if;
+
+  if p_to_status = 'completed' then
+    if not private.has_permission('document.complete') then
+      raise exception 'permission_denied';
+    end if;
+  elsif p_to_status = 'archived' then
+    if not private.has_permission('document.archive') then
+      raise exception 'permission_denied';
+    end if;
+  elsif not private.has_permission('document.update') then
+    raise exception 'permission_denied';
+  end if;
+
+  if not private.is_valid_document_transition(p_document_id, v_from, p_to_status) then
+    raise exception 'invalid_status_transition';
+  end if;
+
+  update public.documents
+     set status = p_to_status
+   where id = p_document_id;
+
+  insert into public.document_status_history
+    (document_id, from_status, to_status, changed_by, reason)
+  values
+    (p_document_id, v_from, p_to_status, v_actor, p_reason);
+
+  if p_to_status in ('completed', 'archived') then
+    update public.deadlines
+       set status = 'completed',
+           completed_at = coalesce(completed_at, now())
+     where document_id = p_document_id
+       and status = 'open';
+  end if;
+
+  return true;
+end
+$function$
+
+
+CREATE OR REPLACE FUNCTION private.allocate_document_number(p_register_id uuid, p_year integer)
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$declare v_number bigint;begin if not private.has_permission('registry.incoming.manage') and not private.has_permission('registry.outgoing.manage') then raise exception 'permission denied';end if;insert into public.number_sequences(register_id,year,current_number) values(p_register_id,p_year,0) on conflict(register_id,year) do nothing;update public.number_sequences set current_number=current_number+1,updated_at=now() where register_id=p_register_id and year=p_year returning current_number into v_number;return v_number;end;$function$
+
+
+CREATE OR REPLACE FUNCTION private.assign_document(p_document_id uuid, p_assignee_id uuid, p_instructions text DEFAULT NULL::text, p_due_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+declare
+  v_id uuid;
+  v_actor uuid := auth.uid();
+  v_subject text;
+begin
+  if v_actor is null or not private.has_permission('document.assign') then
+    raise exception 'permission_denied';
+  end if;
+  if not exists (select 1 from public.documents where id=p_document_id) then
+    raise exception 'document_not_found';
+  end if;
+  if not exists (select 1 from public.profiles where id=p_assignee_id and is_active=true) then
+    raise exception 'assignee_not_found';
+  end if;
+
+  insert into public.document_assignments(document_id,assignee_id,assigned_by,instructions,assignment_status)
+  values(p_document_id,p_assignee_id,v_actor,p_instructions,'assigned')
+  returning id into v_id;
+
+  update public.documents
+    set current_owner_id=p_assignee_id,status='assigned'
+    where id=p_document_id;
+
+  insert into public.document_status_history(document_id,from_status,to_status,changed_by,reason)
+  select id,status,'assigned',v_actor,'มอบหมายงาน'
+  from public.documents where id=p_document_id and status <> 'assigned';
+
+  select subject into v_subject from public.documents where id=p_document_id;
+
+  insert into public.notifications(recipient_id,document_id,type,title,body,priority)
+  values(p_assignee_id,p_document_id,'assignment','ได้รับมอบหมายงาน',
+         'คุณได้รับมอบหมายเรื่อง: '||coalesce(v_subject,'ไม่ระบุเรื่อง'),
+         'high');
+
+  if p_due_at is not null then
+    insert into public.deadlines(document_id,assigned_to,due_at,reminder_at,escalation_at,status)
+    values(p_document_id,p_assignee_id,p_due_at,p_due_at - interval '24 hours',p_due_at,'open');
+  end if;
+
+  return v_id;
+end;
+$function$
+
+
+CREATE OR REPLACE FUNCTION private.audit_row_change()
+ RETURNS trigger
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+declare
+  v_actor uuid := auth.uid();
+  v_old jsonb := case when TG_OP in ('UPDATE','DELETE') then to_jsonb(OLD) else null end;
+  v_new jsonb := case when TG_OP in ('INSERT','UPDATE') then to_jsonb(NEW) else null end;
+  v_entity_id uuid;
+begin
+  begin
+    v_entity_id := coalesce((v_new->>'id')::uuid,(v_old->>'id')::uuid,(v_new->>'document_id')::uuid,(v_old->>'document_id')::uuid);
+  exception when others then v_entity_id := null;
+  end;
+  insert into public.audit_logs(actor_id,action,entity_type,entity_id,old_data,new_data)
+  values(v_actor,TG_OP,replace(TG_TABLE_NAME,'_',' '),v_entity_id,v_old,v_new);
+  if TG_OP='DELETE' then return OLD; end if;
+  return NEW;
+end $function$
+
+
+CREATE OR REPLACE FUNCTION private.create_approval(p_document_id uuid, p_approver_id uuid, p_approval_step integer DEFAULT 1)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+declare
+  v_id uuid;
+  v_actor uuid := auth.uid();
+  v_subject text;
+  v_status public.document_status;
+begin
+  if v_actor is null or not private.has_permission('document.approve') then
+    raise exception 'permission_denied';
+  end if;
+
+  if p_approval_step < 1 then
+    raise exception 'invalid_approval_step';
+  end if;
+
+  if not exists (
+    select 1
+    from public.profiles pr
+    join public.user_roles ur on ur.user_id = pr.id
+    join public.role_permissions rp on rp.role_id = ur.role_id
+    join public.permissions p on p.id = rp.permission_id
+    where pr.id = p_approver_id
+      and pr.is_active = true
+      and p.code = 'document.approve'
+  ) then
+    raise exception 'approver_not_authorized';
+  end if;
+
+  select status, subject into v_status, v_subject
+  from public.documents
+  where id = p_document_id
+  for update;
+
+  if v_status is null then
+    raise exception 'document_not_found';
+  end if;
+
+  if v_status <> 'draft' then
+    raise exception 'document_not_in_draft';
+  end if;
+
+  insert into public.approvals(document_id, approval_step, approver_id, decision)
+  values (p_document_id, p_approval_step, p_approver_id, 'pending')
+  returning id into v_id;
+
+  update public.documents set status = 'pending_approval' where id = p_document_id;
+
+  insert into public.notifications(recipient_id, document_id, type, title, body, priority)
+  values (
+    p_approver_id, p_document_id, 'approval', 'รอการอนุมัติ',
+    'มีเอกสารรอการอนุมัติ: ' || coalesce(v_subject, 'ไม่ระบุเรื่อง'), 'high'
+  );
+
+  return v_id;
+end;
+$function$
+
+
+CREATE OR REPLACE FUNCTION private.decide_approval(p_approval_id uuid, p_decision approval_decision, p_comment text DEFAULT NULL::text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+declare v_actor uuid := auth.uid(); v_doc uuid; v_step integer; v_subject text;
+begin
+  if v_actor is null or not private.has_permission('document.approve') then raise exception 'permission_denied'; end if;
+
+  select document_id,approval_step into v_doc,v_step
+  from public.approvals
+  where id=p_approval_id and approver_id=v_actor and decision='pending'
+  for update;
+  if v_doc is null then raise exception 'approval_not_found_or_not_authorized'; end if;
+
+  update public.approvals
+    set decision=p_decision,comment=p_comment,decided_at=now()
+    where id=p_approval_id;
+
+  if p_decision='approved' then
+    if exists(select 1 from public.approvals where document_id=v_doc and approval_step>v_step and decision='pending') then
+      update public.documents set status='pending_approval' where id=v_doc;
+    else
+      update public.documents set status='approved' where id=v_doc;
+    end if;
+  elsif p_decision in ('rejected','returned') then
+    update public.documents set status='draft' where id=v_doc;
+  end if;
+
+  select subject into v_subject from public.documents where id=v_doc;
+  insert into public.notifications(recipient_id,document_id,type,title,body,priority)
+  select distinct p.created_by,v_doc,'approval_decision','ผลการอนุมัติ',
+         'เอกสาร "'||coalesce(v_subject,'ไม่ระบุเรื่อง')||'" มีผลการพิจารณา: '||p_decision::text,'high'
+  from public.documents p where p.id=v_doc and p.created_by is not null;
+
+  return true;
+end;
+$function$
+
+
+CREATE OR REPLACE FUNCTION private.has_permission(p_permission text)
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$select exists(select 1 from public.user_roles ur join public.role_permissions rp on rp.role_id=ur.role_id join public.permissions p on p.id=rp.permission_id join public.profiles pr on pr.id=ur.user_id where ur.user_id=(select auth.uid()) and pr.is_active=true and p.code=p_permission);$function$
+
+
+CREATE OR REPLACE FUNCTION private.is_admin()
+ RETURNS boolean
+ LANGUAGE sql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$select private.has_permission('settings.manage');$function$
+
+
+CREATE OR REPLACE FUNCTION private.is_valid_document_transition(p_document_id uuid, p_from document_status, p_to document_status)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+declare v_type text;
+begin
+  select document_type::text into v_type from public.documents where id=p_document_id;
+  if v_type is null then return false; end if;
+  if p_to='cancelled' and p_from not in ('completed','archived','cancelled') then return true; end if;
+  if p_from='draft' and p_to='pending_approval' then return true; end if;
+  if p_from='pending_approval' and p_to in ('approved','draft') then return true; end if;
+  if p_from='approved' and p_to='received' then return v_type='incoming'; end if;
+  if p_from='approved' and p_to='sent' then return v_type='outgoing'; end if;
+  if p_from='received' and p_to='registered' then return v_type='incoming'; end if;
+  if p_from='registered' and p_to='assigned' then return true; end if;
+  if p_from='assigned' and p_to='in_progress' then return true; end if;
+  if p_from='in_progress' and p_to='completed' then return true; end if;
+  if p_from='completed' and p_to='archived' then return true; end if;
+  if p_from='sent' and p_to='archived' then return v_type='outgoing'; end if;
+  return false;
+end $function$
+
+
+CREATE OR REPLACE FUNCTION private.process_deadline_notifications()
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+declare v_count integer:=0; d record; r record; v_subject text;
+begin
+ for d in select dl.id,dl.document_id,dl.assigned_to,dl.due_at,dl.reminder_at,doc.subject,doc.urgency,doc.status
+ from public.deadlines dl join public.documents doc on doc.id=dl.document_id
+ where dl.status='open' and doc.status not in ('completed','archived','cancelled')
+ and ((dl.reminder_at is not null and dl.reminder_at<=now() and dl.due_at>now()) or dl.due_at<=now()) loop
+  v_subject:=coalesce(d.subject,'ไม่ระบุเรื่อง');
+  if d.due_at<=now() then
+   if d.assigned_to is not null and not exists(select 1 from public.notifications n where n.document_id=d.document_id and n.recipient_id=d.assigned_to and n.type='deadline_overdue' and n.created_at>=d.due_at) then
+    insert into public.notifications(recipient_id,document_id,type,title,body,priority) values(d.assigned_to,d.document_id,'deadline_overdue','เกินกำหนดงาน','งานเรื่อง "'||v_subject||'" เกินกำหนดแล้ว กรุณาดำเนินการทันที','high'); v_count:=v_count+1;
+   end if;
+   for r in select distinct ur.user_id from public.user_roles ur join public.roles ro on ro.id=ur.role_id where ro.code in('director','deputy_director') loop
+    if not exists(select 1 from public.notifications n where n.document_id=d.document_id and n.recipient_id=r.user_id and n.type='deadline_escalation' and n.created_at>=d.due_at) then
+     insert into public.notifications(recipient_id,document_id,type,title,body,priority) values(r.user_id,d.document_id,'deadline_escalation','แจ้งเตือนผู้บริหาร: เกินกำหนด','เอกสารเรื่อง "'||v_subject||'" เกินกำหนดดำเนินการแล้ว','critical'); v_count:=v_count+1;
+    end if;
+   end loop;
+  else
+   if d.assigned_to is not null and not exists(select 1 from public.notifications n where n.document_id=d.document_id and n.recipient_id=d.assigned_to and n.type='deadline_reminder' and n.created_at>=d.reminder_at) then
+    insert into public.notifications(recipient_id,document_id,type,title,body,priority) values(d.assigned_to,d.document_id,'deadline_reminder','ใกล้ครบกำหนดงาน','งานเรื่อง "'||v_subject||'" ใกล้ครบกำหนด กรุณาตรวจสอบและดำเนินการ','high'); v_count:=v_count+1;
+   end if;
+   for r in select distinct ur.user_id from public.user_roles ur join public.roles ro on ro.id=ur.role_id where ro.code in('director','deputy_director') loop
+    if not exists(select 1 from public.notifications n where n.document_id=d.document_id and n.recipient_id=r.user_id and n.type='deadline_reminder_management' and n.created_at>=d.reminder_at) then
+     insert into public.notifications(recipient_id,document_id,type,title,body,priority) values(r.user_id,d.document_id,'deadline_reminder_management','แจ้งเตือนผู้บริหาร: ใกล้ครบกำหนด','เอกสารเรื่อง "'||v_subject||'" ใกล้ครบกำหนดดำเนินการ','high'); v_count:=v_count+1;
+    end if;
+   end loop;
+  end if;
+ end loop;
+ return v_count;
+end $function$
+
+
+CREATE OR REPLACE FUNCTION private.register_incoming_document(p_subject text, p_sender_id uuid, p_external_document_no text DEFAULT NULL::text, p_external_document_date date DEFAULT NULL::date, p_received_at timestamp with time zone DEFAULT now(), p_urgency urgency_level DEFAULT 'normal'::urgency_level, p_receiving_notes text DEFAULT NULL::text)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+declare
+ v_uid uuid := (select auth.uid());
+ v_register uuid;
+ v_doc uuid;
+ v_no bigint;
+begin
+ if v_uid is null or not private.has_permission('registry.incoming.manage') then
+   raise exception 'permission denied';
+ end if;
+ select id into v_register
+ from public.document_registers
+ where direction='incoming' and is_active=true
+ order by document_year desc, created_at
+ limit 1;
+ if v_register is null then raise exception 'ไม่พบทะเบียนหนังสือรับที่ใช้งานอยู่'; end if;
+ v_no := private.allocate_document_number(v_register, (select document_year from public.document_registers where id=v_register));
+ insert into public.documents(document_type,register_id,subject,urgency,status,current_owner_id,created_by)
+ values('incoming',v_register,p_subject,p_urgency,'received',v_uid,v_uid)
+ returning id into v_doc;
+ insert into public.incoming_document_details(document_id,sender_id,external_document_no,external_document_date,received_at,registered_at,registered_number,receiving_notes)
+ values(v_doc,p_sender_id,p_external_document_no,p_external_document_date,p_received_at,now(),v_no,p_receiving_notes);
+ insert into public.document_status_history(document_id,from_status,to_status,changed_by,reason)
+ values(v_doc,null,'received',v_uid,'รับหนังสือเข้าระบบ');
+ return v_doc;
+end $function$
+
+
+CREATE OR REPLACE FUNCTION private.register_outgoing_document(p_subject text, p_recipient_name text, p_recipient_address text DEFAULT NULL::text, p_recipient_contact text DEFAULT NULL::text, p_document_date date DEFAULT NULL::date, p_urgency urgency_level DEFAULT 'normal'::urgency_level)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+declare
+ v_uid uuid := (select auth.uid());
+ v_register uuid;
+ v_doc uuid;
+ v_no bigint;
+begin
+ if v_uid is null or not private.has_permission('registry.outgoing.manage') then raise exception 'permission denied'; end if;
+ select id into v_register from public.document_registers where direction='outgoing' and is_active=true order by document_year desc,created_at limit 1;
+ if v_register is null then raise exception 'ไม่พบทะเบียนหนังสือส่งที่ใช้งานอยู่'; end if;
+ v_no := private.allocate_document_number(v_register,(select document_year from public.document_registers where id=v_register));
+ insert into public.documents(document_type,register_id,subject,urgency,status,current_owner_id,created_by)
+ values('outgoing',v_register,p_subject,p_urgency,'draft',v_uid,v_uid) returning id into v_doc;
+ insert into public.outgoing_document_details(document_id,outgoing_document_no,document_date,recipient_name,recipient_address,recipient_contact,registered_number)
+ values(v_doc,null,coalesce(p_document_date,current_date),p_recipient_name,p_recipient_address,p_recipient_contact,v_no);
+ insert into public.document_status_history(document_id,from_status,to_status,changed_by,reason)
+ values(v_doc,null,'draft',v_uid,'สร้างหนังสือส่งฉบับร่าง');
+ return v_doc;
+end $function$
+
+
+CREATE OR REPLACE FUNCTION private.set_document_deadline(p_document_id uuid, p_assigned_to uuid, p_due_at timestamp with time zone, p_reminder_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
+ RETURNS uuid
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+declare v_id uuid; v_actor uuid := auth.uid();
+begin
+  if v_actor is null or not private.has_permission('document.assign') then raise exception 'permission_denied'; end if;
+  if p_due_at <= now() then raise exception 'deadline_must_be_future'; end if;
+
+  insert into public.deadlines(document_id,assigned_to,due_at,reminder_at,escalation_at,status)
+  values(p_document_id,p_assigned_to,p_due_at,coalesce(p_reminder_at,p_due_at-interval '24 hours'),p_due_at,'open')
+  returning id into v_id;
+  return v_id;
+end;
+$function$
+
+
+CREATE OR REPLACE FUNCTION private.update_document_status(p_document_id uuid, p_to_status document_status, p_reason text DEFAULT NULL::text)
+ RETURNS boolean
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'pg_catalog', 'public'
+AS $function$
+declare
+  v_actor uuid := auth.uid();
+  v_from document_status;
+begin
+  if v_actor is null or not (private.has_permission('document.update') or private.has_permission('document.complete')) then
+    raise exception 'permission_denied';
+  end if;
+
+  select status into v_from from public.documents where id=p_document_id for update;
+  if v_from is null then raise exception 'document_not_found'; end if;
+  if v_from = p_to_status then return true; end if;
+
+  update public.documents set status=p_to_status where id=p_document_id;
+
+  insert into public.document_status_history(document_id,from_status,to_status,changed_by,reason)
+  values(p_document_id,v_from,p_to_status,v_actor,p_reason);
+
+  if p_to_status in ('completed','archived') then
+    update public.deadlines set status='completed',completed_at=coalesce(completed_at,now())
+    where document_id=p_document_id and status='open';
+  end if;
+
+  return true;
+end;
+$function$
+
+
+-- Views
+CREATE OR REPLACE VIEW public."document_monthly_summary" WITH (security_invoker=true) AS
+ SELECT date_trunc('month'::text, created_at)::date AS month,
+    document_type,
+    count(*) AS total_documents,
+    count(*) FILTER (WHERE status = 'completed'::document_status) AS completed_documents,
+    count(*) FILTER (WHERE urgency = ANY (ARRAY['urgent'::urgency_level, 'very_urgent'::urgency_level, 'critical'::urgency_level])) AS urgent_documents
+   FROM documents
+  GROUP BY (date_trunc('month'::text, created_at)::date), document_type
+  ORDER BY (date_trunc('month'::text, created_at)::date) DESC;;
+
+CREATE OR REPLACE VIEW public."document_report_summary" WITH (security_invoker=true) AS
+ SELECT document_type,
+    status,
+    urgency,
+    count(*) AS total_documents,
+    count(*) FILTER (WHERE created_at >= date_trunc('month'::text, now())) AS current_month
+   FROM documents
+  GROUP BY document_type, status, urgency;;
+
+-- Triggers
+CREATE TRIGGER audit_approvals AFTER INSERT OR DELETE OR UPDATE ON approvals FOR EACH ROW EXECUTE FUNCTION private.audit_row_change();
+CREATE TRIGGER audit_deadlines AFTER INSERT OR DELETE OR UPDATE ON deadlines FOR EACH ROW EXECUTE FUNCTION private.audit_row_change();
+CREATE TRIGGER departments_updated_at BEFORE UPDATE ON departments FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER audit_document_assignments AFTER INSERT OR DELETE OR UPDATE ON document_assignments FOR EACH ROW EXECUTE FUNCTION private.audit_row_change();
+CREATE TRIGGER audit_document_files AFTER INSERT OR DELETE OR UPDATE ON document_files FOR EACH ROW EXECUTE FUNCTION private.audit_row_change();
+CREATE TRIGGER audit_documents AFTER INSERT OR DELETE OR UPDATE ON documents FOR EACH ROW EXECUTE FUNCTION private.audit_row_change();
+CREATE TRIGGER documents_updated_at BEFORE UPDATE ON documents FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER number_sequences_updated_at BEFORE UPDATE ON number_sequences FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER profiles_updated_at BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER senders_updated_at BEFORE UPDATE ON senders FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- RLS settings
+ALTER TABLE public."approvals" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."audit_logs" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."comments" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."deadlines" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."departments" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."document_assignments" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."document_files" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."document_registers" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."document_status_history" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."documents" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."google_drive_files" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."incoming_document_details" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."notifications" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."number_sequences" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."outgoing_document_details" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."permissions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."profiles" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."push_subscriptions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."role_permissions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."roles" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."senders" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public."user_roles" ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "approvals_insert_authorized" ON public."approvals" AS PERMISSIVE FOR INSERT TO "authenticated"
+ WITH CHECK (((approver_id = ( SELECT auth.uid() AS uid)) AND private.has_permission('document.approve'::text)));
+CREATE POLICY "approvals_select_authorized" ON public."approvals" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (((approver_id = ( SELECT auth.uid() AS uid)) OR private.has_permission('document.view'::text)));
+CREATE POLICY "approvals_update_authorized" ON public."approvals" AS PERMISSIVE FOR UPDATE TO "authenticated"
+ USING (((approver_id = ( SELECT auth.uid() AS uid)) AND private.has_permission('document.approve'::text)))
+ WITH CHECK (((approver_id = ( SELECT auth.uid() AS uid)) AND private.has_permission('document.approve'::text)));
+CREATE POLICY "audit_logs_admin_read" ON public."audit_logs" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (private.has_permission('audit.view'::text));
+CREATE POLICY "comments_insert_own" ON public."comments" AS PERMISSIVE FOR INSERT TO "authenticated"
+ WITH CHECK ((author_id = ( SELECT auth.uid() AS uid)));
+CREATE POLICY "comments_select_authorized" ON public."comments" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING ((EXISTS ( SELECT 1
+   FROM documents d
+  WHERE (d.id = comments.document_id))));
+CREATE POLICY "comments_update_own" ON public."comments" AS PERMISSIVE FOR UPDATE TO "authenticated"
+ USING ((author_id = ( SELECT auth.uid() AS uid)))
+ WITH CHECK ((author_id = ( SELECT auth.uid() AS uid)));
+CREATE POLICY "deadlines_manage_authorized" ON public."deadlines" AS PERMISSIVE FOR ALL TO "authenticated"
+ USING (((assigned_to = ( SELECT auth.uid() AS uid)) OR private.has_permission('document.assign'::text)))
+ WITH CHECK (((assigned_to = ( SELECT auth.uid() AS uid)) OR private.has_permission('document.assign'::text)));
+CREATE POLICY "deadlines_select_authorized" ON public."deadlines" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (((assigned_to = ( SELECT auth.uid() AS uid)) OR private.has_permission('document.view'::text)));
+CREATE POLICY "departments_manage_admin" ON public."departments" AS PERMISSIVE FOR ALL TO "authenticated"
+ USING (private.has_permission('settings.manage'::text))
+ WITH CHECK (private.has_permission('settings.manage'::text));
+CREATE POLICY "departments_select_authenticated" ON public."departments" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (true);
+CREATE POLICY "assignments_insert_authorized" ON public."document_assignments" AS PERMISSIVE FOR INSERT TO "authenticated"
+ WITH CHECK (((assigned_by = ( SELECT auth.uid() AS uid)) AND private.has_permission('document.assign'::text)));
+CREATE POLICY "assignments_select_authorized" ON public."document_assignments" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (((assignee_id = ( SELECT auth.uid() AS uid)) OR (assigned_by = ( SELECT auth.uid() AS uid)) OR private.has_permission('document.view'::text)));
+CREATE POLICY "assignments_update_authorized" ON public."document_assignments" AS PERMISSIVE FOR UPDATE TO "authenticated"
+ USING (((assignee_id = ( SELECT auth.uid() AS uid)) OR (assigned_by = ( SELECT auth.uid() AS uid)) OR private.has_permission('document.assign'::text)))
+ WITH CHECK (((assignee_id = ( SELECT auth.uid() AS uid)) OR (assigned_by = ( SELECT auth.uid() AS uid)) OR private.has_permission('document.assign'::text)));
+CREATE POLICY "document_files_authorized" ON public."document_files" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING ((EXISTS ( SELECT 1
+   FROM documents d
+  WHERE (d.id = document_files.document_id))));
+CREATE POLICY "registers_manage_registry" ON public."document_registers" AS PERMISSIVE FOR ALL TO "authenticated"
+ USING ((private.has_permission('settings.manage'::text) OR private.has_permission('registry.incoming.manage'::text) OR private.has_permission('registry.outgoing.manage'::text)))
+ WITH CHECK ((private.has_permission('settings.manage'::text) OR private.has_permission('registry.incoming.manage'::text) OR private.has_permission('registry.outgoing.manage'::text)));
+CREATE POLICY "registers_select_authorized" ON public."document_registers" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING ((private.has_permission('document.view'::text) OR private.has_permission('registry.incoming.manage'::text) OR private.has_permission('registry.outgoing.manage'::text)));
+CREATE POLICY "status_history_select_authorized" ON public."document_status_history" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING ((EXISTS ( SELECT 1
+   FROM documents d
+  WHERE (d.id = document_status_history.document_id))));
+CREATE POLICY "documents_insert_authorized" ON public."documents" AS PERMISSIVE FOR INSERT TO "authenticated"
+ WITH CHECK (((created_by = ( SELECT auth.uid() AS uid)) AND private.has_permission('document.create'::text)));
+CREATE POLICY "documents_select_authorized" ON public."documents" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (((current_owner_id = ( SELECT auth.uid() AS uid)) OR (created_by = ( SELECT auth.uid() AS uid)) OR private.has_permission('document.view'::text)));
+CREATE POLICY "documents_update_authorized" ON public."documents" AS PERMISSIVE FOR UPDATE TO "authenticated"
+ USING (((current_owner_id = ( SELECT auth.uid() AS uid)) OR (created_by = ( SELECT auth.uid() AS uid)) OR private.has_permission('document.update'::text) OR private.has_permission('document.assign'::text) OR private.has_permission('document.approve'::text)))
+ WITH CHECK (((current_owner_id = ( SELECT auth.uid() AS uid)) OR (created_by = ( SELECT auth.uid() AS uid)) OR private.has_permission('document.update'::text) OR private.has_permission('document.assign'::text) OR private.has_permission('document.approve'::text)));
+CREATE POLICY "google_drive_files_authorized" ON public."google_drive_files" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (private.has_permission('document.view'::text));
+CREATE POLICY "incoming_details_insert_registry" ON public."incoming_document_details" AS PERMISSIVE FOR INSERT TO "authenticated"
+ WITH CHECK (private.has_permission('registry.incoming.manage'::text));
+CREATE POLICY "incoming_details_select_authorized" ON public."incoming_document_details" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING ((EXISTS ( SELECT 1
+   FROM documents d
+  WHERE (d.id = incoming_document_details.document_id))));
+CREATE POLICY "incoming_details_update_registry" ON public."incoming_document_details" AS PERMISSIVE FOR UPDATE TO "authenticated"
+ USING (private.has_permission('registry.incoming.manage'::text))
+ WITH CHECK (private.has_permission('registry.incoming.manage'::text));
+CREATE POLICY "notifications_own" ON public."notifications" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING ((recipient_id = ( SELECT auth.uid() AS uid)));
+CREATE POLICY "notifications_update_own" ON public."notifications" AS PERMISSIVE FOR UPDATE TO "authenticated"
+ USING ((recipient_id = ( SELECT auth.uid() AS uid)))
+ WITH CHECK ((recipient_id = ( SELECT auth.uid() AS uid)));
+CREATE POLICY "number_sequences_registry_read" ON public."number_sequences" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING ((private.has_permission('registry.incoming.manage'::text) OR private.has_permission('registry.outgoing.manage'::text) OR private.has_permission('settings.manage'::text)));
+CREATE POLICY "number_sequences_registry_update" ON public."number_sequences" AS PERMISSIVE FOR UPDATE TO "authenticated"
+ USING ((private.has_permission('registry.incoming.manage'::text) OR private.has_permission('registry.outgoing.manage'::text) OR private.has_permission('settings.manage'::text)))
+ WITH CHECK ((private.has_permission('registry.incoming.manage'::text) OR private.has_permission('registry.outgoing.manage'::text) OR private.has_permission('settings.manage'::text)));
+CREATE POLICY "outgoing_details_insert_registry" ON public."outgoing_document_details" AS PERMISSIVE FOR INSERT TO "authenticated"
+ WITH CHECK (private.has_permission('registry.outgoing.manage'::text));
+CREATE POLICY "outgoing_details_select_authorized" ON public."outgoing_document_details" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING ((EXISTS ( SELECT 1
+   FROM documents d
+  WHERE (d.id = outgoing_document_details.document_id))));
+CREATE POLICY "outgoing_details_update_registry" ON public."outgoing_document_details" AS PERMISSIVE FOR UPDATE TO "authenticated"
+ USING (private.has_permission('registry.outgoing.manage'::text))
+ WITH CHECK (private.has_permission('registry.outgoing.manage'::text));
+CREATE POLICY "permissions_manage_admin" ON public."permissions" AS PERMISSIVE FOR ALL TO "authenticated"
+ USING (private.has_permission('role.manage'::text))
+ WITH CHECK (private.has_permission('role.manage'::text));
+CREATE POLICY "permissions_select_authenticated" ON public."permissions" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (true);
+CREATE POLICY "profiles_select_self_or_admin" ON public."profiles" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (((id = ( SELECT auth.uid() AS uid)) OR private.has_permission('user.view'::text)));
+CREATE POLICY "profiles_update_self_or_admin" ON public."profiles" AS PERMISSIVE FOR UPDATE TO "authenticated"
+ USING (((id = ( SELECT auth.uid() AS uid)) OR private.has_permission('user.manage'::text)))
+ WITH CHECK (((id = ( SELECT auth.uid() AS uid)) OR private.has_permission('user.manage'::text)));
+CREATE POLICY "push_subscriptions_own" ON public."push_subscriptions" AS PERMISSIVE FOR ALL TO "authenticated"
+ USING ((user_id = ( SELECT auth.uid() AS uid)))
+ WITH CHECK ((user_id = ( SELECT auth.uid() AS uid)));
+CREATE POLICY "role_permissions_manage_admin" ON public."role_permissions" AS PERMISSIVE FOR ALL TO "authenticated"
+ USING (private.has_permission('role.manage'::text))
+ WITH CHECK (private.has_permission('role.manage'::text));
+CREATE POLICY "role_permissions_select_authenticated" ON public."role_permissions" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (true);
+CREATE POLICY "roles_manage_admin" ON public."roles" AS PERMISSIVE FOR ALL TO "authenticated"
+ USING (private.has_permission('role.manage'::text))
+ WITH CHECK (private.has_permission('role.manage'::text));
+CREATE POLICY "roles_select_authenticated" ON public."roles" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (true);
+CREATE POLICY "senders_manage_registry" ON public."senders" AS PERMISSIVE FOR ALL TO "authenticated"
+ USING (private.has_permission('registry.incoming.manage'::text))
+ WITH CHECK (private.has_permission('registry.incoming.manage'::text));
+CREATE POLICY "senders_select_registry" ON public."senders" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING ((private.has_permission('document.view'::text) OR private.has_permission('registry.incoming.manage'::text)));
+CREATE POLICY "user_roles_manage_admin" ON public."user_roles" AS PERMISSIVE FOR ALL TO "authenticated"
+ USING (private.has_permission('role.manage'::text))
+ WITH CHECK (private.has_permission('role.manage'::text));
+CREATE POLICY "user_roles_select_self_or_admin" ON public."user_roles" AS PERMISSIVE FOR SELECT TO "authenticated"
+ USING (((user_id = ( SELECT auth.uid() AS uid)) OR private.has_permission('user.view'::text)));
