@@ -32,3 +32,13 @@ Deno.test("unknown machine codes remain actionable", () => {
   );
   assertEquals(getUploadErrorMessage(undefined), "อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่");
 });
+
+import { getUploadRefreshMessage } from "../src/upload-refresh.ts";
+
+Deno.test("does not report a failed refresh as a failed upload", () => {
+  assertEquals(getUploadRefreshMessage(true), null);
+  assertEquals(
+    getUploadRefreshMessage(false),
+    "อัปโหลดไฟล์สำเร็จแล้ว แต่รีเฟรชข้อมูลเอกสารไม่สำเร็จ กรุณาโหลดหน้าใหม่เพื่อตรวจสอบสถานะ",
+  );
+});
