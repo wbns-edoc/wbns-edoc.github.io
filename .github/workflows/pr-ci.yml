@@ -26,6 +26,8 @@ jobs:
           path: package-lock.json
           if-no-files-found: error
           retention-days: 7
+      - name: Verify clean lockfile install
+        run: npm ci
       - name: Build with isolated non-production configuration
         env:
           VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
