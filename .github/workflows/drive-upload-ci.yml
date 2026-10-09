@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - "src/main.tsx"
+      - "src/upload-error.ts"
+      - "src/upload-error_test.ts"
       - "supabase/functions/drive-upload/**"
       - "supabase/config.toml"
       - ".github/workflows/drive-upload-ci.yml"
@@ -43,6 +45,8 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+      - name: Run localized upload error unit tests
+        run: deno test --node-modules-dir=auto src/upload-error_test.ts
       - name: Run upload cleanup policy unit tests
         run: deno test --node-modules-dir=auto supabase/functions/drive-upload/cleanup-policy_test.ts
       - name: Run upload input validation unit tests
