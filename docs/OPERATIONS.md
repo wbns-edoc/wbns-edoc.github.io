@@ -59,3 +59,4 @@ For each function, record: live definition hash or reviewed SQL, owner, SECURITY
 
 ## Release decision
 Current status: **NOT YET PRODUCTION READY** until the open release gates above are evidenced and accepted by the school.
+- [x] Added an end-to-end phase tracker with evidence and explicit blockers: [END-TO-END-PHASE-TRACKER-2026-10-09.md](END-TO-END-PHASE-TRACKER-2026-10-09.md). Documentation deployment for prior migration inventory commit succeeded; the phase tracker commit itself still needs its own workflow result checked.
