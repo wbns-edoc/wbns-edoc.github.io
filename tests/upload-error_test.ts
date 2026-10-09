@@ -42,3 +42,14 @@ Deno.test("does not report a failed refresh as a failed upload", () => {
     "อัปโหลดไฟล์สำเร็จแล้ว แต่รีเฟรชข้อมูลเอกสารไม่สำเร็จ กรุณาโหลดหน้าใหม่เพื่อตรวจสอบสถานะ",
   );
 });
+
+Deno.test("maps server-side Drive and metadata failures to Thai guidance", () => {
+  assertEquals(
+    getUploadErrorMessage("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_INVALID"),
+    "การตั้งค่าบัญชีจัดเก็บไฟล์ไม่ถูกต้อง กรุณาติดต่อผู้ดูแลระบบ",
+  );
+  assertEquals(
+    getUploadErrorMessage("FILE_METADATA_SAVE_FAILED"),
+    "จัดเก็บไฟล์แล้วแต่เชื่อมโยงกับเอกสารไม่สำเร็จ ระบบอาจต้องตรวจสอบก่อนลองใหม่",
+  );
+});
