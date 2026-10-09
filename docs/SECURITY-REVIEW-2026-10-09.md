@@ -97,3 +97,17 @@ A fresh read-only catalog query confirmed the current database grants and polici
 - `public.user_roles` has a direct table-management RLS policy requiring `private.has_permission('role.manage')`. The live SECURITY DEFINER role RPCs `admin_set_user_role` and `admin_remove_user_role` instead accept `user.manage OR role.manage`. Because SECURITY DEFINER functions can bypass ordinary RLS, the broader RPC authorization is a confirmed policy mismatch requiring an explicit decision and isolated tests. Do not assume the table policy constrains these RPCs.
 - The live Security Advisor continues to report 10 authenticated-callable SECURITY DEFINER functions and leaked-password protection disabled. These findings remain open; no production grant, function, Auth setting, schema, data, or role assignment was changed in this review.
 - The existing Production `system_admin` assignment must never be removed, demoted, deactivated, or altered as a test. Do not deploy a speculative migration or change grants until the app's actual call paths and expected roles are reconciled, a non-production target is available, and rollback/restore are verified.
+
+
+### Additional RLS policy inventory (2026-10-09)
+
+A further read-only query inspected policies on `user_roles`, `profiles`, `departments`, `documents`, `document_assignments`, and `google_drive_files`:
+
+- `user_roles_manage_admin` permits direct table management only when `private.has_permission('role.manage')`; this reinforces the RPC-vs-RLS mismatch described above.
+- `profiles_update_self_or_admin` allows a user to update their own profile row or an actor with `user.manage`. Review which profile columns are writable by a normal user and whether column-level grants or a narrow RPC are needed to prevent self-editing privileged fields such as `is_active` or department assignment. The policy alone does not show which columns are grantable.
+- `departments_select_authenticated` has `qual = true`, so every authenticated user can read department rows. This may be intentional for routing and staff UI; confirm whether inactive departments or hierarchy metadata should be visible to all signed-in users.
+- `document_assignments_select_authorized` allows an assignee, assigner, or actor with `document.view` to read assignment rows. Confirm whether `document.view` is intentionally global or should be constrained by document/department scope.
+- `google_drive_files_authorized` permits reads to users with `document.view`; verify that Drive metadata exposed through this table is consistent with document-level visibility.
+- Direct document SELECT/UPDATE policies retain owner/creator or permission-based predicates, but they do not establish that SECURITY DEFINER RPCs apply the same object-level checks.
+
+These are policy observations, not proof of an exploitable path. The query did not modify policies or data. Before changing profile policies or column grants, inspect the frontend's update paths and table grants to avoid breaking normal profile editing; then validate both allowed and denied cases in a non-production environment.
