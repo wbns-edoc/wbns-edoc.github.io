@@ -52,7 +52,7 @@ Before deleting an assignment, lock the relevant role/user assignment set consis
 - self-removal when it would remove the caller's final administrative recovery path;
 - removal of a role assignment that is required by a protected bootstrap/recovery process.
 
-Define the canonical System Admin role identifier from live schema data; do not rely only on a display name substring. Add concurrency tests so two simultaneous removals cannot both pass a last-admin count check. No live role changes are part of this work.
+The live role row confirms the canonical System Admin code is `system_admin` (name `System Admin`). Resolve this role by the stable code and verify it remains unique before counting active assignments; do not rely on display-name substring matching. Add concurrency tests so two simultaneous removals cannot both pass a last-admin count check. No live role changes are part of this work.
 
 ### 5. Department hierarchy
 
