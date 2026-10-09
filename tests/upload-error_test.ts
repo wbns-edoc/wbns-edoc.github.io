@@ -45,7 +45,7 @@ Deno.test("does not report a failed refresh as a failed upload", () => {
 
 Deno.test("maps server-side Drive and metadata failures to Thai guidance", () => {
   assertEquals(
-    getUploadErrorMessage("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_INVALID"),
+    getUploadErrorMessage("GOOGLE_DRIVE_CONFIGURATION_INVALID"),
     "การตั้งค่าบัญชีจัดเก็บไฟล์ไม่ถูกต้อง กรุณาติดต่อผู้ดูแลระบบ",
   );
   assertEquals(
