@@ -13,7 +13,7 @@ The school owner supplied the following four department names for the proposed d
 3. กลุ่มบริหารงานบุคคล
 4. กลุ่มบริหารงานทั่วไป
 
-These names are accepted as the source list for design and test fixtures. They have **not** been inserted into Production. The initial department assignment for the current System Admin is still unconfirmed; no profile assignment or department seed should be applied until that mapping is confirmed and a safe test environment is available.
+These names are accepted as the source list for design and test fixtures. They have **not** been inserted into Production. The school owner clarified that System Admin, เจ้าหน้าที่ธุรการ, ผู้อำนวยการสถานศึกษา, and รองผู้อำนวยการสถานศึกษา are central roles, not members of these four departments, and sit above/across them. These central-role profiles should not be forced into a department merely to satisfy a schema assumption; their individual permissions must still be defined by role.
 
 ## Why this design is required
 
@@ -31,7 +31,7 @@ Therefore cross-department isolation is not verified. Do not represent PR #6 as 
 1. Add a nullable `documents.department_id` FK to `departments.id` in a reviewed migration. Keep it nullable during rollout to avoid inventing ownership for historical documents.
 2. New document creation must assign the department from the authenticated user's trusted `profiles.department_id` inside a server-side database function/policy. Never accept a department from editable user metadata or trust a browser-supplied department as authority.
 3. Existing documents with no department require a reviewed backfill mapping based on authoritative records. Do not blindly set all historical rows to the current user's department.
-4. Define an explicit global-scope permission (proposal: `document.view_all_departments`) separately from ordinary `document.view`. Do not silently grant it to existing roles. System-admin treatment must follow the project's verified server-side admin predicate and must never remove or modify the sole existing System Admin assignment as part of testing.
+4. Define explicit global-scope permissions separately from ordinary `document.view`. Model central roles independently from `profiles.department_id`: System Admin (technical administration), เจ้าหน้าที่ธุรการ (registry operations), ผู้อำนวยการสถานศึกษา (director review/approval/command), and รองผู้อำนวยการสถานศึกษา (delegated review/approval/command). Confirm allowed actions for each role before granting them; central organizational position does not imply identical permissions. Never remove or modify the sole existing System Admin assignment as part of testing.
 5. Within-department access should be enforced consistently for SELECT, UPDATE, RPC operations, file metadata, and attachment. Assignment/approval workflows may grant explicit document-level access, but the exact rules must be specified and tested; creator/owner status alone must not accidentally bypass department restrictions.
 6. The file-attachment RPC must independently verify that the authenticated user may update the target document's scope, and that the file metadata row is eligible for attachment. A generic `document.update` permission alone is not sufficient.
 7. Use a single trusted authorization predicate/helper only after its semantics are reviewed. Any SECURITY DEFINER helper must have a fixed safe search_path, narrow EXECUTE grants, explicit auth checks, and tests for both allowed and denied paths.
@@ -69,7 +69,8 @@ Therefore cross-department isolation is not verified. Do not represent PR #6 as 
 ## Acceptance gates
 
 - [x] School owner supplied the four department names for the design/test master list.
-- [ ] Confirm the current System Admin's department assignment, or explicitly confirm intentional unassigned status.
+- [x] Owner confirmed the four central roles are above/across the four departments and are not department members.
+- [ ] Confirm the initial role assignments for each existing profile and the exact school-wide document actions allowed to each central role.
 - [ ] Department transfer/reassignment and cross-department delegation semantics approved.
 - [ ] Migration tested against a schema/data fixture matching Production.
 - [ ] All expected and denied authorization tests pass.
@@ -105,7 +106,7 @@ Read-only inspection of the live function definitions identified the creation pa
 - The live `public.assign_document(...)` checks `document.assign`, document existence, and active assignee, but does not check department membership or explicit cross-department delegation.
 - The current document SELECT policy also permits the creator or current owner independently of the global `document.view` branch. A future policy must define whether those relationships remain valid across a department transfer; it must not accidentally preserve access to the former department.
 
-Production currently has zero department rows and the single profile's `department_id` is not sufficient evidence of an approved department mapping. Thus, a migration that immediately requires a non-null document department, or assigns all documents to an assumed department, is not safe. First confirm the initial profile assignment and use the four supplied names to build a zero-cost fixture. Since Production has zero documents at this snapshot, no historical-document backfill is currently indicated, but this must be rechecked immediately before any migration.
+Production currently has zero department rows. Central-role users are intentionally outside the four department groups, so the authorization model must allow profiles with no department while granting explicitly assigned central-role permissions. A migration that requires every profile to have a non-null department is not safe. Use the four supplied names and role-specific central fixtures to build a zero-cost test fixture. Since Production has zero documents at this snapshot, no historical-document backfill is currently indicated, but this must be rechecked immediately before any migration.
 
 ### Additional tests required for creation and delegation
 
