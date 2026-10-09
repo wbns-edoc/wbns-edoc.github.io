@@ -39,3 +39,13 @@ This tracker separates tasks completed by direct evidence from tasks that requir
 
 ## Release gate rule
 Any remediation migration must be forward-only, reviewed against authoritative source, tested off Production, protected by a verified backup and recovery plan, and approved by the school owner. Never reset Production, replay historical migrations, fabricate migration history, or test by removing the last administrator.
+
+
+## Latest progress update (2026-10-09)
+
+- The documentation deployment for commit `e51b4af4ef27a764972a28b8b89c414db6371abd` completed successfully: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37892850991.
+- The live `user-import` Edge Function (version 3, JWT verification enabled) was inspected read-only. Its current production source supports `set_active` and `resend_invitation`; the source variant in the repository does not match this deployed version. Do not deploy the repository variant until parity is reconciled.
+- Source review found that the deployed import path accepts either `user.manage` or `role.manage` and can assign a role from the imported row through the admin client. It does not visibly deny `system_admin` assignment explicitly. The `set_active` path also does not visibly guard against deactivating the only active system administrator. Findings are documented in `SECURITY-REVIEW-2026-10-09.md`; they have not been tested by making writes.
+- The security review findings were committed as `9329fb491afef8938332c24f7732ee0ffe8b2653`. Its GitHub Actions deployment was still in progress at the time of this update; verify the final run result before claiming publication.
+- Overall project estimate remains **approximately 55%**. Discovery and documentation of risks improve visibility but do not count as implemented remediation or acceptance testing.
+- Production safety invariant remains unchanged: do not remove, demote, deactivate, or otherwise alter the existing Production `system_admin` assignment. No Production data/schema/role changes were made during this follow-up.
