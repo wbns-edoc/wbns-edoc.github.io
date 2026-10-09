@@ -51,6 +51,7 @@
 - [ ] Direct transition to `assigned` is rejected; assignment must use `assign_document`
 - [ ] Direct transition to `pending_approval`/`approved` is rejected; approval must use approval RPCs
 - [ ] `create_approval` rejects documents that are not in `draft`
+- [ ] `create_approval` rejects inactive approvers and users without `document.approve`
 - [ ] RLS blocks unauthorized document access
 - [ ] Audit log records admin/security-sensitive changes
 
