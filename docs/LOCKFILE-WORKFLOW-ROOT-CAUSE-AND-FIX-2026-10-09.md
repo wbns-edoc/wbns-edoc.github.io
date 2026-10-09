@@ -43,3 +43,12 @@ This change is confined to the existing GitHub safety PR branch. No Production d
 - Latest observed PR CI run for that SHA: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37949211277 — **in progress** at the latest check.
 - Latest observed lockfile workflow run for that SHA: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37949211246 — **in progress** at the latest check.
 - Therefore: lockfile committed = **verified**; CI run on the exact head with committed lockfile = **pending**, not yet passed. The PR remains draft and unmerged.
+
+## Final validation update
+
+- The lockfile is confirmed in the Git tree for both `9c2990e35791f051e079b5db47f3b8a324d96570` and current PR head `19b66e2a3d023897cfc9fbb0bae259d9bea19694`; the lockfile-add commit records 1,980 lines added.
+- Pull Request CI run `37949211277` for current head `19b66e2a3d023897cfc9fbb0bae259d9bea19694` completed successfully. The job step list confirms successful dependency installation, artifact upload, `npm ci`, build with non-production configuration, all six configuration-validation cases, and the missing-config negative test.
+  https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37949211277
+- The lockfile workflow run `37949211246` for the same head also completed successfully.
+  https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37949211246
+- The earlier absence finding is now resolved on the safety PR branch: the lockfile exists and CI passed on the current head containing it. The PR remains open, draft, and unmerged. No Production deployment or Supabase changes occurred.
