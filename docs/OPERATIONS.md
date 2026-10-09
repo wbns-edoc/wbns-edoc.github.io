@@ -23,6 +23,10 @@
 - [ ] Verify Google Drive backup/retention and restore procedure.
 - [ ] Obtain school owner acceptance before declaring production ready.
 
+
+- [x] Read-only role-admin review documented; no administrator role was removed. See [Role Administration Remediation Plan](ROLE-ADMIN-REMEDIATION-PLAN-2026-10-09.md).
+- [ ] Obtain school owner confirmation of role delegation policy and establish a safe recovery path; live inspection found only one active `system_admin`.
+
 ## Security Advisor triage
 The 10 authenticated SECURITY DEFINER findings are not automatically vulnerabilities. They require a function-by-function review because authenticated application clients use some of these RPCs. Do not revoke all authenticated EXECUTE grants indiscriminately.
 
