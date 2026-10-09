@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
   const folder = Deno.env.get("GOOGLE_DRIVE_ROOT_FOLDER_ID");
   if (!raw || !folder) return out({ ok: false, code: "GOOGLE_DRIVE_CONFIGURATION_MISSING" }, 500);
   let sa: SA;
-  try { sa = JSON.parse(raw); } catch { return out({ ok: false, code: "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_INVALID" }, 500); }
+  try { sa = JSON.parse(raw); } catch { return out({ ok: false, code: "GOOGLE_DRIVE_CONFIGURATION_INVALID" }, 500); }
 
   let driveFileId: string | null = null;
   let driveAccessToken: string | null = null;
