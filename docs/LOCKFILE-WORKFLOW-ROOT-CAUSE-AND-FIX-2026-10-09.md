@@ -1,0 +1,36 @@
+# Lockfile Workflow Root Cause and Fix — 2026-10-09
+
+## Confirmed root cause
+
+Review of commit `5a2e5e0e8b4e0261a6a52ce68b3394ddcfea1b32` and its changed-file list shows that the commit only added `.github/workflows/commit-lockfile.yml`; it did not add `package-lock.json`.
+
+The workflow used:
+
+```sh
+if git diff --quiet -- package-lock.json; then
+  echo "Lockfile is already current."
+  exit 0
+fi
+```
+
+Git's `git diff` does not include an untracked file by default. Thus a newly generated, untracked `package-lock.json` can be mistaken for an unchanged lockfile and skipped. This matches the observed green workflow run while the branch tree still had no lockfile.
+
+## Change made on the existing safety PR branch
+
+Updated `.github/workflows/commit-lockfile.yml` on the existing branch `safety/ci-build-config-validation`, without creating another branch:
+
+- Skip only if `package-lock.json` is already tracked and unchanged.
+- Otherwise configure the bot identity, stage the generated lockfile, commit, and push as before.
+
+Workflow-change commit: `d52ab4e05e89a8bb6a52d45184374c11178f4d59`.
+
+## Validation status at time of writing
+
+- The lockfile workflow for the changed SHA was queued and then observed in progress.
+- The PR CI workflow for the same SHA was queued and then observed in progress.
+- At the latest check, `package-lock.json` was not yet present at the branch head. The fix is therefore **not yet confirmed successful**; the workflow must finish, the new file must be visible in the branch tree, and a subsequent CI run must pass `npm ci` against that committed file.
+- The previous green CI result was for SHA `5a2e5e0e8b4e0261a6a52ce68b3394ddcfea1b32` and did not establish a committed lockfile.
+
+## Safety boundary
+
+This change is confined to the existing GitHub safety PR branch. No Production deployment was initiated; no Supabase project, schema, role, policy, or data was changed. No additional Supabase resource was created. Production release remains blocked until all independent database, authorization, file upload, backup/restore, and admin-survivability gates are verified.
