@@ -1,6 +1,6 @@
 # WBNS e-Document — Phase Completion Matrix
 
-อัปเดต: 2026-10-08
+อัปเดต: 2026-10-09
 
 Release candidate verification checkpoint: GitHub Pages deployment is triggered from main; production acceptance remains dependent on school-controlled VAPID and backup/restore verification.
 
@@ -34,7 +34,7 @@ Supabase project: wbns-edoc / iigzzwyfxxtqbgjawyom
 - core schema, registers, workflow, notifications, audit, reporting
 - document file versioning
 - department management
-- migration history synchronized with production
+- production migration history inspected; synchronization is NOT verified — several applied production migration entries do not have matching files in the repository and require controlled reconciliation
 
 ## PHASE 4 — Auth / RBAC
 สถานะ: COMPLETE
@@ -109,18 +109,19 @@ Supabase project: wbns-edoc / iigzzwyfxxtqbgjawyom
 - responsive mobile navigation
 
 ## PHASE 12 — Testing / Security
-สถานะ: IN PROGRESS → SMOKE TEST CHECKLIST READY
-- RLS enabled on all public application tables
-- security advisor checked
-- RPC anonymous access hardened
-- workflow transition guards
+สถานะ: IN PROGRESS — production acceptance NOT COMPLETE
+- RLS enabled on all public application tables (prior verification)
+- RPC anonymous access hardening present
+- workflow transition guards present
 - production smoke-test checklist documented
-- browser/device acceptance testing must be run with real school users
+- 2026-10-09 Security Advisor: 10 authenticated SECURITY DEFINER RPC warnings remain; review each function's authorization and grants before changing access because the app intentionally calls these RPCs
+- 2026-10-09 Security Advisor: leaked-password protection is disabled and requires configuration in Supabase Auth settings
+- browser/device and role-based acceptance tests must be run with real school users; no fabricated production records
 
 ## PHASE 13 — Deployment / Backup / Recovery / Documentation
 สถานะ: IN PROGRESS
 - GitHub Pages deployment workflow present
-- production migration history tracked
+- production migration history inspected; repository parity is currently unverified and must be reconciled before the next schema change
 - operations and recovery runbook documented
 - backup must be executed by school-controlled operator using Supabase export/pg_dump and Drive backup procedures
 - final production acceptance requires successful Pages workflow + school acceptance test + backup restore drill
@@ -128,7 +129,7 @@ Supabase project: wbns-edoc / iigzzwyfxxtqbgjawyom
 ## Release gate
 ระบบถือว่า Production Ready เมื่อ:
 1. GitHub Pages build/deploy passes.
-2. Supabase Security Advisor has no unintended anonymous executable SECURITY DEFINER functions.
+2. Supabase Security Advisor has no unintended anonymous executable SECURITY DEFINER functions; authenticated SECURITY DEFINER findings are reviewed and justified or remediated; leaked-password protection is enabled.
 3. Admin/user/workflow/Drive smoke tests pass.
 4. School-controlled backup is created and restore procedure is tested.
 5. Web Push VAPID secrets are configured if push delivery is required.
