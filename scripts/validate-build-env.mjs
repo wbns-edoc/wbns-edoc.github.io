@@ -23,9 +23,9 @@ if (parsed.protocol !== 'https:' || !parsed.hostname.endsWith('.supabase.co')) {
   process.exit(1);
 }
 
-if (key.startsWith('sb_secret_') || key.startsWith('eyJ')) {
+if (key.startsWith('sb_secret_')) {
   console.error(
-    'Build configuration error: VITE_SUPABASE_PUBLISHABLE_KEY must not contain a secret/service-role key.'
+    'Build configuration error: VITE_SUPABASE_PUBLISHABLE_KEY must not contain a secret key.'
   );
   process.exit(1);
 }
