@@ -73,9 +73,30 @@ Deno.serve(async (req) => {
   let metadataRowId: string | null = null;
   async function cleanupCreatedResources() {
     if (metadataRowId) {
+      // A timed-out RPC can commit the attachment even when the caller receives an error.
+      // Never delete the Drive object until we have confirmed it is not referenced.
+      const { data: attachedRows, error: attachmentLookupError } = await admin
+        .from("document_files")
+        .select("id")
+        .eq("google_drive_file_id", metadataRowId)
+        .limit(1);
+      if (attachmentLookupError) {
+        console.error("Attachment state lookup failed; preserving upload for reconciliation", attachmentLookupError.message);
+        return;
+      }
+      if (attachedRows?.length) {
+        console.error("Cleanup skipped because upload metadata is already attached; reconcile client result");
+        metadataRowId = null;
+        driveFileId = null;
+        return;
+      }
+
       const { error } = await admin.from("google_drive_files").delete().eq("id", metadataRowId);
-      if (error) console.error("Drive metadata cleanup failed", error.message);
-      else metadataRowId = null;
+      if (error) {
+        console.error("Drive metadata cleanup failed; preserving Drive object for reconciliation", error.message);
+        return;
+      }
+      metadataRowId = null;
     }
     if (driveFileId && driveAccessToken) {
       try {
