@@ -41,3 +41,9 @@ Do not remove, demote, deactivate, or otherwise change the existing `system_admi
 - No isolated restore drill has been evidenced.
 - The leaked-password protection project setting remains open.
 - Do not mark Production Ready until the operations checklist gates are evidenced and accepted.
+
+## Follow-up verification (read-only, 2026-10-09)
+- `public.admin_set_user_department` also uses the `user.manage OR role.manage` permission gate. This should be reviewed against the intended separation of duties, but it does not mutate the `user_roles` table.
+- The live definitions of `admin_set_user_role` and `admin_remove_user_role` still have no explicit audit insert or last-active-admin guard in their function bodies. The earlier trigger query found no user-defined trigger on `user_roles`, so successful assignment changes do not have visible table-trigger audit coverage from that inspection.
+- `admin_set_user_department` explicitly inserts a `user_department_changed` audit event.
+- These findings are based on live read-only SQL inspection. No function was invoked to change a role and no Production schema/data was changed.
