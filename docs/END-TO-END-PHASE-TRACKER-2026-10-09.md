@@ -49,3 +49,15 @@ Any remediation migration must be forward-only, reviewed against authoritative s
 - The security review findings were committed as `9329fb491afef8938332c24f7732ee0ffe8b2653`. Its GitHub Actions deployment was still in progress at the time of this update; verify the final run result before claiming publication.
 - Overall project estimate remains **approximately 55%**. Discovery and documentation of risks improve visibility but do not count as implemented remediation or acceptance testing.
 - Production safety invariant remains unchanged: do not remove, demote, deactivate, or otherwise alter the existing Production `system_admin` assignment. No Production data/schema/role changes were made during this follow-up.
+
+
+## Latest read-only policy/constraint review (2026-10-09)
+
+- Confirmed the documentation commit `cb765d4b428712bde8cfaa45b195193a4e29aaa8` and GitHub Pages deployment both completed successfully:
+  - Docs workflow: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37893883240
+  - Pages deployment: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37893882712
+- Read-only RLS review confirms `documents` direct SELECT policy limits visibility to current owner, creator, or users with `document.view`; direct UPDATE policy allows owner/creator or users with relevant document permissions. However, these table policies alone do not prove equivalent row-scope checks inside SECURITY DEFINER RPCs, because those functions may bypass ordinary RLS. RPC-specific authorization and intended department/document scope must be validated before remediation.
+- Read-only catalog inspection found audit triggers on `documents` and `document_assignments`; this does not establish that every admin role/department change is audited.
+- Department parent foreign key exists, but that alone does not enforce active-parent or no-cycle rules. No schema/function changes were made.
+- Constraints unchanged: no Production role assignment/schema/data/Auth settings were changed; the existing Production `system_admin` assignment must not be removed, demoted, deactivated, or otherwise altered.
+- Overall estimate remains **approximately 55%**; this pass added evidence and narrowed the security review but did not complete remediation, browser acceptance, backup/restore, or end-to-end workflow tests.
