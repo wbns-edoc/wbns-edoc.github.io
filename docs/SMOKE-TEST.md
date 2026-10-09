@@ -14,6 +14,7 @@
 - [ ] Admin can activate/deactivate user
 - [ ] Invitation resend works
 - [ ] Excel import validates duplicate email/employee code
+- [ ] Excel template header `สถานะการใช้งาน` imports active/inactive values correctly
 - [ ] Excel import rejects inactive/nonexistent department
 
 ## 3. Incoming document
