@@ -54,3 +54,4 @@ Before applying any forward-only Production migration, reproduce in a non-produc
 
 A single-admin Production state is not a reason to run a destructive test; establish a second administrator through a reviewed, auditable process first.
 
+- RLS policy inspection found `user_roles_manage_admin` grants table-level management only to actors with `role.manage`, while the SECURITY DEFINER RPCs `admin_set_user_role` and `admin_remove_user_role` accept `user.manage` **or** `role.manage`. Because these RPCs execute with definer privileges, their explicit permission logic can allow a `user.manage`-only actor to bypass the narrower table policy. Confirm the intended separation of duties and make RPC authorization match approved policy; do not rely on RLS to constrain SECURITY DEFINER function bodies.
