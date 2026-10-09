@@ -7,6 +7,7 @@ on:
       - "supabase/tests/database/**"
       - "supabase/config.toml"
       - ".github/workflows/workflow-rpc-security-ci.yml"
+      - "scripts/check-workflow-rpc-migration-order.mjs"
   push:
     branches:
       - fix/drive-upload-metadata-atomicity-2026-10-09
@@ -30,6 +31,9 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check workflow RPC migration-order regression
+        run: node scripts/check-workflow-rpc-migration-order.mjs
 
       - name: Reject incomplete migration source before starting containers
         shell: bash
