@@ -34,3 +34,12 @@ Workflow-change commit: `d52ab4e05e89a8bb6a52d45184374c11178f4d59`.
 ## Safety boundary
 
 This change is confined to the existing GitHub safety PR branch. No Production deployment was initiated; no Supabase project, schema, role, policy, or data was changed. No additional Supabase resource was created. Production release remains blocked until all independent database, authorization, file upload, backup/restore, and admin-survivability gates are verified.
+
+## Follow-up after the workflow fix
+
+- The corrected workflow completed successfully on SHA `d52ab4e05e89a8bb6a52d45184374c11178f4d59` and created commit `9c2990e35791f051e079b5db47f3b8a324d96570` with message `Add reproducible npm dependency lockfile [skip ci]`.
+- The branch tree now confirms that `package-lock.json` exists. This closes the earlier missing-file finding.
+- To ensure CI actually validates the committed lockfile, the workflow commit message was then changed to remove `[skip ci]`, so a future lockfile commit will trigger the PR CI. That workflow update is commit `19b66e2a3d023897cfc9fbb0bae259d9bea19694`.
+- Latest observed PR CI run for that SHA: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37949211277 — **in progress** at the latest check.
+- Latest observed lockfile workflow run for that SHA: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37949211246 — **in progress** at the latest check.
+- Therefore: lockfile committed = **verified**; CI run on the exact head with committed lockfile = **pending**, not yet passed. The PR remains draft and unmerged.
