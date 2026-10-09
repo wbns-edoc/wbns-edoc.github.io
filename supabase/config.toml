@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.user-import]
 verify_jwt = true
+
+[functions.drive-upload]
+verify_jwt = true
