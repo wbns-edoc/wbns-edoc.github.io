@@ -19,7 +19,8 @@
 ## 3. Incoming document
 - [ ] Create/register incoming document
 - [ ] Registered number generated correctly
-- [ ] Attach Google Drive file
+- [ ] Attach Google Drive file with a user who has `document.update`
+- [ ] User without `document.update` is rejected before a Drive upload occurs
 - [ ] File version increments v1 → v2
 - [ ] Only one current version exists
 - [ ] Assign document
