@@ -48,7 +48,9 @@
 - [ ] `document.update` alone cannot complete or archive a document
 - [ ] `document.complete` is required for the `completed` transition
 - [ ] `document.archive` is required for the `archived` transition
-- [ ] `document.assign` is required for direct transition to `assigned`; normal assignment uses the assignment RPC
+- [ ] Direct transition to `assigned` is rejected; assignment must use `assign_document`
+- [ ] Direct transition to `pending_approval`/`approved` is rejected; approval must use approval RPCs
+- [ ] `create_approval` rejects documents that are not in `draft`
 - [ ] RLS blocks unauthorized document access
 - [ ] Audit log records admin/security-sensitive changes
 
