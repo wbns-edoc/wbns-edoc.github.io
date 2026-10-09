@@ -55,3 +55,22 @@ Before applying any forward-only Production migration, reproduce in a non-produc
 A single-admin Production state is not a reason to run a destructive test; establish a second administrator through a reviewed, auditable process first.
 
 - RLS policy inspection found `user_roles_manage_admin` grants table-level management only to actors with `role.manage`, while the SECURITY DEFINER RPCs `admin_set_user_role` and `admin_remove_user_role` accept `user.manage` **or** `role.manage`. Because these RPCs execute with definer privileges, their explicit permission logic can allow a `user.manage`-only actor to bypass the narrower table policy. Confirm the intended separation of duties and make RPC authorization match approved policy; do not rely on RLS to constrain SECURITY DEFINER function bodies.
+
+
+### Follow-up live Edge Function review (2026-10-09)
+
+Read-only source inspection of the deployed `user-import` Edge Function (active version 3, JWT verification enabled) identified additional high-impact authorization concerns:
+
+9. **Bulk import can assign privileged roles.** The live function resolves the supplied role name/code and upserts it into `user_roles` using the service/admin client. It does not visibly reject `system_admin` or require a distinct `role.manage` permission for privileged-role assignment. Its entry gate accepts either `user.manage` or `role.manage`. A user manager may therefore be able to grant a role beyond their intended authority through bulk import.
+10. **Bulk import can deactivate profiles without a last-admin guard.** The live `set_active` action updates `profiles.is_active` using the admin client after the same broad `user.manage OR role.manage` permission gate. The inspected body does not check whether the target is the only active `system_admin`. The bulk-import path also writes `profiles.is_active` from each row and does not visibly guard the last active administrator.
+11. **Live and repository sources differ.** The deployed version 3 contains `set_active` and `resend_invitation` actions not present in the repository's `supabase/functions/user-import/index.ts` (which appears to be an older source variant). Do not deploy the repository file over Production until source parity is reconciled; doing so could remove live functionality.
+
+These are source-review findings, not exploit tests. No Edge Function was changed or invoked for writes during this review. The Production `system_admin` assignment was not altered.
+
+### Edge Function remediation acceptance tests
+
+- `user.manage` alone cannot grant `system_admin` or any role outside an explicitly approved allowlist.
+- `role.manage` authority is checked separately for role assignments; policy is consistent with the reviewed RPCs and RLS.
+- Deactivating a system administrator follows a reviewed recovery policy and cannot leave zero active administrators; never test this against the sole Production admin.
+- Both per-row role assignment and profile activation/deactivation are audited with actor, target, previous state and result.
+- The repository source and deployed function version are reconciled before deploying any new version.
