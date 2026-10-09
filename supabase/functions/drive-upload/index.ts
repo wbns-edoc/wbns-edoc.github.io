@@ -81,12 +81,16 @@ Deno.serve(async (req) => {
         .select("id")
         .eq("google_drive_file_id", metadataRowId)
         .limit(1);
-      if (attachmentLookupError) {
-        console.error("Attachment state lookup failed; preserving upload for reconciliation", attachmentLookupError.message);
-        return;
-      }
-      const attachmentState = attachedRows?.length ? "already-attached" : "unattached";
+      const attachmentState = attachmentLookupError
+        ? "lookup-failed"
+        : attachedRows?.length
+        ? "already-attached"
+        : "unattached";
       if (!mayDeleteUploadResources(attachmentState)) {
+        if (attachmentLookupError) {
+          console.error("Attachment state lookup failed; preserving upload for reconciliation", attachmentLookupError.message);
+          return;
+        }
         console.error("Cleanup skipped because upload metadata is already attached; reconcile client result");
         metadataRowId = null;
         driveFileId = null;
