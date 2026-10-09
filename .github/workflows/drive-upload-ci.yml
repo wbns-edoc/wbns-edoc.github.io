@@ -4,6 +4,7 @@ on:
     paths:
       - "src/main.tsx"
       - "src/upload-error.ts"
+      - "src/upload-refresh.ts"
       - "tests/upload-error_test.ts"
       - "supabase/functions/drive-upload/**"
       - "supabase/config.toml"
