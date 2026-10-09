@@ -1,48 +1,57 @@
-# WBNS e-Document — Operations & Recovery Runbook
+# WBNS e-Document — Production Readiness Checklist
 
-## Daily
-- Check Supabase project health.
-- Check Google Drive health from Admin → Audit/Health Check.
-- Review unread notifications and overdue deadlines.
-- Review audit log for unexpected admin changes.
+อัปเดต: 2026-10-09
 
-## Before schema changes
-1. Confirm the change belongs to WBNS infrastructure.
-2. Create/verify a database backup.
-3. Add a timestamped migration under `supabase/migrations/`.
-4. Apply to Production only after the migration is reviewed.
-5. Verify migration history.
-6. Run smoke tests.
+เอกสารนี้ใช้ติดตามงานก่อนประกาศ Production Ready โดยแยกสิ่งที่ตรวจพบจากเครื่องมือออกจากสิ่งที่ต้องยืนยันโดยผู้ดูแลระบบโรงเรียน
 
-## Database backup
-Use a school-controlled operator account and the official Supabase/PostgreSQL connection details. Example:
+## Verified from current tooling
+- [x] Latest checked GitHub Pages workflow completed successfully (commit `15588bf6fca53b0bd1906b88562a16f50cbfab9c`).
+- [x] Supabase Security Advisor was checked on 2026-10-09.
+- [x] Operations/recovery procedure exists.
+- [x] Production smoke-test checklist exists.
+- [x] A read-only review found the production migration history and repository migration filenames cannot be reconciled by filename prefix alone.
 
-```bash
-pg_dump --format=custom --file=wbns-edoc-YYYYMMDD.dump "$DATABASE_URL"
-```
+## Open release gates — do not mark complete without evidence
+- [ ] Map each production migration version/name to authoritative SQL and a repository file or document why it cannot be recovered.
+- [ ] Verify live definitions, grants, search_path and permission checks for all 10 authenticated SECURITY DEFINER findings.
+- [ ] Test RPC authorization using an admin account and a normal staff account, including denied cases.
+- [ ] Confirm protection against removing/demoting the last active system administrator.
+- [ ] Enable Supabase Auth leaked-password protection in project settings and verify password recovery with a school-controlled mailbox.
+- [ ] Run login, user/role, incoming/outgoing workflow, Google Drive upload/versioning, audit, notification and PWA smoke tests.
+- [ ] Create a school-controlled database backup and record the backup date, operator and secure storage location (never commit backup files or credentials).
+- [ ] Restore the backup into an isolated non-production target and record the test result.
+- [ ] Verify Google Drive backup/retention and restore procedure.
+- [ ] Obtain school owner acceptance before declaring production ready.
 
-Never commit database dumps, service-account JSON, VAPID private keys, Supabase secret keys, or user passwords to GitHub.
+## Security Advisor triage
+The 10 authenticated SECURITY DEFINER findings are not automatically vulnerabilities. They require a function-by-function review because authenticated application clients use some of these RPCs. Do not revoke all authenticated EXECUTE grants indiscriminately.
 
-## Google Drive backup
-- The school owns the root Drive folder.
-- Keep the service account key only in Supabase Secrets / secure school password management.
-- Periodically export critical document folders according to the school's retention policy.
-- Do not copy school documents into another school's infrastructure.
+Review at minimum:
+- `admin_create_department`
+- `admin_remove_user_role`
+- `admin_set_user_department`
+- `admin_set_user_role`
+- `admin_update_department`
+- `assign_document`
+- `attach_document_file_version`
+- `get_my_permissions`
+- `set_document_deadline`
+- `update_document_status`
 
-## Recovery
-1. Stop application writes if required.
-2. Restore PostgreSQL backup into a controlled recovery target.
-3. Apply migrations only up to the verified target version.
-4. Verify RLS, roles, permissions and workflow RPCs.
-5. Verify Google Drive references.
-6. Re-run smoke tests.
-7. Switch production only after acceptance.
+For each function, record: live definition hash or reviewed SQL, owner, SECURITY DEFINER/INVOKER mode, fixed search_path, EXECUTE grants, permission gate, object-level authorization, allowed/denied test evidence and reviewer.
 
-## Web Push
-Required Supabase secrets/configuration:
-- VAPID public key → frontend build variable `VITE_VAPID_PUBLIC_KEY`
-- VAPID private key → Supabase Secret (server-side only)
-- Do not expose the private key to the browser.
+## Safe migration reconciliation
+1. Export the exact production migration history and retrieve authoritative SQL for each entry.
+2. Compare SQL semantics and live schema; version-prefix matching alone is insufficient.
+3. Do not rename migrations to force a match, mark unknown migrations as applied, reset production, or replay historical SQL.
+4. Resolve missing migration source from trusted deployment records; if unrecoverable, record the gap and design a forward-only baseline after review.
+5. Any production schema change requires a verified backup, reviewed migration, school approval and post-change smoke tests.
 
-## Incident rule
-Do not guess credentials or repair another school's resources. Escalate to the school's infrastructure owner when an account, secret, Drive permission, or production setting is missing.
+## Backup and recovery
+- Database backups must be created by a school-controlled operator using secure Supabase/PostgreSQL connection details.
+- Store backup files in approved school-controlled secure storage, separate from GitHub.
+- Restore only to an isolated recovery target during a drill.
+- Validate profiles/roles, RLS, document metadata, workflow RPCs, audit records and Google Drive references before considering a restore successful.
+
+## Release decision
+Current status: **NOT YET PRODUCTION READY** until the open release gates above are evidenced and accepted by the school.
