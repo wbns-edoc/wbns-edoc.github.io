@@ -44,6 +44,7 @@ jobs:
           version: 2.81.3
 
       - name: Start isolated local Supabase services
+        id: start_local
         run: supabase start
 
       - name: Apply repository migrations to the disposable local database
@@ -53,5 +54,5 @@ jobs:
         run: supabase test db
 
       - name: Stop local Supabase services
-        if: always()
+        if: always() && steps.start_local.outcome != 'skipped'
         run: supabase stop --no-backup
