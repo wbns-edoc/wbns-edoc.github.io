@@ -27,8 +27,8 @@ Deno.test("maps missing server configuration to actionable guidance", () => {
 
 Deno.test("unknown machine codes remain actionable", () => {
   assertEquals(
-    getUploadErrorMessage("GOOGLE_DRIVE_UPLOAD_FAILED"),
-    "อัปโหลดไฟล์ไม่สำเร็จ (GOOGLE_DRIVE_UPLOAD_FAILED) กรุณาลองใหม่หรือติดต่อผู้ดูแลระบบ",
+    getUploadErrorMessage("UNRECOGNIZED_UPLOAD_ERROR"),
+    "อัปโหลดไฟล์ไม่สำเร็จ (UNRECOGNIZED_UPLOAD_ERROR) กรุณาลองใหม่หรือติดต่อผู้ดูแลระบบ",
   );
   assertEquals(getUploadErrorMessage(undefined), "อัปโหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่");
 });
