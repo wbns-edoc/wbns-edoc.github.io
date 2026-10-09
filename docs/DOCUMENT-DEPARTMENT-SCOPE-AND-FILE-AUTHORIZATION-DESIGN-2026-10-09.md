@@ -81,3 +81,32 @@ A read-only recheck after the upload-flow change confirmed the same scope blocke
 - GitHub Actions run [37951788240](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37951788240) completed successfully for the latest PR head checked at the time: frontend build with placeholder configuration and Deno type-check. This does **not** constitute an authorization integration test or a live Drive upload test.
 
 No Production schema, policy, user role, or document data was changed during this recheck. No Supabase branch/project was created; additional infrastructure spend remains 0 THB.
+
+## Creation-path and authorization-function inspection — 2026-10-09
+
+Read-only inspection of the live function definitions identified the creation paths that a future scope migration must update:
+- `private.register_incoming_document(...)` inserts into `public.documents` without a department value.
+- `private.register_outgoing_document(...)` also inserts without a department value.
+- The public `register_incoming_document` and `register_outgoing_document` functions are invoker wrappers that delegate to those private implementations.
+- The live `public.attach_document_file_version(...)` checks authentication and the global `document.update` permission, and checks that both rows exist. It does not verify document department, file uploader/creator eligibility, or a document-specific grant.
+- The live `public.assign_document(...)` checks `document.assign`, document existence, and active assignee, but does not check department membership or explicit cross-department delegation.
+- The current document SELECT policy also permits the creator or current owner independently of the global `document.view` branch. A future policy must define whether those relationships remain valid across a department transfer; it must not accidentally preserve access to the former department.
+
+Production currently has zero department rows and the single profile's `department_id` is not sufficient evidence of an approved department mapping. Thus, a migration that immediately requires a non-null document department, or assigns all documents to an assumed department, is not safe. First obtain the school's authoritative department list and assign the initial profile through the approved administrative process. Since Production has zero documents at this snapshot, no historical-document backfill is currently indicated, but this must be rechecked immediately before any migration.
+
+### Additional tests required for creation and delegation
+
+| Scenario | Expected result |
+|---|---|
+| Incoming registration by active user with an approved department | Document receives that trusted department ID from the server-side profile |
+| Outgoing registration by active user with an approved department | Document receives that trusted department ID from the server-side profile |
+| Registration by user with no department | Explicitly denied or routed through a documented school-wide registry policy; never silently assigned a fabricated department |
+| Browser submits a different department ID | Ignored or rejected; server-side profile is authoritative |
+| User in department A assigns document to user in department B | Denied unless a separately approved delegation/cross-department rule permits it |
+| Creator or previous owner changes department | Access follows explicit transfer policy; old department access is not retained by accident |
+| Department is deactivated | Registration/assignment behavior follows an explicit policy; existing records remain auditable |
+| File metadata was created for another document/upload | Attachment denied unless a verified ownership/linking rule explicitly allows it |
+
+### Implementation constraint
+
+Do not implement the scope rules as a frontend-only filter. The same trusted predicate must be enforced in database RLS and every SECURITY DEFINER RPC that reads or mutates documents or file links. Before replacing live functions, compare the complete current function definitions and dependencies against repository migrations; migration-name parity is known to be incomplete. Test the exact SQL against a safe fixture before any Production approval.
