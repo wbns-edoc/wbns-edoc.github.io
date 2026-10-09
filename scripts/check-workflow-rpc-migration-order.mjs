@@ -27,7 +27,7 @@ for (const file of files) {
     if (!definitions.has(name)) continue;
 
     const start = match.index;
-    const markerMatch = /\\bas\\s+\\$[a-z_]*\\$/i.exec(sql.slice(start));
+    const markerMatch = /\bas\s+\$[a-z_]*\$/i.exec(sql.slice(start));
     if (!markerMatch) {
       console.error(`Cannot determine function header end: ${file}: public.${name}`);
       process.exitCode = 1;
