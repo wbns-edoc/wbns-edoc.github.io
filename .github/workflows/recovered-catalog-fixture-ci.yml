@@ -47,7 +47,7 @@ jobs:
 
       - name: Apply reconstructed catalog to disposable local database
         working-directory: ${{ env.TEST_DIR }}
-        run: supabase start
+        run: supabase start -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
       - name: Lint reconstructed schema
         working-directory: ${{ env.TEST_DIR }}
