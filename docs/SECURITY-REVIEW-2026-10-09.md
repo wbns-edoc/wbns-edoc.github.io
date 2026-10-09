@@ -87,3 +87,13 @@ A fresh read-only retrieval of the live SQL function definitions confirms the fo
 16. **Role and department audit coverage remains uncertain.** The inspected role assignment/removal and department update bodies do not write audit rows directly. Confirm whether database triggers cover these operations; do not count audit as complete until verified.
 
 No live function was modified and no write-path was invoked. Recommended next step remains a policy decision and isolated tests before a forward-only migration; Production has one active system administrator, and that assignment must not be altered for testing.
+
+
+## Additional live grant and RLS confirmation (2026-10-09)
+
+A fresh read-only catalog query confirmed the current database grants and policies:
+
+- The reviewed public RPCs are executable by `authenticated` and not executable by `anon`; the inspected functions use fixed `search_path` settings. This is positive baseline evidence, but it does not by itself establish correct authorization within the function bodies.
+- `public.user_roles` has a direct table-management RLS policy requiring `private.has_permission('role.manage')`. The live SECURITY DEFINER role RPCs `admin_set_user_role` and `admin_remove_user_role` instead accept `user.manage OR role.manage`. Because SECURITY DEFINER functions can bypass ordinary RLS, the broader RPC authorization is a confirmed policy mismatch requiring an explicit decision and isolated tests. Do not assume the table policy constrains these RPCs.
+- The live Security Advisor continues to report 10 authenticated-callable SECURITY DEFINER functions and leaked-password protection disabled. These findings remain open; no production grant, function, Auth setting, schema, data, or role assignment was changed in this review.
+- The existing Production `system_admin` assignment must never be removed, demoted, deactivated, or altered as a test. Do not deploy a speculative migration or change grants until the app's actual call paths and expected roles are reconciled, a non-production target is available, and rollback/restore are verified.
