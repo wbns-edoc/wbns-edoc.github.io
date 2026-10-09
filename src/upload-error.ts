@@ -19,7 +19,7 @@ export function getUploadErrorMessage(code: unknown): string {
       return "คุณไม่มีสิทธิ์แนบไฟล์กับเอกสารนี้";
     case "DOCUMENT_NOT_FOUND_OR_NOT_ACCESSIBLE":
       return "ไม่พบเอกสารหรือคุณไม่มีสิทธิ์เข้าถึงเอกสารนี้";
-    case "GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON_INVALID":
+    case "GOOGLE_DRIVE_CONFIGURATION_INVALID":
       return "การตั้งค่าบัญชีจัดเก็บไฟล์ไม่ถูกต้อง กรุณาติดต่อผู้ดูแลระบบ";
     case "GOOGLE_DRIVE_CONFIGURATION_MISSING":
     case "SERVER_DATABASE_CONFIGURATION_MISSING":
