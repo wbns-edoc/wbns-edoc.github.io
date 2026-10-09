@@ -45,6 +45,10 @@
 - [ ] Anonymous client cannot call admin RPCs
 - [ ] Staff cannot modify another user's role/department
 - [ ] Staff cannot bypass workflow transition guards
+- [ ] `document.update` alone cannot complete or archive a document
+- [ ] `document.complete` is required for the `completed` transition
+- [ ] `document.archive` is required for the `archived` transition
+- [ ] `document.assign` is required for direct transition to `assigned`; normal assignment uses the assignment RPC
 - [ ] RLS blocks unauthorized document access
 - [ ] Audit log records admin/security-sensitive changes
 
