@@ -69,3 +69,15 @@ Therefore cross-department isolation is not verified. Do not represent PR #6 as 
 ## Current state
 
 This document is design-only. No SQL migration has been applied, no Production policy/role/data has been changed, and no live upload was attempted. Additional paid infrastructure spend remains 0 THB.
+
+## Follow-up verification — 2026-10-09
+
+A read-only recheck after the upload-flow change confirmed the same scope blocker remains:
+- Production still has 1 profile, 0 departments, 0 documents, and exactly 1 System Admin assignment. These counts are a snapshot, not a substitute for backup or restore testing.
+- The live `documents_select_authorized` policy still includes `private.has_permission('document.view')` without a department predicate.
+- The live `document_files` and `google_drive_files` policies remain SELECT-only. No broad browser INSERT policy was added.
+- The Edge Function currently checks the global `document.update` permission and reads the target document through the user's JWT, but the schema has no document department column. This cannot establish department-level authorization; the attachment RPC must enforce scope independently once the model is implemented.
+- Security Advisor still reports 10 `authenticated_security_definer_function_executable` warnings and 1 `auth_leaked_password_protection` warning. These remain separate release gates; do not bulk-revoke EXECUTE without function-by-function dependency and regression tests.
+- GitHub Actions run [37951788240](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37951788240) completed successfully for the latest PR head checked at the time: frontend build with placeholder configuration and Deno type-check. This does **not** constitute an authorization integration test or a live Drive upload test.
+
+No Production schema, policy, user role, or document data was changed during this recheck. No Supabase branch/project was created; additional infrastructure spend remains 0 THB.
