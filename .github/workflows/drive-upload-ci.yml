@@ -4,6 +4,7 @@ on:
     paths:
       - "src/main.tsx"
       - "supabase/functions/drive-upload/**"
+      - "supabase/config.toml"
       - ".github/workflows/drive-upload-ci.yml"
       - "package.json"
   push:
@@ -27,6 +28,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Require JWT verification for Drive upload
+        run: grep -F -A1 '[functions.drive-upload]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
       - name: Install frontend dependencies
         run: npm install
       - name: Build frontend with isolated non-production configuration
