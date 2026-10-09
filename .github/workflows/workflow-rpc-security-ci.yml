@@ -16,6 +16,7 @@ on:
       - "supabase/tests/database/**"
       - "supabase/config.toml"
       - ".github/workflows/workflow-rpc-security-ci.yml"
+      - "scripts/check-workflow-rpc-migration-order.mjs"
   workflow_dispatch:
 
 permissions:
