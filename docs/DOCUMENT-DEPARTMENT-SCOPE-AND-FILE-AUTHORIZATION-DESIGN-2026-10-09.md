@@ -4,6 +4,17 @@ Date: 2026-10-09
 Status: Design only — not applied to Production  
 Related: PR #6 (Drive upload metadata persistence)
 
+## Authoritative department names received
+
+The school owner supplied the following four department names for the proposed department master list:
+
+1. กลุ่มบริหารงานวิชาการ
+2. กลุ่มบริการงบประมาณ
+3. กลุ่มบริหารงานบุคคล
+4. กลุ่มบริหารงานทั่วไป
+
+These names are accepted as the source list for design and test fixtures. They have **not** been inserted into Production. The initial department assignment for the current System Admin is still unconfirmed; no profile assignment or department seed should be applied until that mapping is confirmed and a safe test environment is available.
+
 ## Why this design is required
 
 A read-only Production schema review confirmed:
@@ -57,7 +68,9 @@ Therefore cross-department isolation is not verified. Do not represent PR #6 as 
 
 ## Acceptance gates
 
-- [ ] Department source-of-truth and transfer/reassignment semantics approved.
+- [x] School owner supplied the four department names for the design/test master list.
+- [ ] Confirm the current System Admin's department assignment, or explicitly confirm intentional unassigned status.
+- [ ] Department transfer/reassignment and cross-department delegation semantics approved.
 - [ ] Migration tested against a schema/data fixture matching Production.
 - [ ] All expected and denied authorization tests pass.
 - [ ] Existing document and workflow behavior has regression coverage.
@@ -92,7 +105,7 @@ Read-only inspection of the live function definitions identified the creation pa
 - The live `public.assign_document(...)` checks `document.assign`, document existence, and active assignee, but does not check department membership or explicit cross-department delegation.
 - The current document SELECT policy also permits the creator or current owner independently of the global `document.view` branch. A future policy must define whether those relationships remain valid across a department transfer; it must not accidentally preserve access to the former department.
 
-Production currently has zero department rows and the single profile's `department_id` is not sufficient evidence of an approved department mapping. Thus, a migration that immediately requires a non-null document department, or assigns all documents to an assumed department, is not safe. First obtain the school's authoritative department list and assign the initial profile through the approved administrative process. Since Production has zero documents at this snapshot, no historical-document backfill is currently indicated, but this must be rechecked immediately before any migration.
+Production currently has zero department rows and the single profile's `department_id` is not sufficient evidence of an approved department mapping. Thus, a migration that immediately requires a non-null document department, or assigns all documents to an assumed department, is not safe. First confirm the initial profile assignment and use the four supplied names to build a zero-cost fixture. Since Production has zero documents at this snapshot, no historical-document backfill is currently indicated, but this must be rechecked immediately before any migration.
 
 ### Additional tests required for creation and delegation
 
