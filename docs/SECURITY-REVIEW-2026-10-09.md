@@ -34,3 +34,23 @@ The current live Advisor reports 10 `authenticated_security_definer_function_exe
 
 ## Acceptance rule
 This review is not a production security sign-off. No finding is resolved until a safe test and live evidence are recorded. Current release decision remains **NOT YET PRODUCTION READY**.
+
+### Follow-up read-only checks (2026-10-09)
+
+- Queried PostgreSQL constraints and non-internal triggers for `user_roles`, `profiles`, `roles`, and `departments`. `user_roles` has its primary key and foreign keys, but the query found **no user-defined trigger on `user_roles`** and no constraint that enforces a minimum count of active `system_admin` users. The visible `profiles` trigger only maintains `updated_at`; department triggers maintain `updated_at`. This strengthens the concern in finding 1: last-admin protection is not evident in the inspected table constraints/triggers or RPC body.
+- A read-only aggregate query found **1 active profile with the `system_admin` role (1 assignment)** at the time checked. This is a high-impact single-admin configuration: do not test by removing/demoting this account, and do not attempt a Production change until a second school-controlled administrator and a tested recovery path exist.
+- The live `private.has_permission(text)` helper checks permissions through role mappings for `auth.uid()` and requires an active profile. It is SECURITY DEFINER with a fixed `pg_catalog, public` search path. This does not mitigate the missing last-admin invariant inside role removal.
+- These checks were read-only; no Production data or schema was changed.
+
+### Recommended remediation acceptance tests
+
+Before applying any forward-only Production migration, reproduce in a non-production environment:
+1. Removing the only active `system_admin` assignment is rejected with a stable error and leaves the assignment unchanged.
+2. Demoting or deactivating the last active system administrator is rejected if deactivation/demotion paths exist.
+3. Removing another user's non-admin role remains possible only for the explicitly approved permission set.
+4. A `role.manage`-only actor cannot grant or remove `system_admin` unless the school owner explicitly approves that policy.
+5. Concurrent attempts to remove/demote the last two administrators cannot leave zero active administrators (the guard must be concurrency-safe, not just a count check without serialization).
+6. Audit history records both successful role changes and rejected sensitive attempts where policy requires it.
+
+A single-admin Production state is not a reason to run a destructive test; establish a second administrator through a reviewed, auditable process first.
+
