@@ -22,6 +22,7 @@ The inspected EXECUTE grant listing includes `authenticated`, `postgres`, and `s
 8. **Permission introspection.** `get_my_permissions()` filters by `auth.uid()` and active profile, and has a restricted search path; it appears appropriately scoped from the inspected body.
 
 ## Security Advisor
+
 The current live Advisor reports 10 `authenticated_security_definer_function_executable` warnings and one `auth_leaked_password_protection` warning. The latter remains an open project setting; it was not changed in this review. Advisor warnings are triage signals, not proof that every RPC is exploitable.
 
 ## Safe next steps
@@ -33,6 +34,7 @@ The current live Advisor reports 10 `authenticated_security_definer_function_exe
 6. Run the full smoke test and an isolated backup-restore drill.
 
 ## Acceptance rule
+
 This review is not a production security sign-off. No finding is resolved until a safe test and live evidence are recorded. Current release decision remains **NOT YET PRODUCTION READY**.
 
 ### Follow-up read-only checks (2026-10-09)
@@ -56,7 +58,6 @@ A single-admin Production state is not a reason to run a destructive test; estab
 
 - RLS policy inspection found `user_roles_manage_admin` grants table-level management only to actors with `role.manage`, while the SECURITY DEFINER RPCs `admin_set_user_role` and `admin_remove_user_role` accept `user.manage` **or** `role.manage`. Because these RPCs execute with definer privileges, their explicit permission logic can allow a `user.manage`-only actor to bypass the narrower table policy. Confirm the intended separation of duties and make RPC authorization match approved policy; do not rely on RLS to constrain SECURITY DEFINER function bodies.
 
-
 ### Follow-up live Edge Function review (2026-10-09)
 
 Read-only source inspection of the deployed `user-import` Edge Function (active version 3, JWT verification enabled) identified additional high-impact authorization concerns:
@@ -75,7 +76,6 @@ These are source-review findings, not exploit tests. No Edge Function was change
 - Both per-row role assignment and profile activation/deactivation are audited with actor, target, previous state and result.
 - The repository source and deployed function version are reconciled before deploying any new version.
 
-
 ### Second-pass RPC body review (2026-10-09)
 
 A fresh read-only retrieval of the live SQL function definitions confirms the following implementation details:
@@ -88,7 +88,6 @@ A fresh read-only retrieval of the live SQL function definitions confirms the fo
 
 No live function was modified and no write-path was invoked. Recommended next step remains a policy decision and isolated tests before a forward-only migration; Production has one active system administrator, and that assignment must not be altered for testing.
 
-
 ## Additional live grant and RLS confirmation (2026-10-09)
 
 A fresh read-only catalog query confirmed the current database grants and policies:
@@ -97,7 +96,6 @@ A fresh read-only catalog query confirmed the current database grants and polici
 - `public.user_roles` has a direct table-management RLS policy requiring `private.has_permission('role.manage')`. The live SECURITY DEFINER role RPCs `admin_set_user_role` and `admin_remove_user_role` instead accept `user.manage OR role.manage`. Because SECURITY DEFINER functions can bypass ordinary RLS, the broader RPC authorization is a confirmed policy mismatch requiring an explicit decision and isolated tests. Do not assume the table policy constrains these RPCs.
 - The live Security Advisor continues to report 10 authenticated-callable SECURITY DEFINER functions and leaked-password protection disabled. These findings remain open; no production grant, function, Auth setting, schema, data, or role assignment was changed in this review.
 - The existing Production `system_admin` assignment must never be removed, demoted, deactivated, or altered as a test. Do not deploy a speculative migration or change grants until the app's actual call paths and expected roles are reconciled, a non-production target is available, and rollback/restore are verified.
-
 
 ### Additional RLS policy inventory (2026-10-09)
 
@@ -111,3 +109,17 @@ A further read-only query inspected policies on `user_roles`, `profiles`, `depar
 - Direct document SELECT/UPDATE policies retain owner/creator or permission-based predicates, but they do not establish that SECURITY DEFINER RPCs apply the same object-level checks.
 
 These are policy observations, not proof of an exploitable path. The query did not modify policies or data. Before changing profile policies or column grants, inspect the frontend's update paths and table grants to avoid breaking normal profile editing; then validate both allowed and denied cases in a non-production environment.
+
+### Profile and role table grants (2026-10-09)
+
+A fresh read-only query of `information_schema.role_table_grants` and `information_schema.column_privileges` found broad table and column privileges granted to both `anon` and `authenticated` on `public.profiles` and `public.user_roles`, including `UPDATE` on profile fields such as `is_active` and `department_id`. The RLS policies inspected for these tables apply to `authenticated`, not `anon`; no `anon` policy was returned for either table.
+
+**Interpretation:** these grants are broader than the apparent application need and should be reviewed. RLS may still block rows when enabled, so the grants alone do not prove anonymous access; however, the missing anon policies, broad authenticated column privileges, and self-row profile UPDATE policy create avoidable risk. In particular, the self-update policy's row predicate does not restrict individual columns, while UPDATE privilege includes `is_active` and `department_id`. A signed-in user may therefore be able to modify these fields on their own profile unless another database mechanism prevents it. This is a confirmed policy/grant mismatch requiring a safe reproduction test, not a claim that a successful exploit was performed.
+
+Recommended next actions:
+1. Inspect whether RLS is enabled/forced on both tables and confirm effective privileges under actual PostgREST roles.
+2. Review frontend profile-update code to identify required fields, then narrow grants or replace broad direct updates with a safe RPC that permits only approved fields.
+3. Revoke unnecessary `anon` privileges and narrow `authenticated` INSERT/UPDATE/DELETE privileges only after validating application call paths and preparing a forward-only migration plus rollback plan.
+4. Reproduce permitted and denied profile edits in a non-production environment, including attempts to change `is_active` and `department_id`; do not run a self-deactivation or role-change probe against the only Production administrator.
+
+No grants, policies, profile rows, role assignments, or Production settings were changed during this review.
