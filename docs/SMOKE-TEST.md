@@ -5,6 +5,10 @@
 - [ ] Normal staff login succeeds
 - [ ] Inactive profile cannot use application permissions
 - [ ] Permission list loads
+- [ ] Login page shows “ลืมรหัสผ่าน?”
+- [ ] Password recovery email uses the configured site URL and opens the reset-password form
+- [ ] Password reset succeeds and the new password can be used to sign in
+- [ ] Dashboard and User / Role pages load without Supabase relationship-embedding errors
 
 ## 2. User / Department / Role
 - [ ] Admin can create/edit department
@@ -44,6 +48,8 @@
 
 ## 6. Security
 - [ ] Anonymous client cannot call admin RPCs
+- [ ] Supabase Auth leaked-password protection is enabled in project settings
+- [ ] Review every authenticated SECURITY DEFINER RPC warning; confirm server-side permission checks and intentional EXECUTE grants before accepting or changing grants
 - [ ] Staff cannot modify another user's role/department
 - [ ] Staff cannot bypass workflow transition guards
 - [ ] `document.update` alone cannot complete or archive a document
