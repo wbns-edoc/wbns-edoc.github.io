@@ -74,3 +74,16 @@ These are source-review findings, not exploit tests. No Edge Function was change
 - Deactivating a system administrator follows a reviewed recovery policy and cannot leave zero active administrators; never test this against the sole Production admin.
 - Both per-row role assignment and profile activation/deactivation are audited with actor, target, previous state and result.
 - The repository source and deployed function version are reconciled before deploying any new version.
+
+
+### Second-pass RPC body review (2026-10-09)
+
+A fresh read-only retrieval of the live SQL function definitions confirms the following implementation details:
+
+12. **Role RPC authorization mismatch is present in live SQL.** Both `admin_set_user_role` and `admin_remove_user_role` accept `user.manage OR role.manage`, while the inspected table RLS policy only allows `role.manage` for direct `user_roles` management. Because the RPCs are SECURITY DEFINER, their own checks govern the RPC path. Decide the separation-of-duties policy, then align the RPC and Edge Function gates.
+13. **Department RPCs also use broad permission gates.** `admin_set_user_department` and `admin_update_department` accept either `user.manage` or `role.manage`. The department update body checks that the target exists, names are nonblank, and code is unique, but does not visibly validate parent existence/active status or prevent hierarchy cycles. Confirm foreign keys and any other invariant before proposing a migration.
+14. **Document assignment and deadline RPCs have limited visible scope checks.** `assign_document` verifies `document.assign`, document existence, active assignee, future deadline and locks the document before requiring status `registered`; it does not visibly verify caller scope for that specific document. `set_document_deadline` checks `document.assign`, existence, active assignee and date ordering, but does not visibly lock/check document status or verify caller scope before inserting a deadline. Confirm whether intended document scope is global or department/assignment-scoped.
+15. **File-version attachment lacks a visible file/document association check.** `attach_document_file_version` verifies that both document and Drive-file rows exist, then creates a version for the supplied pair. The function body does not visibly reject a Drive-file row already associated with another document or enforce caller scope to that document. Verify schema constraints and business rules before remediation.
+16. **Role and department audit coverage remains uncertain.** The inspected role assignment/removal and department update bodies do not write audit rows directly. Confirm whether database triggers cover these operations; do not count audit as complete until verified.
+
+No live function was modified and no write-path was invoked. Recommended next step remains a policy decision and isolated tests before a forward-only migration; Production has one active system administrator, and that assignment must not be altered for testing.
