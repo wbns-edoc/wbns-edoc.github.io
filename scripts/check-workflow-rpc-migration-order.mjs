@@ -27,14 +27,14 @@ for (const file of files) {
     if (!definitions.has(name)) continue;
 
     const start = match.index;
-    const marker = sql.toLowerCase().indexOf("as $$", start);
-    if (marker < 0) {
+    const markerMatch = /\\bas\\s+\\$[a-z_]*\\$/i.exec(sql.slice(start));
+    if (!markerMatch) {
       console.error(`Cannot determine function header end: ${file}: public.${name}`);
       process.exitCode = 1;
       continue;
     }
 
-    const header = sql.slice(start, marker);
+    const header = sql.slice(start, start + markerMatch.index);
     const mode = /\bsecurity\s+definer\b/i.test(header)
       ? "DEFINER"
       : "INVOKER"; // PostgreSQL's default when SECURITY is omitted.
