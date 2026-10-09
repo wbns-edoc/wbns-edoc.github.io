@@ -32,5 +32,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json
-          git commit -m "Add reproducible npm dependency lockfile [skip ci]"
+          git commit -m "Add reproducible npm dependency lockfile"
           git push origin "HEAD:${GITHUB_REF_NAME}"
