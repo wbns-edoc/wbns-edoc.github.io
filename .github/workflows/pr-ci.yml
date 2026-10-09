@@ -24,3 +24,9 @@ jobs:
           VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
           VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
         run: npm run build
+      - name: Verify missing configuration fails closed
+        run: |
+          if env -u VITE_SUPABASE_URL -u VITE_SUPABASE_PUBLISHABLE_KEY node scripts/validate-build-env.mjs; then
+            echo "Expected missing configuration to fail, but validation succeeded."
+            exit 1
+          fi
