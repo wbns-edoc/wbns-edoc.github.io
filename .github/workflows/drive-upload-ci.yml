@@ -37,5 +37,7 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
+      - name: Run upload cleanup policy unit tests
+        run: deno test --node-modules-dir=auto supabase/functions/drive-upload/cleanup-policy_test.ts
       - name: Type-check Drive upload Edge Function
         run: deno check --node-modules-dir=auto supabase/functions/drive-upload/index.ts
