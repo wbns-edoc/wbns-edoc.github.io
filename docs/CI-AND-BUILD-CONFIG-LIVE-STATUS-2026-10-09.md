@@ -37,3 +37,12 @@ The security branch `security/release-gate-review-2026-10-09` currently contains
 Frontend/build-config CI on PR #5's observed SHA: **passed**.
 Committed lockfile at current PR head: **not verified / appears absent**.
 Production release: **blocked** pending independent database and operational gates.
+
+## Final lockfile follow-up
+
+The missing-lockfile finding above was resolved on the separate existing safety PR branch after this report was first written. The root cause was that `git diff` does not report untracked files; the lockfile workflow now checks whether the file is tracked before treating it as unchanged.
+
+- `package-lock.json` is present in the Git tree at the current PR head `19b66e2a3d023897cfc9fbb0bae259d9bea19694`.
+- CI run `37949211277` passed on that exact head, including `npm ci`, build, six build-configuration cases, and the missing-config negative test: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37949211277
+- The lockfile workflow also passed: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/37949211246
+- PR #5 remains open, draft, and unmerged. These checks do not validate Production database authorization, migration parity, file-upload integration, backup/restore, or admin survivability. Production release remains blocked.
