@@ -11,7 +11,7 @@
 - [x] Public application tables เปิด RLS
 - [x] ไม่มี anonymous executable SECURITY DEFINER RPC ที่ไม่ได้ตั้งใจ
 - [x] Google Drive Edge Functions active และตั้ง `verify_jwt=true`
-- [x] Migration history ถูกติดตามใน repository
+- [ ] ตรวจสอบว่า migration ที่ apply ทั้งหมดมีไฟล์ใน repository และลำดับตรงกับฐานข้อมูล Production
 
 ## B. School acceptance test
 
