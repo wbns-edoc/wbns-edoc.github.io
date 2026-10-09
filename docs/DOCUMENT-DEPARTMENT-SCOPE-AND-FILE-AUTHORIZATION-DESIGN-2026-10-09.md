@@ -110,3 +110,11 @@ Production currently has zero department rows and the single profile's `departme
 ### Implementation constraint
 
 Do not implement the scope rules as a frontend-only filter. The same trusted predicate must be enforced in database RLS and every SECURITY DEFINER RPC that reads or mutates documents or file links. Before replacing live functions, compare the complete current function definitions and dependencies against repository migrations; migration-name parity is known to be incomplete. Test the exact SQL against a safe fixture before any Production approval.
+
+## Upload compensation race review — 2026-10-09
+
+A code review of `drive-upload` identified a failure mode worth guarding: an attachment RPC can commit in the database while the caller receives an error or loses the response. Deleting the Google Drive object solely because the client saw an RPC error could then leave a valid attachment row pointing at a deleted file.
+
+The upload branch was updated to query `document_files` through the server-side client before compensating an upload. It now preserves the Drive object and metadata if the attachment state cannot be determined, or if the metadata is already referenced. It also preserves the Drive object if metadata deletion fails. This deliberately prefers a reconcilable orphan/uncertain result over destroying a potentially attached document file.
+
+This is a defensive code-path change, not proof that the race has been reproduced or that cleanup works against the live Google Drive account. CI must pass, and tests should cover: attachment committed but response lost; attachment lookup failure; metadata deletion failure; Drive delete failure; and normal cleanup after a confirmed no-attachment result.
