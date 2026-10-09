@@ -1,0 +1,63 @@
+name: Recovered Catalog Fixture CI
+
+on:
+  pull_request:
+    paths:
+      - "supabase/tests/fixtures/recovered-production-catalog.sql"
+      - "supabase/tests/database/recovered_catalog_fixture_smoke.sql"
+      - ".github/workflows/recovered-catalog-fixture-ci.yml"
+  push:
+    branches:
+      - fix/drive-upload-metadata-atomicity-2026-10-09
+    paths:
+      - "supabase/tests/fixtures/recovered-production-catalog.sql"
+      - "supabase/tests/database/recovered_catalog_fixture_smoke.sql"
+      - ".github/workflows/recovered-catalog-fixture-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recovered-catalog-fixture-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  recovered-catalog-fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
+      - name: Prepare isolated fixture-only project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test_dir="$RUNNER_TEMP/wbns-catalog-fixture"
+          mkdir -p "$test_dir/supabase/migrations" "$test_dir/supabase/tests"
+          cp supabase/config.toml "$test_dir/supabase/config.toml"
+          sed -i 's/^project_id = .*/project_id = "wbns-edoc-catalog-fixture-ci"/' "$test_dir/supabase/config.toml"
+          cp supabase/tests/fixtures/recovered-production-catalog.sql "$test_dir/supabase/migrations/20261010120000_recovered_production_catalog.sql"
+          cp supabase/tests/database/recovered_catalog_fixture_smoke.sql "$test_dir/supabase/tests/recovered_catalog_fixture_smoke.sql"
+          echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
+
+      - name: Apply reconstructed catalog to disposable local database
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase start
+
+      - name: Lint reconstructed schema
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase db lint --local --schema public,private --fail-on error
+
+      - name: Run catalog smoke tests
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase test db --local
+
+      - name: Stop isolated local Supabase services
+        if: always()
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase stop --no-backup
