@@ -25,6 +25,13 @@ export function getUploadErrorMessage(code: unknown): string {
     case "SERVER_DATABASE_CONFIGURATION_MISSING":
     case "SUPABASE_CONFIGURATION_MISSING":
       return "ระบบจัดเก็บไฟล์ยังตั้งค่าไม่ครบ กรุณาติดต่อผู้ดูแลระบบ";
+    case "FILE_METADATA_SAVE_FAILED":
+    case "DOCUMENT_FILE_ATTACH_FAILED":
+      return "จัดเก็บไฟล์แล้วแต่เชื่อมโยงกับเอกสารไม่สำเร็จ ระบบอาจต้องตรวจสอบก่อนลองใหม่";
+    case "GOOGLE_DRIVE_UPLOAD_FAILED":
+    case "GOOGLE_DRIVE_RESPONSE_INVALID":
+    case "GOOGLE_DRIVE_UPLOAD_ERROR":
+      return "ส่งไฟล์ไปยัง Google Drive ไม่สำเร็จ กรุณาลองใหม่";
     default:
       return typeof code === "string" && code.length > 0
         ? `อัปโหลดไฟล์ไม่สำเร็จ (${code}) กรุณาลองใหม่หรือติดต่อผู้ดูแลระบบ`
