@@ -11,6 +11,7 @@ Status: release blocked; documentation only. This file does not authorize Produc
   2. กลุ่มบริการงบประมาณ
   3. กลุ่มบริหารงานบุคคล
   4. กลุ่มบริหารงานทั่วไป
+- The owner clarified that System Admin, เจ้าหน้าที่ธุรการ, ผู้อำนวยการสถานศึกษา, and รองผู้อำนวยการสถานศึกษา are central roles: they are not members of the four departments and sit above/across them in the organizational structure.
 - The current Production database still has 0 departments; receiving the names does not mean they have been inserted into Production.
 - `documents` currently has no `department_id`; current document policies include creator/current-owner access and broad permission-based access without department isolation.
 - Production migration history and repository migration files do not match one-to-one. Live function implementations differ from some repository migration expectations.
@@ -19,14 +20,15 @@ Status: release blocked; documentation only. This file does not authorize Produc
 
 ## Decisions needed from the school owner
 
-1. **Initial profile assignments, especially the current System Admin**
-   - Confirm which of the four departments the current System Admin belongs to, or explicitly confirm that the System Admin is intentionally unassigned.
-   - Provide the department assignment for each existing profile before any backfill. Do not infer department membership from names, email addresses, or job titles.
-   - The current read-only snapshot shows one profile and one System Admin assignment, but does not establish the correct department for that account.
+1. **Separate central roles from department membership**
+   - Treat System Admin, เจ้าหน้าที่ธุรการ, ผู้อำนวยการสถานศึกษา, and รองผู้อำนวยการสถานศึกษา as central roles with no `department_id` assignment to the four department groups.
+   - Keep role-based capabilities separate: System Admin manages system configuration and accounts; the registrar handles registry work; the director and deputy director receive document review/approval/command permissions according to the school's approved workflow. Do not assume all four roles have identical powers merely because they are central.
+   - Confirm the initial role assignments for all existing profiles and whether the current single System Admin account also holds any other central role. Do not infer role assignments from names, email addresses, or job titles.
 
-2. **Unassigned users and registry visibility**
-   - Decide whether a user without a department must be denied document access, or whether a specific, separately granted school-wide registry role exists.
-   - School-wide visibility must be an explicit permission, not an automatic consequence of being authenticated or being System Admin unless the school explicitly approves that policy.
+2. **Central-role access and registry visibility**
+   - Define explicit school-wide document permissions for the registrar, director, and deputy director, including read, register, assign, review, approve, and issue/command actions as applicable to each role.
+   - Define System Admin's technical administration permissions separately from routine document-content access. If System Admin must have access to all document content, grant that explicitly and audit it rather than relying on a broad accidental RLS bypass.
+   - A profile with no department and no approved central role must not automatically receive school-wide document access.
 
 3. **Cross-department assignment and transfer**
    - Confirm whether cross-department delegation is allowed and which role may authorize it.
