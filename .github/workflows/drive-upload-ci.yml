@@ -38,4 +38,4 @@ jobs:
         with:
           deno-version: v2.x
       - name: Type-check Drive upload Edge Function
-        run: deno check supabase/functions/drive-upload/index.ts
+        run: deno check --node-modules-dir=auto supabase/functions/drive-upload/index.ts
