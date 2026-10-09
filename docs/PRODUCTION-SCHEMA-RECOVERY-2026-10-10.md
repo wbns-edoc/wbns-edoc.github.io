@@ -81,3 +81,13 @@ Production has the following 26 applied migrations (the authoritative names/vers
 - Do not add broad file-table INSERT policies. The upload path uses server-side metadata writes and a version-attachment RPC.
 - Do not add `documents.department_id` in Production until the forward-only data/authorization design is tested against the real schema.
 - This work is read-only until a verified recovery baseline and safe forward-only patch are available.
+
+
+## Reconstructed catalog fixture added
+
+A test-only SQL snapshot was assembled from read-only catalog output and committed at:
+`supabase/tests/fixtures/recovered-production-catalog.sql`.
+
+It contains current public enum/table/constraint/index/function/view/trigger/RLS-policy definitions, current API ACLs, and only the system reference rows for roles, permissions, role-permission mappings, and document registers. It deliberately omits profiles, role assignments, senders, documents, files, audit logs, and other operational records.
+
+A separate CI workflow, `.github/workflows/recovered-catalog-fixture-ci.yml`, applies this snapshot to a disposable local Supabase stack and runs schema lint plus smoke tests. The fixture is a **reconstructed current-state test snapshot**, not the missing ordered 26-migration history and not a Production deployment artifact. The original migration chain remains unreconciled until the snapshot passes CI and its definitions are reviewed against repository code.
