@@ -6,9 +6,11 @@ on:
       - "supabase/tests/fixtures/recovered-production-catalog.sql"
       - "supabase/tests/database/recovered_catalog_fixture_smoke.sql"
       - "supabase/tests/database/workflow_rpc_wrappers.sql"
+      - "supabase/tests/database/automatic_admin_document_permissions.sql"
+      - "supabase/tests/database/department_scoped_document_access.sql"
       - "supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql"
       - "supabase/migrations/20261010150000_grant_director_document_update.sql"
-      - "supabase/tests/database/automatic_admin_document_permissions.sql"
+      - "supabase/migrations/20261010170000_department_scoped_document_access_v1.sql"
       - ".github/workflows/recovered-catalog-fixture-ci.yml"
   push:
     branches:
@@ -17,9 +19,11 @@ on:
       - "supabase/tests/fixtures/recovered-production-catalog.sql"
       - "supabase/tests/database/recovered_catalog_fixture_smoke.sql"
       - "supabase/tests/database/workflow_rpc_wrappers.sql"
+      - "supabase/tests/database/automatic_admin_document_permissions.sql"
+      - "supabase/tests/database/department_scoped_document_access.sql"
       - "supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql"
       - "supabase/migrations/20261010150000_grant_director_document_update.sql"
-      - "supabase/tests/database/automatic_admin_document_permissions.sql"
+      - "supabase/migrations/20261010170000_department_scoped_document_access_v1.sql"
       - ".github/workflows/recovered-catalog-fixture-ci.yml"
   workflow_dispatch:
 
@@ -52,9 +56,11 @@ jobs:
           cp supabase/tests/fixtures/recovered-production-catalog.sql "$test_dir/supabase/migrations/20261010120000_recovered_production_catalog.sql"
           cp supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261010150000_grant_director_document_update.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261010170000_department_scoped_document_access_v1.sql "$test_dir/supabase/migrations/"
           cp supabase/tests/database/recovered_catalog_fixture_smoke.sql "$test_dir/supabase/tests/recovered_catalog_fixture_smoke.sql"
           cp supabase/tests/database/workflow_rpc_wrappers.sql "$test_dir/supabase/tests/workflow_rpc_wrappers.sql"
           cp supabase/tests/database/automatic_admin_document_permissions.sql "$test_dir/supabase/tests/automatic_admin_document_permissions.sql"
+          cp supabase/tests/database/department_scoped_document_access.sql "$test_dir/supabase/tests/department_scoped_document_access.sql"
           echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
 
       - name: Apply recovered catalog and forward migration to disposable local database
