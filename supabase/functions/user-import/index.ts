@@ -173,12 +173,20 @@ Deno.serve(async (req: Request) => {
           }
         }
 
+        const clearPrimary = await admin.from("user_departments").update({ is_primary: false }).eq("user_id", userId);
+        if (clearPrimary.error) { results.push({ row: rowNo, status:"error", code:"department_primary_reset_failed" }); continue; }
+        const memberships = resolvedDepartmentIds.map((depId, index) => ({ user_id: userId, department_id: depId, is_primary: index === 0, assigned_by: actorId || null }));
+        const membershipWrite = await admin.from("user_departments").upsert(memberships, { onConflict:"user_id,department_id" });
+        if (membershipWrite.error) { results.push({ row: rowNo, status:"error", code:"department_membership_write_failed", message:membershipWrite.error.message }); continue; }
+        const staleMemberships = await admin.from("user_departments").delete().eq("user_id", userId).not("department_id", "in", "(" + resolvedDepartmentIds.join(",") + ")");
+        if (staleMemberships.error) { results.push({ row: rowNo, status:"error", code:"department_membership_sync_failed" }); continue; }
+
         await admin.from("audit_logs").insert({
           actor_id: actorId || null,
           action: "user_import_" + action,
           entity_type: "profiles",
           entity_id: userId,
-          new_data: { employee_code: employeeCode, full_name: fullName, email, role: roleValue || null },
+          new_data: { employee_code: employeeCode, full_name: fullName, email, role: roleValue || null, department_ids: resolvedDepartmentIds },
         });
 
         results.push({ row: rowNo, status:"ok", action, user_id:userId });
