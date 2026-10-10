@@ -16,21 +16,44 @@
 
 These facts are blockers, not evidence that the system is ready for general use. Counts do not establish the approved organizational structure or user-to-department mapping.
 
+## Owner-approved organizational structure
+
+The school has confirmed the following structure; use these exact names in the implementation and UI:
+
+1. **ฝ่ายบริหาร**
+   - System Admin
+   - ผู้อำนวยการโรงเรียน
+   - รองผู้อำนวยการโรงเรียน
+   - เจ้าหน้าที่สารบรรณ
+   - เจ้าหน้าที่ธุรการ
+2. **กลุ่มบริหารงบประมาณ**
+3. **กลุ่มบริหารงานวิชาการ**
+4. **กลุ่มบริหารงานบุคคล**
+5. **กลุ่มบริหารงานทั่วไป**
+
+Important modeling rules:
+- Treat ฝ่ายบริหาร as the central administrative unit and the four named กลุ่มบริหาร as separate document-scope units.
+- The school has explicitly approved automatic read-all access for **System Admin** and **ผู้อำนวยการโรงเรียน** only.
+- Do not infer read-all, approval, or mutation rights for รองผู้อำนวยการโรงเรียน, เจ้าหน้าที่สารบรรณ, or เจ้าหน้าที่ธุรการ from their unit membership alone. Their access must follow explicitly assigned permissions and workflow rules.
+- Read-all is a read capability only; it does not automatically grant approval, assignment, status-transition, role-management, or other mutation rights.
+- Do not remove, demote, deactivate, or replace the final active System Admin.
+- No staff profile-to-department mapping has been approved in the live database yet; do not infer it from the current empty department table.
+
 ## Owner-approved access requirement
 
-- System Admin and Director must automatically be able to read every document across all school workgroups.
-- This read-all capability does not automatically grant approval, assignment, status-transition, role-management, or other mutation rights.
-- Do not remove, demote, deactivate, or replace the final active System Admin.
-- Department-based restrictions for ordinary users must not override the read-all rule for System Admin and Director.
-- No department list or profile-to-department mapping may be inferred from current empty tables.
+- System Admin and ผู้อำนวยการโรงเรียน must automatically be able to read every document across ฝ่ายบริหาร and all four กลุ่มบริหาร.
+- Department-based restrictions for ordinary users must not override this read-all rule.
+- Users in the other roles and groups must be restricted to their approved department scope, active assignments, ownership, or designated workflow access, subject to the final reviewed policy.
+- Read access to a document must govern access to its file metadata, file versions, and Drive download path as well; knowing a URL must not bypass authorization.
 
 ## Required remediation work
 
 ### 1. Authorization model and document/file scope
 
-- Agree and record the authoritative school department/workgroup list and the initial assignment of each staff profile.
+- Seed the five confirmed organizational units using stable identifiers and unique constraints; ensure migrations are repeatable and safe for an existing database.
+- Approve and record the initial assignment of each staff profile to the correct unit before enforcing ordinary-user scope.
 - Add document scope in a forward-only migration after that mapping is approved; update both trusted incoming and outgoing registration paths.
-- Define an explicit authorization helper/policy that permits read-all for System Admin and Director, and limits other users to approved department scope, active assignments, ownership, or designated approval access.
+- Define an explicit authorization helper/policy that grants read-all to System Admin and ผู้อำนวยการโรงเรียน, and limits other users to approved department scope, active assignments, ownership, or designated workflow access.
 - Ensure file metadata, file-version attachment RPCs, Drive upload/download paths, assignment RPCs, and related history use the same document authorization rule.
 - Explicitly test that creator/current-owner visibility does not retain access after an authorized transfer.
 - Keep Drive URLs and metadata inaccessible to users who cannot read the parent document.
@@ -63,8 +86,10 @@ Before changing function signatures or grants, verify exact live signatures, def
 
 ## Release gate (all required)
 
-- [ ] Authoritative department/workgroup list and staff mapping approved.
-- [ ] System Admin and Director read-all tests pass across all document types and files.
+- [ ] Five organizational units match the school-approved structure above.
+- [ ] Initial staff-to-unit mapping is approved and recorded.
+- [ ] System Admin and ผู้อำนวยการโรงเรียน read-all tests pass across all document types and files.
+- [ ] Other roles do not gain read-all or mutation privileges merely from belonging to ฝ่ายบริหาร.
 - [ ] Ordinary cross-department read and mutation attempts are denied unless explicitly authorized.
 - [ ] Sensitive public RPC wrappers and ACL regression tests pass.
 - [ ] Last-active-System-Admin protection passes sequential and concurrency tests.
