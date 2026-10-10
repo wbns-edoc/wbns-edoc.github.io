@@ -34,16 +34,19 @@ The school has confirmed the following structure; use these exact names in the i
 
 Important modeling rules:
 - Treat ฝ่ายบริหาร as the central administrative unit and the four named กลุ่มบริหาร as separate document-scope units.
-- The school has explicitly approved automatic read-all access for **System Admin** and **ผู้อำนวยการโรงเรียน** only.
-- Do not infer read-all, approval, or mutation rights for รองผู้อำนวยการโรงเรียน, เจ้าหน้าที่สารบรรณ, or เจ้าหน้าที่ธุรการ from their unit membership alone. Their access must follow explicitly assigned permissions and workflow rules.
-- Read-all is a read capability only; it does not automatically grant approval, assignment, status-transition, role-management, or other mutation rights.
+- The school has explicitly approved automatic cross-department document read access for **System Admin** and **ผู้อำนวยการโรงเรียน**.
+- The school has now also explicitly approved automatic **document approval and document editing** permissions for these two roles. Grant these through the stable role codes `system_admin` and `director`; do not require per-user permission assignment for those capabilities.
+- This approval/editing grant is limited to document approval and editing. Do not infer assignment, archive, completion, role-management, user-management, or other mutation rights for the director unless separately assigned.
+- Do not infer read-all or mutation rights for รองผู้อำนวยการโรงเรียน, เจ้าหน้าที่สารบรรณ, or เจ้าหน้าที่ธุรการ from their unit membership alone. Their access must follow explicitly assigned permissions and workflow rules.
 - Do not remove, demote, deactivate, or replace the final active System Admin.
 - No staff profile-to-department mapping has been approved in the live database yet; do not infer it from the current empty department table.
 
 ## Owner-approved access requirement
 
-- System Admin and ผู้อำนวยการโรงเรียน must automatically be able to read every document across ฝ่ายบริหาร and all four กลุ่มบริหาร.
-- Department-based restrictions for ordinary users must not override this read-all rule.
+- System Admin and ผู้อำนวยการโรงเรียน must automatically be able to read, approve, and edit every document across ฝ่ายบริหาร and all four กลุ่มบริหาร, through role-level permissions.
+- Department-based restrictions for ordinary users must not override these approved capabilities for these two roles.
+- The role `director` already has `document.view` and `document.approve`; a forward-only migration must add `document.update`. `system_admin` already has all three permissions in the inspected role-permission catalogue.
+- This is a role permission change only; do not assign the `director` role to any user automatically.
 - Users in the other roles and groups must be restricted to their approved department scope, active assignments, ownership, or designated workflow access, subject to the final reviewed policy.
 - Read access to a document must govern access to its file metadata, file versions, and Drive download path as well; knowing a URL must not bypass authorization.
 
@@ -54,7 +57,7 @@ Important modeling rules:
 - Seed the four confirmed document-scope groups using stable identifiers and unique constraints. Represent ฝ่ายบริหาร as a central administrative unit/organizational grouping, not as an ordinary document-scope department unless a distinct scope requirement is approved. Ensure migrations are repeatable and safe for an existing database.
 - Approve and record the initial assignment of each staff profile to the correct unit before enforcing ordinary-user scope.
 - Add document scope in a forward-only migration after that mapping is approved; update both trusted incoming and outgoing registration paths.
-- Define an explicit authorization helper/policy that grants read-all to System Admin and ผู้อำนวยการโรงเรียน, and limits other users to approved department scope, active assignments, ownership, or designated workflow access.
+- Define an explicit authorization helper/policy that grants read-all, approval, and document editing to System Admin and ผู้อำนวยการโรงเรียน, and limits other users to approved department scope, active assignments, ownership, or designated workflow access. Approval/editing must still respect valid workflow transitions and audit logging.
 - Ensure file metadata, file-version attachment RPCs, Drive upload/download paths, assignment RPCs, and related history use the same document authorization rule.
 - Explicitly test that creator/current-owner visibility does not retain access after an authorized transfer.
 - Keep Drive URLs and metadata inaccessible to users who cannot read the parent document.
@@ -89,7 +92,7 @@ Before changing function signatures or grants, verify exact live signatures, def
 
 - [ ] Four document-scope groups match the school-approved names; ฝ่ายบริหาร is represented separately as the central administrative unit.
 - [ ] Initial staff-to-unit mapping is approved and recorded.
-- [ ] `system_admin` and `director` read-all tests pass across all document types and files; the existing profile-to-role assignment must be verified before enforcing the rule.
+- [ ] `system_admin` and `director` role-level `document.view`, `document.approve`, and `document.update` tests pass across all document types and files; no user is assigned the director role automatically.
 - [ ] Other roles do not gain read-all or mutation privileges merely from belonging to ฝ่ายบริหาร.
 - [ ] Ordinary cross-department read and mutation attempts are denied unless explicitly authorized.
 - [ ] Sensitive public RPC wrappers and ACL regression tests pass.
@@ -104,3 +107,9 @@ Before changing function signatures or grants, verify exact live signatures, def
 ## Safety decision
 
 Do not deploy this remediation directly to Production until it has been generated and tested in an isolated local/test environment, reviewed, backed up, and explicitly approved. No additional paid Supabase project or branch should be created solely for this gate. No Production mutation is performed by this document.
+
+## Owner decision update — 2026-10-10
+
+The owner has superseded the earlier read-only-only interpretation: **System Admin and the director role automatically receive document read, approval, and editing permissions.** This grants `document.approve` and `document.update` at the role-permission layer, not by assigning the director role to any individual account. `system_admin` already has these permissions in the live role-permission snapshot; `director` already has `document.view` and `document.approve`, and requires the additive `document.update` mapping.
+
+A forward-only idempotent migration and disposable-database regression test are being added to PR #6. This does not remove the separate Production release blockers: migration source reconciliation, department/file scope enforcement, live integration tests, and backup/restore evidence. No direct Production permission write was performed as part of this documentation update.
