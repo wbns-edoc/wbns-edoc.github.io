@@ -573,11 +573,11 @@ begin
   where df.document_id=p_document_id
     and df.file_role=p_file_role;
 
-  update public.document_files
+  update public.document_files as df
      set is_current=false
-   where document_id=p_document_id
-     and file_role=p_file_role
-     and is_current=true;
+   where df.document_id=p_document_id
+     and df.file_role=p_file_role
+     and df.is_current=true;
 
   update public.google_drive_files
      set created_by=coalesce(created_by,auth.uid())
