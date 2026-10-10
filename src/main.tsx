@@ -155,8 +155,8 @@ function BacklogImport({permissions,setError,onClose,onDone}:{permissions:string
         const senderMatches=senders.filter(s=>backlogMatch(s.organization_name)===backlogMatch(sender));
         const assigneeMatches=profiles.filter(p=>[p.full_name,p.employee_code,p.email].some(v=>backlogMatch(v)===backlogMatch(assignee)));
         let departmentId:string|undefined,senderId:string|undefined,assigneeId:string|undefined;
-        if(departmentMatches.length===1)departmentId=departmentMatches[0].id;
-        else if(departmentMatches.length===0)errors.push('ไม่พบกลุ่มงานที่ตรงกัน');
+        if(depMatches.length===1)departmentId=depMatches[0].id;
+        else if(depMatches.length===0)errors.push('ไม่พบกลุ่มงานที่ตรงกัน');
         else errors.push('ชื่อ/รหัสกลุ่มงานซ้ำ ต้องใช้รหัสที่ไม่ซ้ำ');
         if(senderMatches.length===1)senderId=senderMatches[0].id;
         else if(senderMatches.length===0)errors.push('ไม่พบหน่วยงานผู้ส่งในทะเบียน (เพิ่มหน่วยงานจริงก่อน)');
@@ -164,7 +164,7 @@ function BacklogImport({permissions,setError,onClose,onDone}:{permissions:string
         if(assigneeMatches.length===1)assigneeId=assigneeMatches[0].id;
         else if(assigneeMatches.length===0)errors.push('ไม่พบผู้รับมอบหมาย (ตรวจรายชื่อ/รหัสบุคลากร)');
         else errors.push('ชื่อผู้รับมอบหมายซ้ำ ให้ใช้รหัสบุคลากรหรืออีเมล');
-        if(assigneeMatches.length===1&&departmentMatches.length===1&&assigneeMatches[0].department_id!==departmentMatches[0].id)errors.push('ผู้รับมอบหมายไม่ได้สังกัดกลุ่มงานเดียวกับเอกสาร');
+        if(assigneeMatches.length===1&&depMatches.length===1&&assigneeMatches[0].department_id!==depMatches[0].id)errors.push('ผู้รับมอบหมายไม่ได้สังกัดกลุ่มงานเดียวกับเอกสาร');
         return {rowNo:i+2,subject,department,sender,assignee,externalNo,externalDate:externalDateIso||'',receivedAt:receivedIso||'',urgency,notes,legacyNo,departmentId,senderId,assigneeId,errors};
       });
       setRows(prepared);
