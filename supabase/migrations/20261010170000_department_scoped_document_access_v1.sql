@@ -61,22 +61,31 @@ AS $function$
   SELECT EXISTS (
     SELECT 1
     FROM public.documents d
+    JOIN public.profiles pr
+      ON pr.id = (SELECT auth.uid()) AND pr.is_active = true
     WHERE d.id = p_document_id
       AND (
-        d.created_by = (SELECT auth.uid())
-        OR d.current_owner_id = (SELECT auth.uid())
-        OR (
+        (
           private.has_permission('document.view')
           AND (
             private.has_document_wide_read_role()
             OR (
               d.department_id IS NOT NULL
-              AND EXISTS (
-                SELECT 1 FROM public.profiles pr
-                WHERE pr.id = (SELECT auth.uid())
-                  AND pr.is_active = true
-                  AND pr.department_id = d.department_id
-              )
+              AND pr.department_id = d.department_id
+            )
+          )
+        )
+        OR (
+          d.department_id IS NOT NULL
+          AND pr.department_id = d.department_id
+          AND (
+            d.created_by = (SELECT auth.uid())
+            OR d.current_owner_id = (SELECT auth.uid())
+            OR EXISTS (
+              SELECT 1 FROM public.document_assignments da
+              WHERE da.document_id = d.id
+                AND da.assignee_id = (SELECT auth.uid())
+                AND da.assignment_status = 'assigned'
             )
           )
         )
