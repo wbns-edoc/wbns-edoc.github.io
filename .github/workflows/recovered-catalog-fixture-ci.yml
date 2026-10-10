@@ -5,6 +5,8 @@ on:
     paths:
       - "supabase/tests/fixtures/recovered-production-catalog.sql"
       - "supabase/tests/database/recovered_catalog_fixture_smoke.sql"
+      - "supabase/tests/database/workflow_rpc_wrappers.sql"
+      - "supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql"
       - ".github/workflows/recovered-catalog-fixture-ci.yml"
   push:
     branches:
@@ -12,6 +14,8 @@ on:
     paths:
       - "supabase/tests/fixtures/recovered-production-catalog.sql"
       - "supabase/tests/database/recovered_catalog_fixture_smoke.sql"
+      - "supabase/tests/database/workflow_rpc_wrappers.sql"
+      - "supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql"
       - ".github/workflows/recovered-catalog-fixture-ci.yml"
   workflow_dispatch:
 
@@ -33,7 +37,7 @@ jobs:
         with:
           version: 2.81.3
 
-      - name: Prepare isolated fixture-only project
+      - name: Prepare isolated catalog fixture and forward migration
         shell: bash
         run: |
           set -euo pipefail
@@ -42,20 +46,22 @@ jobs:
           cp supabase/config.toml "$test_dir/supabase/config.toml"
           sed -i 's/^project_id = .*/project_id = "wbns-edoc-catalog-fixture-ci"/' "$test_dir/supabase/config.toml"
           cp supabase/tests/fixtures/recovered-production-catalog.sql "$test_dir/supabase/migrations/20261010120000_recovered_production_catalog.sql"
+          cp supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql "$test_dir/supabase/migrations/"
           cp supabase/tests/database/recovered_catalog_fixture_smoke.sql "$test_dir/supabase/tests/recovered_catalog_fixture_smoke.sql"
+          cp supabase/tests/database/workflow_rpc_wrappers.sql "$test_dir/supabase/tests/workflow_rpc_wrappers.sql"
           echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
 
-      - name: Apply reconstructed catalog to disposable local database
+      - name: Apply recovered catalog and forward migration to disposable local database
         working-directory: ${{ env.TEST_DIR }}
         run: supabase start -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
-      - name: Lint reconstructed schema
+      - name: Lint recovered catalog and forward migration
         id: lint
         continue-on-error: true
         working-directory: ${{ env.TEST_DIR }}
         run: supabase db lint --local --schema public,private --fail-on error
 
-      - name: Run catalog smoke tests
+      - name: Run catalog and workflow RPC regression tests
         working-directory: ${{ env.TEST_DIR }}
         run: supabase test db --local
 
