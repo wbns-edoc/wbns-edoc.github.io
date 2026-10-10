@@ -11,6 +11,7 @@ on:
       - "supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql"
       - "supabase/migrations/20261010150000_grant_director_document_update.sql"
       - "supabase/migrations/20261010170000_department_scoped_document_access_v1.sql"
+      - "supabase/migrations/20261010180000_scope_workflow_assignment_and_status.sql"
       - ".github/workflows/recovered-catalog-fixture-ci.yml"
   push:
     branches:
@@ -24,6 +25,7 @@ on:
       - "supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql"
       - "supabase/migrations/20261010150000_grant_director_document_update.sql"
       - "supabase/migrations/20261010170000_department_scoped_document_access_v1.sql"
+      - "supabase/migrations/20261010180000_scope_workflow_assignment_and_status.sql"
       - ".github/workflows/recovered-catalog-fixture-ci.yml"
   workflow_dispatch:
 
@@ -57,6 +59,7 @@ jobs:
           cp supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261010150000_grant_director_document_update.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261010170000_department_scoped_document_access_v1.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261010180000_scope_workflow_assignment_and_status.sql "$test_dir/supabase/migrations/"
           cp supabase/tests/database/recovered_catalog_fixture_smoke.sql "$test_dir/supabase/tests/recovered_catalog_fixture_smoke.sql"
           cp supabase/tests/database/workflow_rpc_wrappers.sql "$test_dir/supabase/tests/workflow_rpc_wrappers.sql"
           cp supabase/tests/database/automatic_admin_document_permissions.sql "$test_dir/supabase/tests/automatic_admin_document_permissions.sql"
