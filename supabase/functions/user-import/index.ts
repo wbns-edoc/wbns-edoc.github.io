@@ -43,6 +43,7 @@ Deno.serve(async (req: Request) => {
         const phone = String(r.phone ?? "").trim() || null;
         const password = String(r.password ?? "");
         const departmentName = String(r.department ?? "").trim();
+        const additionalDepartmentNames = String(r.additional_departments ?? "").split(/[;,，；]/).map((x: string) => x.trim()).filter(Boolean);
         const roleValue = String(r.role ?? "").trim();
         const isActive = r.is_active !== false;
 
@@ -57,24 +58,32 @@ Deno.serve(async (req: Request) => {
         }
 
         let departmentId: string | null = null;
-        if (departmentName) {
-          const dep = await admin.from("departments").select("id").or(
-            "code.ilike." + departmentName.replace(/,/g, "") + ",name.ilike." + departmentName.replace(/,/g, "")
-          ).limit(2);
+        const resolvedDepartmentIds: string[] = [];
+        const departmentNames = [departmentName, ...additionalDepartmentNames].filter(Boolean);
+        if (!departmentName) { results.push({ row: rowNo, status:"error", code:"primary_department_required" }); continue; }
+        let departmentLookupFailed = false;
+        for (const depName of departmentNames) {
+          const safeName = depName.replace(/[,()%_]/g, "");
+          const dep = await admin.from("departments").select("id,code,name").or(
+            "code.ilike." + safeName + ",name.ilike." + safeName
+          ).eq("is_active", true).limit(2);
           if (dep.error) {
             results.push({ row: rowNo, status:"error", code:"department_lookup_failed" });
-            continue;
+            departmentLookupFailed = true; break;
           }
           if ((dep.data ?? []).length > 1) {
-            results.push({ row: rowNo, status:"error", code:"department_ambiguous" });
-            continue;
+            results.push({ row: rowNo, status:"error", code:"department_ambiguous", department: depName });
+            departmentLookupFailed = true; break;
           }
-          if ((dep.data ?? []).length === 1) departmentId = dep.data[0].id;
+          if ((dep.data ?? []).length === 1) resolvedDepartmentIds.push(dep.data[0].id);
           else {
-            results.push({ row: rowNo, status:"error", code:"department_not_found" });
-            continue;
+            results.push({ row: rowNo, status:"error", code:"department_not_found", department: depName });
+            departmentLookupFailed = true; break;
           }
         }
+        if (departmentLookupFailed) continue;
+        departmentId = resolvedDepartmentIds[0] ?? null;
+        if (new Set(resolvedDepartmentIds).size !== resolvedDepartmentIds.length) { results.push({ row: rowNo, status:"error", code:"duplicate_department" }); continue; }
 
         let roleId: string | null = null;
         if (roleValue) {
@@ -164,12 +173,20 @@ Deno.serve(async (req: Request) => {
           }
         }
 
+        const clearPrimary = await admin.from("user_departments").update({ is_primary: false }).eq("user_id", userId);
+        if (clearPrimary.error) { results.push({ row: rowNo, status:"error", code:"department_primary_reset_failed" }); continue; }
+        const memberships = resolvedDepartmentIds.map((depId, index) => ({ user_id: userId, department_id: depId, is_primary: index === 0, assigned_by: actorId || null }));
+        const membershipWrite = await admin.from("user_departments").upsert(memberships, { onConflict:"user_id,department_id" });
+        if (membershipWrite.error) { results.push({ row: rowNo, status:"error", code:"department_membership_write_failed", message:membershipWrite.error.message }); continue; }
+        const staleMemberships = await admin.from("user_departments").delete().eq("user_id", userId).not("department_id", "in", "(" + resolvedDepartmentIds.join(",") + ")");
+        if (staleMemberships.error) { results.push({ row: rowNo, status:"error", code:"department_membership_sync_failed" }); continue; }
+
         await admin.from("audit_logs").insert({
           actor_id: actorId || null,
           action: "user_import_" + action,
           entity_type: "profiles",
           entity_id: userId,
-          new_data: { employee_code: employeeCode, full_name: fullName, email, role: roleValue || null },
+          new_data: { employee_code: employeeCode, full_name: fullName, email, role: roleValue || null, department_ids: resolvedDepartmentIds },
         });
 
         results.push({ row: rowNo, status:"ok", action, user_id:userId });
