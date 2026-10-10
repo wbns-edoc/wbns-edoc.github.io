@@ -41,12 +41,18 @@ Deno.serve(async (req: Request) => {
         const fullName = String(r.full_name ?? "").trim();
         const employeeCode = String(r.employee_code ?? "").trim() || null;
         const phone = String(r.phone ?? "").trim() || null;
+        const password = String(r.password ?? "");
         const departmentName = String(r.department ?? "").trim();
         const roleValue = String(r.role ?? "").trim();
         const isActive = r.is_active !== false;
 
         if (!fullName || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           results.push({ row: rowNo, status:"error", code:"invalid_required_fields" });
+          continue;
+        }
+
+        if (password && password.length < 8) {
+          results.push({ row: rowNo, status:"error", code:"password_min_8_characters" });
           continue;
         }
 
@@ -108,15 +114,28 @@ Deno.serve(async (req: Request) => {
         let action = "updated";
 
         if (!userId) {
-          const invited = await admin.auth.admin.inviteUserByEmail(email, {
-            data: { full_name: fullName, employee_code: employeeCode },
-          });
-          if (invited.error || !invited.data?.user?.id) {
-            results.push({ row: rowNo, status:"error", code:"auth_invite_failed", message: invited.error?.message ?? "invite_failed" });
+          if (!password) {
+            results.push({ row: rowNo, status:"error", code:"password_required_for_new_user" });
             continue;
           }
-          userId = invited.data.user.id;
-          action = "invited";
+          const created = await admin.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { full_name: fullName, employee_code: employeeCode },
+          });
+          if (created.error || !created.data?.user?.id) {
+            results.push({ row: rowNo, status:"error", code:"auth_create_failed", message: created.error?.message ?? "create_user_failed" });
+            continue;
+          }
+          userId = created.data.user.id;
+          action = "created";
+        } else if (password) {
+          const changed = await admin.auth.admin.updateUserById(userId, { password });
+          if (changed.error) {
+            results.push({ row: rowNo, status:"error", code:"password_update_failed", message: changed.error.message });
+            continue;
+          }
         }
 
         const upsert = await admin.from("profiles").upsert({
@@ -157,7 +176,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const summary = {
-        invited: results.filter(x => x.action === "invited").length,
+        created: results.filter(x => x.action === "created").length,
         updated: results.filter(x => x.action === "updated").length,
         errors: results.filter(x => x.status === "error").length,
       };
