@@ -63,12 +63,12 @@ SELECT set_config('request.jwt.claim.sub','dddddddd-dddd-4ddd-8ddd-ddddddddddd4'
 SET LOCAL ROLE authenticated;
 SELECT is((SELECT count(*) FROM public.documents WHERE id='c0000000-0000-4000-8000-000000000003'), 1::bigint,
           'director can read a document in another department');
-SELECT is((WITH changed AS (
-  UPDATE public.documents SET subject='Director cross-department edit verified'
-  WHERE id='c0000000-0000-4000-8000-000000000003'
-  RETURNING id
-) SELECT count(*) FROM changed), 1::bigint,
-          'director can edit a document in another department');
+SELECT lives_ok(
+  $UPDATE public.documents
+    SET subject='Director cross-department edit verified'
+    WHERE id='c0000000-0000-4000-8000-000000000003'$,
+  'director can edit a document in another department'
+);
 RESET ROLE;
 
 -- System Admin also has document-wide read.
