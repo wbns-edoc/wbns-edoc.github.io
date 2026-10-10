@@ -30,3 +30,22 @@ Do not bulk-revoke EXECUTE privileges: that could break application flows and is
 Recover an authoritative schema/migration source. The preferred input is a schema-only export created by the owner in a trusted environment, or the complete original migration set. Do not share credentials or data dumps. After recovery, build a disposable local database, implement and test a forward-only authorization fix, then take/verify backup and request explicit owner approval before Production changes.
 
 No Production schema, data, RLS, grants, roles, or Edge Function deployment was changed in this update.
+
+
+## Follow-up evidence — 2026-10-10
+
+- Recovered Catalog Fixture CI run 26: schema lint and all 6 catalog smoke checks **PASS** on the disposable local Supabase database. The workflow was still completing service cleanup at the time this note was recorded; treat the job's final conclusion as authoritative.
+  - Run: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38031167633
+  - This validates the reconstructed test fixture only. It does **not** prove the incomplete historical migration chain can recreate Production from zero and does not authorize deployment.
+- Drive Upload CI run 111: **PASS**.
+  - Run: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38031167475
+- Workflow RPC Security CI run 42: **FAIL/CORRECTLY BLOCKED** by the migration-order security guard. Do not merge/deploy until the latest definitions are corrected and database tests can run against an authoritative migration source.
+  - Run: https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38031167470
+- Read-only Production count check reconfirmed: 1 profile, 0 departments, 0 documents, 0 document-file links, and 0 Drive-file metadata rows. No Production data or schema was changed by this check.
+- Owner-approved access requirement recorded: System Admin and the director receive automatic read access to all school documents, across all four departments. This is read-only visibility and does not grant System Admin workflow mutation/approval powers. Registrar and deputy director do not receive blanket access by implication. This policy is documented but **not yet implemented in Production**.
+
+## Updated release decision
+
+**NO-GO for merge/deployment to Production remains in force.** Fixture lint/smoke success is useful evidence, but the Workflow RPC security gate and authoritative migration-source gap remain unresolved. Department-scoped access still cannot be enforced reliably while Production's `documents` table has no `department_id`. Continue only with isolated tests and reviewed, forward-only changes until migration source recovery, authorization tests, backup/restore verification, and explicit deployment approval are complete.
+
+No Production schema, data, RLS, grants, roles, or Edge Function deployment was changed in this follow-up.
