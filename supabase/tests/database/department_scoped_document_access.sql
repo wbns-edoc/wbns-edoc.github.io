@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(17);
+SELECT plan(20);
 
 SELECT has_column('public', 'documents', 'department_id',
   'documents has a department scope column');
@@ -142,6 +142,27 @@ SELECT ok(
       AND pg_get_expr(polqual, polrelid) LIKE '%can_access_document%'
   ),
   'outgoing document details inherit parent document scope'
+);
+
+SELECT ok(
+  position('private.can_access_document' IN pg_get_functiondef(
+    'private.assign_document(uuid,uuid,text,timestamp with time zone)'::regprocedure
+  )) > 0,
+  'assignment RPC enforces document scope'
+);
+
+SELECT ok(
+  position('cross_department_assignment_denied' IN pg_get_functiondef(
+    'private.assign_document(uuid,uuid,text,timestamp with time zone)'::regprocedure
+  )) > 0,
+  'assignment RPC blocks cross-department assignment without System Admin'
+);
+
+SELECT ok(
+  position('private.can_access_document' IN pg_get_functiondef(
+    'private.update_document_status(uuid,public.document_status,text)'::regprocedure
+  )) > 0,
+  'status mutation RPC enforces document scope'
 );
 
 SELECT * FROM finish();
