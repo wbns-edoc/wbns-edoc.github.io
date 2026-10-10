@@ -17,6 +17,7 @@ on:
     paths:
       - "src/main.tsx"
       - "supabase/functions/drive-upload/**"
+      - "supabase/functions/user-import/**"
       - "supabase/config.toml"
       - ".github/workflows/drive-upload-ci.yml"
       - "package.json"
