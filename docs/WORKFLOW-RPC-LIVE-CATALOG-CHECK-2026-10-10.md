@@ -31,3 +31,8 @@ Recover and reconcile the full migration source before preparing a forward-only 
 ## Safety
 
 No Production changes were made. No additional Supabase project or branch was created.
+
+
+## Follow-up read-only confirmation (2026-10-10)
+
+A second read-only catalog query reconfirmed that the live Production definitions of `public.assign_document`, `public.update_document_status`, and `public.set_document_deadline` are still SECURITY DEFINER. Their corresponding `private` implementations are also SECURITY DEFINER. No function was invoked and no database object, grant, or data was changed during this follow-up check. The remote migration history still reports 26 entries; the repository source reconciliation blocker remains unresolved.
