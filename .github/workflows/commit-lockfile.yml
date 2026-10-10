@@ -1,0 +1,36 @@
+name: Commit reviewed dependency lockfile
+on:
+  push:
+    branches:
+      - safety/ci-build-config-validation
+permissions:
+  contents: write
+concurrency:
+  group: lockfile-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Generate lockfile from package.json
+        run: npm install --package-lock-only
+      - name: Commit lockfile if changed
+        run: |
+          # git diff does not include untracked files; only skip when the lockfile
+          # is already tracked and unchanged.
+          if git ls-files --error-unmatch package-lock.json >/dev/null 2>&1 && git diff --quiet -- package-lock.json; then
+            echo "Tracked lockfile is already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "Add reproducible npm dependency lockfile"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

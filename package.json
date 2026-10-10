@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "prebuild": "node scripts/validate-build-env.mjs",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview"
