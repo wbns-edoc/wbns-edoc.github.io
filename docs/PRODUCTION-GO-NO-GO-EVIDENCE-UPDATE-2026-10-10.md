@@ -108,3 +108,22 @@ Findings requiring remediation/tests before release:
 - Repository `supabase/functions/user-import/index.ts` does not match the deployed version's `set_active` and `resend_invitation` actions. The repository must first reconcile this deployed-source drift so a future deploy does not accidentally remove existing behavior.
 
 No user-import invocation or mutation was performed. No Production change was made. Add this to the release gate: recover the deployed function source into version control, enforce action-specific permissions, add a transactional/serialized last-System-Admin guard at the database layer, test partial-import/audit failure behavior in isolation, and verify the live role mapping before deployment.
+
+
+## User-import permission separation — isolated code change and CI evidence
+
+The repository branch now has a pure authorization helper and five Deno tests for the current bulk-import handler:
+- Profile/account changes require `user.manage`.
+- If any import row requests a role assignment, the request additionally requires `role.manage`; neither permission substitutes for the other.
+- The helper tests cover missing user permission, role permission alone, missing role permission, and the two allowed cases.
+
+CI run [38032163486](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38032163486) **PASS**: all five new authorization unit tests passed, and the current repository `user-import/index.ts` passed Deno type-check after fixing type findings from the first attempt. The frontend build and existing Drive upload checks also passed in that run.
+
+Important limits:
+- This change is on the Draft PR branch only; it is not deployed.
+- It currently hardens the repository's bulk-import handler only. Production's deployed `user-import` also exposes `set_active` and `resend_invitation`, which are not yet reconciled into the repository source. Do not deploy the current branch function because doing so may remove those deployed actions.
+- The helper's pure tests do not replace a runtime authorization test against Supabase, a database-serialized final-System-Admin guard, or audit/partial-batch failure tests.
+
+Workflow RPC Security CI run [38032163530](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38032163530) still **FAILS** at the migration-order guard. Recovered Catalog Fixture CI run [38032163481](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38032163481) was still pending at the time this note was prepared; its final conclusion must be checked separately.
+
+Release remains **NO-GO**. No Production schema, data, permissions, or Edge Functions were changed.
