@@ -43,6 +43,7 @@ Deno.serve(async (req: Request) => {
         const phone = String(r.phone ?? "").trim() || null;
         const password = String(r.password ?? "");
         const departmentName = String(r.department ?? "").trim();
+        const additionalDepartmentNames = String(r.additional_departments ?? "").split(/[;,，；]/).map((x: string) => x.trim()).filter(Boolean);
         const roleValue = String(r.role ?? "").trim();
         const isActive = r.is_active !== false;
 
@@ -57,24 +58,32 @@ Deno.serve(async (req: Request) => {
         }
 
         let departmentId: string | null = null;
-        if (departmentName) {
-          const dep = await admin.from("departments").select("id").or(
-            "code.ilike." + departmentName.replace(/,/g, "") + ",name.ilike." + departmentName.replace(/,/g, "")
-          ).limit(2);
+        const resolvedDepartmentIds: string[] = [];
+        const departmentNames = [departmentName, ...additionalDepartmentNames].filter(Boolean);
+        if (!departmentName) { results.push({ row: rowNo, status:"error", code:"primary_department_required" }); continue; }
+        let departmentLookupFailed = false;
+        for (const depName of departmentNames) {
+          const safeName = depName.replace(/[,()%_]/g, "");
+          const dep = await admin.from("departments").select("id,code,name").or(
+            "code.ilike." + safeName + ",name.ilike." + safeName
+          ).eq("is_active", true).limit(2);
           if (dep.error) {
             results.push({ row: rowNo, status:"error", code:"department_lookup_failed" });
-            continue;
+            departmentLookupFailed = true; break;
           }
           if ((dep.data ?? []).length > 1) {
-            results.push({ row: rowNo, status:"error", code:"department_ambiguous" });
-            continue;
+            results.push({ row: rowNo, status:"error", code:"department_ambiguous", department: depName });
+            departmentLookupFailed = true; break;
           }
-          if ((dep.data ?? []).length === 1) departmentId = dep.data[0].id;
+          if ((dep.data ?? []).length === 1) resolvedDepartmentIds.push(dep.data[0].id);
           else {
-            results.push({ row: rowNo, status:"error", code:"department_not_found" });
-            continue;
+            results.push({ row: rowNo, status:"error", code:"department_not_found", department: depName });
+            departmentLookupFailed = true; break;
           }
         }
+        if (departmentLookupFailed) continue;
+        departmentId = resolvedDepartmentIds[0] ?? null;
+        if (new Set(resolvedDepartmentIds).size !== resolvedDepartmentIds.length) { results.push({ row: rowNo, status:"error", code:"duplicate_department" }); continue; }
 
         let roleId: string | null = null;
         if (roleValue) {
