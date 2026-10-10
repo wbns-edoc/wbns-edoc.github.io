@@ -261,6 +261,16 @@ AS $function$
   SELECT private.register_outgoing_document($1,$2,$3,$4,$5,$6,$7);
 $function$;
 
+REVOKE ALL ON FUNCTION private.register_incoming_document(text,uuid,text,date,timestamptz,public.urgency_level,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION private.register_outgoing_document(text,text,text,text,date,public.urgency_level) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION private.register_incoming_document(text,uuid,text,date,timestamptz,public.urgency_level,text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION private.register_outgoing_document(text,text,text,text,date,public.urgency_level) TO authenticated, service_role;
+
+REVOKE ALL ON FUNCTION public.register_incoming_document(text,uuid,text,date,timestamptz,public.urgency_level,text) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.register_outgoing_document(text,text,text,text,date,public.urgency_level) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.register_incoming_document(text,uuid,text,date,timestamptz,public.urgency_level,text) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.register_outgoing_document(text,text,text,text,date,public.urgency_level) TO authenticated, service_role;
+
 REVOKE ALL ON FUNCTION private.register_incoming_document(text,uuid,text,date,timestamptz,public.urgency_level,text,uuid) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION private.register_outgoing_document(text,text,text,text,date,public.urgency_level,uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION private.register_incoming_document(text,uuid,text,date,timestamptz,public.urgency_level,text,uuid) TO authenticated, service_role;
