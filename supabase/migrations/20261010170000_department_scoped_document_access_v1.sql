@@ -397,4 +397,56 @@ $function$;
 REVOKE ALL ON FUNCTION public.attach_document_file_version(uuid, uuid, text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.attach_document_file_version(uuid, uuid, text) TO authenticated, service_role;
 
+-- Incoming/outgoing detail rows contain document content too; registry role alone
+-- must not bypass the parent document's department scope.
+DROP POLICY IF EXISTS incoming_details_select_authorized ON public.incoming_document_details;
+CREATE POLICY incoming_details_select_authorized ON public.incoming_document_details
+FOR SELECT TO authenticated
+USING (private.can_access_document(document_id));
+
+DROP POLICY IF EXISTS incoming_details_insert_registry ON public.incoming_document_details;
+CREATE POLICY incoming_details_insert_registry ON public.incoming_document_details
+FOR INSERT TO authenticated
+WITH CHECK (
+  private.has_permission('registry.incoming.manage')
+  AND private.can_access_document(document_id)
+);
+
+DROP POLICY IF EXISTS incoming_details_update_registry ON public.incoming_document_details;
+CREATE POLICY incoming_details_update_registry ON public.incoming_document_details
+FOR UPDATE TO authenticated
+USING (
+  private.has_permission('registry.incoming.manage')
+  AND private.can_access_document(document_id)
+)
+WITH CHECK (
+  private.has_permission('registry.incoming.manage')
+  AND private.can_access_document(document_id)
+);
+
+DROP POLICY IF EXISTS outgoing_details_select_authorized ON public.outgoing_document_details;
+CREATE POLICY outgoing_details_select_authorized ON public.outgoing_document_details
+FOR SELECT TO authenticated
+USING (private.can_access_document(document_id));
+
+DROP POLICY IF EXISTS outgoing_details_insert_registry ON public.outgoing_document_details;
+CREATE POLICY outgoing_details_insert_registry ON public.outgoing_document_details
+FOR INSERT TO authenticated
+WITH CHECK (
+  private.has_permission('registry.outgoing.manage')
+  AND private.can_access_document(document_id)
+);
+
+DROP POLICY IF EXISTS outgoing_details_update_registry ON public.outgoing_document_details;
+CREATE POLICY outgoing_details_update_registry ON public.outgoing_document_details
+FOR UPDATE TO authenticated
+USING (
+  private.has_permission('registry.outgoing.manage')
+  AND private.can_access_document(document_id)
+)
+WITH CHECK (
+  private.has_permission('registry.outgoing.manage')
+  AND private.can_access_document(document_id)
+);
+
 COMMIT;
