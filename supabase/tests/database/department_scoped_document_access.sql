@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(15);
+SELECT plan(17);
 
 SELECT has_column('public', 'documents', 'department_id',
   'documents has a department scope column');
@@ -122,6 +122,26 @@ SELECT ok(
     'public.attach_document_file_version(uuid,uuid,text)'::regprocedure
   )) > 0,
   'attachment RPC blocks linking a file to a different document'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polrelid = 'public.incoming_document_details'::regclass
+      AND polname = 'incoming_details_select_authorized'
+      AND pg_get_expr(polqual, polrelid) LIKE '%can_access_document%'
+  ),
+  'incoming document details inherit parent document scope'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polrelid = 'public.outgoing_document_details'::regclass
+      AND polname = 'outgoing_details_select_authorized'
+      AND pg_get_expr(polqual, polrelid) LIKE '%can_access_document%'
+  ),
+  'outgoing document details inherit parent document scope'
 );
 
 SELECT * FROM finish();
