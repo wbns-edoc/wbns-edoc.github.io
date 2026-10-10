@@ -1,0 +1,98 @@
+name: Recovered Catalog Fixture CI
+
+on:
+  pull_request:
+    paths:
+      - "supabase/tests/fixtures/recovered-production-catalog.sql"
+      - "supabase/tests/database/recovered_catalog_fixture_smoke.sql"
+      - "supabase/tests/database/workflow_rpc_wrappers.sql"
+      - "supabase/tests/database/automatic_admin_document_permissions.sql"
+      - "supabase/tests/database/department_scoped_document_access.sql"
+      - "supabase/tests/database/department_scope_behavior.sql"
+      - "supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql"
+      - "supabase/migrations/20261010150000_grant_director_document_update.sql"
+      - "supabase/migrations/20261010170000_department_scoped_document_access_v1.sql"
+      - "supabase/migrations/20261010180000_scope_workflow_assignment_and_status.sql"
+      - "supabase/migrations/20261010190000_department_aware_document_registration_v1.sql"
+      - ".github/workflows/recovered-catalog-fixture-ci.yml"
+  push:
+    branches:
+      - fix/drive-upload-metadata-atomicity-2026-10-09
+    paths:
+      - "supabase/tests/fixtures/recovered-production-catalog.sql"
+      - "supabase/tests/database/recovered_catalog_fixture_smoke.sql"
+      - "supabase/tests/database/workflow_rpc_wrappers.sql"
+      - "supabase/tests/database/automatic_admin_document_permissions.sql"
+      - "supabase/tests/database/department_scoped_document_access.sql"
+      - "supabase/tests/database/department_scope_behavior.sql"
+      - "supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql"
+      - "supabase/migrations/20261010150000_grant_director_document_update.sql"
+      - "supabase/migrations/20261010170000_department_scoped_document_access_v1.sql"
+      - "supabase/migrations/20261010180000_scope_workflow_assignment_and_status.sql"
+      - "supabase/migrations/20261010190000_department_aware_document_registration_v1.sql"
+      - ".github/workflows/recovered-catalog-fixture-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recovered-catalog-fixture-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  recovered-catalog-fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
+      - name: Prepare isolated catalog fixture and forward migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test_dir="$RUNNER_TEMP/wbns-catalog-fixture"
+          mkdir -p "$test_dir/supabase/migrations" "$test_dir/supabase/tests"
+          cp supabase/config.toml "$test_dir/supabase/config.toml"
+          sed -i 's/^project_id = .*/project_id = "wbns-edoc-catalog-fixture-ci"/' "$test_dir/supabase/config.toml"
+          cp supabase/tests/fixtures/recovered-production-catalog.sql "$test_dir/supabase/migrations/20261010120000_recovered_production_catalog.sql"
+          cp supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261010150000_grant_director_document_update.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261010170000_department_scoped_document_access_v1.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261010180000_scope_workflow_assignment_and_status.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261010190000_department_aware_document_registration_v1.sql "$test_dir/supabase/migrations/"
+          cp supabase/tests/database/recovered_catalog_fixture_smoke.sql "$test_dir/supabase/tests/recovered_catalog_fixture_smoke.sql"
+          cp supabase/tests/database/workflow_rpc_wrappers.sql "$test_dir/supabase/tests/workflow_rpc_wrappers.sql"
+          cp supabase/tests/database/automatic_admin_document_permissions.sql "$test_dir/supabase/tests/automatic_admin_document_permissions.sql"
+          cp supabase/tests/database/department_scoped_document_access.sql "$test_dir/supabase/tests/department_scoped_document_access.sql"
+          cp supabase/tests/database/department_scope_behavior.sql "$test_dir/supabase/tests/department_scope_behavior.sql"
+          echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
+
+      - name: Apply recovered catalog and forward migration to disposable local database
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase start -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Lint recovered catalog and forward migration
+        id: lint
+        continue-on-error: true
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase db lint --local --schema public,private --fail-on error
+
+      - name: Run catalog and workflow RPC regression tests
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase test db --local
+
+      - name: Fail job if schema lint reported errors
+        if: steps.lint.outcome == 'failure'
+        run: |
+          echo "Schema lint reported errors; smoke tests ran for additional diagnostics, but this CI must remain failed."
+          exit 1
+
+      - name: Stop isolated local Supabase services
+        if: always()
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase stop --no-backup
