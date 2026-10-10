@@ -1,6 +1,6 @@
 # Owner decisions required before Production release — 2026-10-09
 
-Status: release blocked; documentation only. This file does not authorize Production changes.
+Status: release blocked; documentation only. This file records the owner's approved visibility rule; it does not authorize Production changes.
 
 ## Verified release blockers
 
@@ -18,16 +18,28 @@ Status: release blocked; documentation only. This file does not authorize Produc
 - The Drive upload CI validates frontend compilation, helper tests, input validation, JWT configuration, secret-reference guard, and Edge Function types. It does not validate live Drive uploads, cross-department authorization, or backup/restore.
 - No Production schema, policy, role, or data changes are authorized by this checklist.
 
-## Decisions needed from the school owner
+## Owner decisions confirmed — 2026-10-10
+
+The owner approved the following central-role visibility rule:
+- **System Admin** and **ผู้อำนวยการสถานศึกษา** may read all school documents automatically, across all four departments.
+- This is a **read-visibility grant only**. It does not automatically grant the System Admin business workflow authority to register, assign, approve, issue commands, void records, or bypass workflow. Those actions still require separate explicit permissions and audit controls.
+- The director's authority to read all documents is confirmed; approval/command and mutation actions remain governed by the school's approved workflow and any separately configured permissions.
+- **เจ้าหน้าที่ธุรการ** and **รองผู้อำนวยการสถานศึกษา** do not receive blanket all-document visibility from this decision. Their access remains limited to specifically approved registry duties or delegated scope.
+- These central roles remain independent of department membership; do not populate their `profiles.department_id` merely to enable access.
+
+This approval records the intended policy, but it has **not** been implemented in Production. Existing broad grants and policies must be reviewed and reconciled safely before deployment.
+
+## Decisions still needed from the school owner
 
 1. **Separate central roles from department membership**
    - Treat System Admin, เจ้าหน้าที่ธุรการ, ผู้อำนวยการสถานศึกษา, and รองผู้อำนวยการสถานศึกษา as central roles with no `department_id` assignment to the four department groups.
    - Keep role-based capabilities separate: System Admin manages system configuration and accounts; the registrar handles registry work; the director and deputy director receive document review/approval/command permissions according to the school's approved workflow. Do not assume all four roles have identical powers merely because they are central.
    - Confirm the initial role assignments for all existing profiles and whether the current single System Admin account also holds any other central role. Do not infer role assignments from names, email addresses, or job titles.
 
-2. **Central-role access and registry visibility**
-   - Define explicit school-wide document permissions for the registrar, director, and deputy director, including read, register, assign, review, approve, and issue/command actions as applicable to each role.
-   - Define System Admin's technical administration permissions separately from routine document-content access. If System Admin must have access to all document content, grant that explicitly and audit it rather than relying on a broad accidental RLS bypass.
+2. **Remaining central-role access and registry visibility**
+   - System Admin and the director have approved automatic school-wide document read access. Implement this as explicit, auditable role-based read scope, not as a generic admin bypass.
+   - Define the registrar's and deputy director's document visibility and registry/workflow permissions separately; do not infer blanket access from their central position.
+   - Keep System Admin technical administration separate from business workflow authority.
    - A profile with no department and no approved central role must not automatically receive school-wide document access.
 
 3. **Cross-department assignment and transfer**
