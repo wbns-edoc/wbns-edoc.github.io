@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(20);
+SELECT plan(25);
 
 SELECT has_column('public', 'documents', 'department_id',
   'documents has a department scope column');
@@ -163,6 +163,55 @@ SELECT ok(
     'private.update_document_status(uuid,public.document_status,text)'::regprocedure
   )) > 0,
   'status mutation RPC enforces document scope'
+);
+
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'register_incoming_document'
+      AND p.pronargs = 8 AND 'p_department_id' = ANY(p.proargnames)
+  ),
+  'incoming registration exposes an explicit department argument'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname = 'register_outgoing_document'
+      AND p.pronargs = 7 AND 'p_department_id' = ANY(p.proargnames)
+  ),
+  'outgoing registration exposes an explicit department argument'
+);
+
+SELECT ok(
+  position('active_document_department_required' IN pg_get_functiondef(
+    'private.register_incoming_document(text,uuid,text,date,timestamp with time zone,urgency_level,text,uuid)'::regprocedure
+  )) > 0
+  AND position('department_id' IN pg_get_functiondef(
+    'private.register_incoming_document(text,uuid,text,date,timestamp with time zone,urgency_level,text,uuid)'::regprocedure
+  )) > 0,
+  'incoming registration validates and persists the selected active department'
+);
+
+SELECT ok(
+  position('active_document_department_required' IN pg_get_functiondef(
+    'private.register_outgoing_document(text,text,text,text,date,urgency_level,uuid)'::regprocedure
+  )) > 0
+  AND position('department_id' IN pg_get_functiondef(
+    'private.register_outgoing_document(text,text,text,text,date,urgency_level,uuid)'::regprocedure
+  )) > 0,
+  'outgoing registration validates and persists the selected active department'
+);
+
+SELECT ok(
+  position('document_department_required' IN pg_get_functiondef(
+    'private.register_incoming_document(text,uuid,text,date,timestamp with time zone,urgency_level,text)'::regprocedure
+  )) > 0
+  AND position('document_department_required' IN pg_get_functiondef(
+    'private.register_outgoing_document(text,text,text,text,date,urgency_level)'::regprocedure
+  )) > 0,
+  'legacy registration signatures fail closed when the actor has no department'
 );
 
 SELECT * FROM finish();
