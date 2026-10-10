@@ -56,3 +56,7 @@ These database labels are not yet a complete mapping to the Thai organizational 
 ## Safety statement
 
 This document records observations and a correction plan only. It has not changed Production schema, policies, functions, roles, or data. No deployment or live upload test was performed. Keep additional infrastructure spend at 0 THB.
+
+## Additional lint finding from isolated catalog fixture
+
+The recovered Production catalog fixture was successfully applied to a disposable local Supabase database. Schema lint then reported an ambiguity in `public.attach_document_file_version(uuid,uuid,text)`: `where id=p_document_id` can resolve to either the `RETURNS TABLE(id uuid, ...)` output variable or the `public.documents.id` column. This is a real function-definition concern observed in the recovered catalog, not evidence that a Production fix has been deployed. The test fixture now qualifies `public.documents.id` solely to allow isolated smoke/lint progress and is explicitly marked as a test-only patch. A forward-only Production correction remains blocked until migration history/source is reconciled and the owner approves a tested plan.
