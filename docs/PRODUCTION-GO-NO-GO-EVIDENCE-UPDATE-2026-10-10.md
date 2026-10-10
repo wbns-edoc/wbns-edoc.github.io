@@ -49,3 +49,19 @@ No Production schema, data, RLS, grants, roles, or Edge Function deployment was 
 **NO-GO for merge/deployment to Production remains in force.** Fixture lint/smoke success is useful evidence, but the Workflow RPC security gate and authoritative migration-source gap remain unresolved. Department-scoped access still cannot be enforced reliably while Production's `documents` table has no `department_id`. Continue only with isolated tests and reviewed, forward-only changes until migration source recovery, authorization tests, backup/restore verification, and explicit deployment approval are complete.
 
 No Production schema, data, RLS, grants, roles, or Edge Function deployment was changed in this follow-up.
+
+
+## Fresh read-only Supabase Advisor check — 2026-10-10 06:37 UTC
+
+Security Advisor returned the same release-critical categories in a fresh live snapshot:
+- **10** `authenticated_security_definer_function_executable` warnings: `admin_create_department`, `admin_remove_user_role`, `admin_set_user_department`, `admin_set_user_role`, `admin_update_department`, `assign_document`, `attach_document_file_version`, `get_my_permissions`, `set_document_deadline`, and `update_document_status`.
+- **1** `auth_leaked_password_protection` warning: leaked-password protection is disabled.
+
+Performance Advisor returned **35 unused-index INFO findings** and **8 multiple-permissive-SELECT-policy WARN findings**. Do not remove indexes or consolidate policies blindly: this is a new/empty application data footprint, and policy consolidation can change access semantics. Address security authorization before performance cleanup.
+
+Remediation links:
+- [Supabase Security Advisor: SECURITY DEFINER functions callable by authenticated users](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable)
+- [Supabase Auth: leaked-password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
+- [Supabase Performance Advisor: multiple permissive policies](https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies)
+
+These are read-only advisor observations, not remediation. No Production changes were made. The release remains NO-GO.
