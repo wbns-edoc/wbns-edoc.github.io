@@ -370,16 +370,19 @@ BEGIN
 
   PERFORM pg_advisory_xact_lock(hashtextextended(p_document_id::text || ':' || p_file_role, 0));
   SELECT coalesce(max(df.version_no), 0) + 1 INTO v_version
-  FROM public.document_files df
-  WHERE df.document_id = p_document_id AND df.file_role = p_file_role;
+  FROM public.document_files AS df
+  WHERE df.document_id = p_document_id
+    AND df.file_role = p_file_role;
 
-  UPDATE public.document_files
+  UPDATE public.document_files AS df
   SET is_current = false
-  WHERE document_id = p_document_id AND file_role = p_file_role AND is_current = true;
+  WHERE df.document_id = p_document_id
+    AND df.file_role = p_file_role
+    AND df.is_current = true;
 
-  UPDATE public.google_drive_files
-  SET created_by = coalesce(created_by, auth.uid())
-  WHERE id = p_google_drive_file_id;
+  UPDATE public.google_drive_files AS gdf
+  SET created_by = coalesce(gdf.created_by, auth.uid())
+  WHERE gdf.id = p_google_drive_file_id;
 
   INSERT INTO public.document_files(
     document_id, google_drive_file_id, file_role, version_no, is_current, uploaded_by
