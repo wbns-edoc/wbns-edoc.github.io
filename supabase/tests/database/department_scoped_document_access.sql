@@ -1,0 +1,128 @@
+BEGIN;
+SELECT plan(15);
+
+SELECT has_column('public', 'documents', 'department_id',
+  'documents has a department scope column');
+
+SELECT has_function('private', 'can_access_document', ARRAY['uuid'],
+  'document access is centralized in a scoped helper');
+
+SELECT has_function('private', 'has_document_wide_read_role', ARRAY[]::text[],
+  'only the explicit schoolwide reader roles have a scope bypass');
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgrelid = 'public.documents'::regclass
+      AND tgname = 'documents_default_department'
+      AND NOT tgisinternal
+  ),
+  'new documents default to the creator profile department'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_trigger
+    WHERE tgrelid = 'public.documents'::regclass
+      AND tgname = 'documents_guard_department_change'
+      AND NOT tgisinternal
+  ),
+  'department changes are guarded separately from document editing'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polrelid = 'public.documents'::regclass
+      AND polname = 'documents_select_authorized'
+      AND pg_get_expr(polqual, polrelid) LIKE '%can_access_document%'
+  ),
+  'document reads use the scoped access helper'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polrelid = 'public.documents'::regclass
+      AND polname = 'documents_insert_authorized'
+      AND pg_get_expr(polwithcheck, polrelid) LIKE '%department_id%'
+  ),
+  'document creation is restricted to the actor department or System Admin'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polrelid = 'public.documents'::regclass
+      AND polname = 'documents_update_authorized'
+      AND pg_get_expr(polqual, polrelid) LIKE '%can_access_document%'
+  ),
+  'document edits must pass scoped access'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polrelid = 'public.document_files'::regclass
+      AND polname = 'document_files_authorized'
+      AND pg_get_expr(polqual, polrelid) LIKE '%can_access_document%'
+  ),
+  'file links inherit parent document scope'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polrelid = 'public.document_status_history'::regclass
+      AND polname = 'status_history_select_authorized'
+      AND pg_get_expr(polqual, polrelid) LIKE '%can_access_document%'
+  ),
+  'status history inherits parent document scope'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polrelid = 'public.comments'::regclass
+      AND polname = 'comments_select_authorized'
+      AND pg_get_expr(polqual, polrelid) LIKE '%can_access_document%'
+  ),
+  'comments inherit parent document scope'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polrelid = 'public.approvals'::regclass
+      AND polname = 'approvals_select_authorized'
+      AND pg_get_expr(polqual, polrelid) LIKE '%can_access_document%'
+  ),
+  'approval records inherit parent document scope'
+);
+
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM pg_policy
+    WHERE polrelid = 'public.google_drive_files'::regclass
+      AND polname = 'google_drive_files_authorized'
+      AND pg_get_expr(polqual, polrelid) LIKE '%document_files%'
+  ),
+  'Drive metadata is only visible when linked to an accessible document'
+);
+
+SELECT ok(
+  position('private.can_access_document' IN pg_get_functiondef(
+    'public.attach_document_file_version(uuid,uuid,text)'::regprocedure
+  )) > 0,
+  'attachment RPC checks document scope'
+);
+
+SELECT ok(
+  position('file_already_linked_to_another_document' IN pg_get_functiondef(
+    'public.attach_document_file_version(uuid,uuid,text)'::regprocedure
+  )) > 0,
+  'attachment RPC blocks linking a file to a different document'
+);
+
+SELECT * FROM finish();
+ROLLBACK;
