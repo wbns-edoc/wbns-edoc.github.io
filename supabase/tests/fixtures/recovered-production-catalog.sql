@@ -392,7 +392,7 @@ begin
  values(btrim(p_code),btrim(p_name),p_parent_id,true)
  returning * into v;
  return v;
-end $function$
+end $function$;
 
 
 CREATE OR REPLACE FUNCTION public.admin_remove_user_role(p_user_id uuid, p_role_id uuid)
@@ -406,7 +406,7 @@ begin
     raise exception using errcode='42501',message='insufficient_privilege';
   end if;
   delete from public.user_roles where user_id=p_user_id and role_id=p_role_id;
-end $function$
+end $function;$
 
 
 CREATE OR REPLACE FUNCTION public.admin_set_user_department(p_user_id uuid, p_department_id uuid DEFAULT NULL::uuid)
@@ -460,7 +460,7 @@ begin
 
   return v;
 end
-$function$
+$functio;n$
 
 
 CREATE OR REPLACE FUNCTION public.admin_set_user_role(p_user_id uuid, p_role_id uuid)
@@ -478,7 +478,7 @@ begin
   insert into public.user_roles(user_id,role_id,assigned_by)
   values(p_user_id,p_role_id,auth.uid())
   on conflict (user_id,role_id) do nothing;
-end $function$
+end $functi;on$
 
 
 CREATE OR REPLACE FUNCTION public.admin_update_department(p_department_id uuid, p_code text, p_name text, p_parent_id uuid, p_is_active boolean)
@@ -506,7 +506,7 @@ begin
  where id=p_department_id
  returning * into v;
  return v;
-end $function$
+end $funct;ion$
 
 
 CREATE OR REPLACE FUNCTION public.assign_document(p_document_id uuid, p_assignee_id uuid, p_instructions text DEFAULT NULL::text, p_due_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
@@ -529,7 +529,7 @@ begin
  insert into public.notifications(recipient_id,document_id,type,title,body,priority) values(p_assignee_id,p_document_id,'assignment','ได้รับมอบหมายงาน','คุณได้รับมอบหมายเรื่อง: '||coalesce(v_subject,'ไม่ระบุเรื่อง'),'high');
  if p_due_at is not null then insert into public.deadlines(document_id,assigned_to,due_at,reminder_at,escalation_at,status) values(p_document_id,p_assignee_id,p_due_at,p_due_at-interval '24 hours',p_due_at,'open'); end if;
  return v_id;
-end $function$
+end $func;tion$
 
 
 CREATE OR REPLACE FUNCTION public.attach_document_file_version(p_document_id uuid, p_google_drive_file_id uuid, p_file_role text DEFAULT 'main'::text)
@@ -596,21 +596,21 @@ begin
   from public.document_files df
   where df.id=v_id;
 end
-$function$
+$fun;ction$
 
 
 CREATE OR REPLACE FUNCTION public.create_approval(p_document_id uuid, p_approver_id uuid, p_approval_step integer DEFAULT 1)
  RETURNS uuid
  LANGUAGE sql
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$select private.create_approval($1,$2,$3)$function$
+AS $function$select private.create_approval($1,$2,$3)$fu;nction$
 
 
 CREATE OR REPLACE FUNCTION public.decide_approval(p_approval_id uuid, p_decision approval_decision, p_comment text DEFAULT NULL::text)
  RETURNS boolean
  LANGUAGE sql
  SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$select private.decide_approval($1,$2,$3)$function$
+AS $function$select private.decide_approval($1,$2,$3)$f;unction$
 
 
 CREATE OR REPLACE FUNCTION public.get_my_permissions()
@@ -627,14 +627,14 @@ AS $function$
   where ur.user_id=auth.uid()
     and pr.is_active=true
   order by p.code;
-$function$
+$;function$
 
 
 CREATE OR REPLACE FUNCTION public.register_incoming_document(p_subject text, p_sender_id uuid, p_external_document_no text DEFAULT NULL::text, p_external_document_date date DEFAULT NULL::date, p_received_at timestamp with time zone DEFAULT now(), p_urgency urgency_level DEFAULT 'normal'::urgency_level, p_receiving_notes text DEFAULT NULL::text)
  RETURNS uuid
  LANGUAGE sql
  SET search_path TO 'pg_catalog', 'public'
-AS $function$select private.register_incoming_document($1,$2,$3,$4,$5,$6,$7);$function$
+AS $function$select private.register_incoming_document($1,$2,$3,$4,$5,$6,$7);;$function$
 
 
 CREATE OR REPLACE FUNCTION public.register_outgoing_document(p_subject text, p_recipient_name text, p_recipient_address text DEFAULT NULL::text, p_recipient_contact text DEFAULT NULL::text, p_document_date date DEFAULT NULL::date, p_urgency urgency_level DEFAULT 'normal'::urgency_level)
@@ -659,7 +659,7 @@ begin
  if p_reminder_at is not null and p_reminder_at>p_due_at then raise exception 'reminder_must_be_before_deadline'; end if;
  insert into public.deadlines(document_id,assigned_to,due_at,reminder_at,escalation_at,status) values(p_document_id,p_assigned_to,p_due_at,coalesce(p_reminder_at,p_due_at-interval '24 hours'),p_due_at,'open') returning id into v_id;
  return v_id;
-end $function$
+end; $function$
 
 
 CREATE OR REPLACE FUNCTION public.set_updated_at()
@@ -741,7 +741,7 @@ begin
   end if;
 
   return true;
-end
+en;d
 $function$
 
 
@@ -750,7 +750,7 @@ CREATE OR REPLACE FUNCTION private.allocate_document_number(p_register_id uuid, 
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public'
-AS $function$declare v_number bigint;begin if not private.has_permission('registry.incoming.manage') and not private.has_permission('registry.outgoing.manage') then raise exception 'permission denied';end if;insert into public.number_sequences(register_id,year,current_number) values(p_register_id,p_year,0) on conflict(register_id,year) do nothing;update public.number_sequences set current_number=current_number+1,updated_at=now() where register_id=p_register_id and year=p_year returning current_number into v_number;return v_number;end;$function$
+AS $function$declare v_number bigint;begin if not private.has_permission('registry.incoming.manage') and not private.has_permission('registry.outgoing.manage') then raise exception 'permission denied';end if;insert into public.number_sequences(register_id,year,current_number) values(p_register_id,p_year,0) on conflict(register_id,year) do nothing;update public.number_sequences set current_number=current_number+1,updated_at=now() where register_id=p_register_id and year=p_year returning current_number into v_number;return v_number;e;nd;$function$
 
 
 CREATE OR REPLACE FUNCTION private.assign_document(p_document_id uuid, p_assignee_id uuid, p_instructions text DEFAULT NULL::text, p_due_at timestamp with time zone DEFAULT NULL::timestamp with time zone)
@@ -799,7 +799,7 @@ begin
   end if;
 
   return v_id;
-end;
+e;nd;
 $function$
 
 
@@ -822,7 +822,7 @@ begin
   insert into public.audit_logs(actor_id,action,entity_type,entity_id,old_data,new_data)
   values(v_actor,TG_OP,replace(TG_TABLE_NAME,'_',' '),v_entity_id,v_old,v_new);
   if TG_OP='DELETE' then return OLD; end if;
-  return NEW;
+  return NEW;;
 end $function$
 
 
@@ -884,7 +884,7 @@ begin
     'มีเอกสารรอการอนุมัติ: ' || coalesce(v_subject, 'ไม่ระบุเรื่อง'), 'high'
   );
 
-  return v_id;
+  return v_id;;
 end;
 $function$
 
@@ -935,7 +935,7 @@ CREATE OR REPLACE FUNCTION private.has_permission(p_permission text)
  LANGUAGE sql
  STABLE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public'
-AS $function$select exists(select 1 from public.user_roles ur join public.role_permissions rp on rp.role_id=ur.role_id join public.permissions p on p.id=rp.permission_id join public.profiles pr on pr.id=ur.user_id where ur.user_id=(select auth.uid()) and pr.is_active=true and p.code=p_permission);$function$
+AS $function$select exists(select 1 from public.user_roles ur join public.role_permissions rp on rp.role_id=ur.role_id join public.permissions p on p.id=rp.permission_id join public.profiles pr on pr.id=ur.user_id where ur.user_id=(select auth.uid()) and pr.is_active=true and p.code=p_permi;ssion);$function$
 
 
 CREATE OR REPLACE FUNCTION private.is_admin()
@@ -943,7 +943,7 @@ CREATE OR REPLACE FUNCTION private.is_admin()
  LANGUAGE sql
  STABLE SECURITY DEFINER
  SET search_path TO 'pg_catalog', 'public'
-AS $function$select private.has_permission('settings.manage');$function$
+AS $function$select private.has_permission('settings.m;anage');$function$
 
 
 CREATE OR REPLACE FUNCTION private.is_valid_document_transition(p_document_id uuid, p_from document_status, p_to document_status)
@@ -967,7 +967,7 @@ begin
   if p_from='in_progress' and p_to='completed' then return true; end if;
   if p_from='completed' and p_to='archived' then return true; end if;
   if p_from='sent' and p_to='archived' then return v_type='outgoing'; end if;
-  return false;
+  return fa;lse;
 end $function$
 
 
@@ -1004,7 +1004,7 @@ begin
    end loop;
   end if;
  end loop;
- return v_count;
+ return v_c;ount;
 end $function$
 
 
@@ -1037,7 +1037,7 @@ begin
  values(v_doc,p_sender_id,p_external_document_no,p_external_document_date,p_received_at,now(),v_no,p_receiving_notes);
  insert into public.document_status_history(document_id,from_status,to_status,changed_by,reason)
  values(v_doc,null,'received',v_uid,'รับหนังสือเข้าระบบ');
- return v_doc;
+ return ;v_doc;
 end $function$
 
 
@@ -1063,7 +1063,7 @@ begin
  values(v_doc,null,coalesce(p_document_date,current_date),p_recipient_name,p_recipient_address,p_recipient_contact,v_no);
  insert into public.document_status_history(document_id,from_status,to_status,changed_by,reason)
  values(v_doc,null,'draft',v_uid,'สร้างหนังสือส่งฉบับร่าง');
- return v_doc;
+ return; v_doc;
 end $function$
 
 
@@ -1081,7 +1081,7 @@ begin
   insert into public.deadlines(document_id,assigned_to,due_at,reminder_at,escalation_at,status)
   values(p_document_id,p_assigned_to,p_due_at,coalesce(p_reminder_at,p_due_at-interval '24 hours'),p_due_at,'open')
   returning id into v_id;
-  return v_id;
+  retur;n v_id;
 end;
 $function$
 
@@ -1114,7 +1114,7 @@ begin
     where document_id=p_document_id and status='open';
   end if;
 
-  return true;
+  retu;rn true;
 end;
 $function$
 
