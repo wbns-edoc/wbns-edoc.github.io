@@ -18,7 +18,7 @@ Deno.serve(async (req: Request) => {
 
       const { data: perms, error: permError } = await ctx.supabase.rpc("get_my_permissions");
       if (permError) throw new Error("permission_check_failed");
-      const codes = new Set((perms ?? []).map((x: any) => x.permission_code));
+      const codes = new Set<string>((perms ?? []).map((x: any) => String(x.permission_code ?? "")));
       const hasRoleAssignment = rows.some((row: any) => String(row?.role ?? "").trim().length > 0);
       const { authorizeUserImport } = await import("./authorization.ts");
       const authorization = authorizeUserImport({
@@ -31,7 +31,7 @@ Deno.serve(async (req: Request) => {
       }
 
       const admin = ctx.supabaseAdmin;
-      const actorId = String(ctx.userClaims?.sub ?? "");
+      const actorId = String((ctx.userClaims as unknown as { sub?: string } | undefined)?.sub ?? "");
       const results: any[] = [];
 
       for (let i = 0; i < rows.length; i++) {
