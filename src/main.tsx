@@ -137,7 +137,7 @@ function BacklogImport({permissions,setError,onClose,onDone}:{permissions:string
         const externalNo=get(raw,['เลขที่หนังสือจากผู้ส่ง','เลขที่หนังสือ','เลขที่หนังสือต้นทาง','external_document_no','sender_document_no']);
         const externalDate=get(raw,['วันที่หนังสือจากผู้ส่ง','วันที่หนังสือ','วันที่หนังสือต้นทาง','external_document_date']);
         const receivedAt=get(raw,['วันที่รับ','วันรับหนังสือ','รับเมื่อ','received_at','received_date']);
-        const urgencyRaw=backlogMatch(get(raw,['ความเร่งด่วน','ชั้นความเร็ว','urgency']));
+        const urgencyRaw=backlogKey(get(raw,['ความเร่งด่วน','ชั้นความเร็ว','urgency']));
         const urgency=urgencyRaw.includes('ที่สุด')||urgencyRaw==='critical'?'critical':urgencyRaw.includes('มาก')||urgencyRaw==='veryurgent'?'very_urgent':urgencyRaw.includes('ด่วน')||urgencyRaw==='urgent'?'urgent':'normal';
         const notes=get(raw,['หมายเหตุ','รายละเอียดงาน','คำสั่งงาน','หมายเหตุการมอบหมาย','instructions','notes']);
         const legacyNo=get(raw,['เลขทะเบียนเดิม','เลขทะเบียนเดิมของโรงเรียน','legacy_register_number','old_register_number']);
