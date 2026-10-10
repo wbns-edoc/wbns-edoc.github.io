@@ -65,3 +65,13 @@ Remediation links:
 - [Supabase Performance Advisor: multiple permissive policies](https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies)
 
 These are read-only advisor observations, not remediation. No Production changes were made. The release remains NO-GO.
+
+
+## CI re-run on evidence update commit — 2026-10-10
+
+The three workflows triggered by evidence commit `a29554a83d01542168174285529f879e5c954018` have completed:
+- [Drive Upload CI run 38031625655](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38031625655): **PASS**.
+- [Recovered Catalog Fixture CI run 38031625794](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38031625794): **PASS**.
+- [Workflow RPC Security CI run 38031625679](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38031625679): **FAIL**, as expected from the current migration-order guard. The repository still has later SECURITY DEFINER definitions for public workflow RPCs, and the guard must not be weakened to manufacture a pass.
+
+This re-run changes no release decision: **NO-GO**. Do not merge PR #6 or deploy Edge Functions until authoritative migration history/source, scope enforcement, RPC authorization tests, and backup/restore evidence are complete.
