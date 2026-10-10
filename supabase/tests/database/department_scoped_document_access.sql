@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(25);
+SELECT plan(27);
 
 SELECT has_column('public', 'documents', 'department_id',
   'documents has a department scope column');
@@ -212,6 +212,21 @@ SELECT ok(
     'private.register_outgoing_document(text,text,text,text,date,urgency_level)'::regprocedure
   )) > 0,
   'legacy registration signatures fail closed when the actor has no department'
+);
+
+
+SELECT ok(
+  NOT has_function_privilege('anon', 'public.register_incoming_document(text,uuid,text,date,timestamp with time zone,urgency_level,text)'::regprocedure, 'EXECUTE')
+  AND NOT has_function_privilege('anon', 'public.register_outgoing_document(text,text,text,text,date,urgency_level)'::regprocedure, 'EXECUTE')
+  AND NOT has_function_privilege('anon', 'public.register_incoming_document(text,uuid,text,date,timestamp with time zone,urgency_level,text,uuid)'::regprocedure, 'EXECUTE')
+  AND NOT has_function_privilege('anon', 'public.register_outgoing_document(text,text,text,text,date,urgency_level,uuid)'::regprocedure, 'EXECUTE'),
+  'anonymous role cannot execute any document registration RPC'
+);
+
+SELECT ok(
+  has_function_privilege('authenticated', 'public.register_incoming_document(text,uuid,text,date,timestamp with time zone,urgency_level,text,uuid)'::regprocedure, 'EXECUTE')
+  AND has_function_privilege('authenticated', 'public.register_outgoing_document(text,text,text,text,date,urgency_level,uuid)'::regprocedure, 'EXECUTE'),
+  'authenticated users can call the explicit-department registration RPCs'
 );
 
 SELECT * FROM finish();
