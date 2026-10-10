@@ -52,13 +52,15 @@ AS $function$
         (private.has_permission('document.view')
           AND (private.has_document_wide_read_role()
             OR (d.department_id IS NOT NULL AND private.user_has_department(pr.id, d.department_id))))
-        OR (d.department_id IS NOT NULL AND (
-          d.created_by = (SELECT auth.uid())
-          OR d.current_owner_id = (SELECT auth.uid())
-          OR EXISTS (SELECT 1 FROM public.document_assignments da
-            WHERE da.document_id = d.id AND da.assignee_id = (SELECT auth.uid())
-              AND da.assignment_status = 'assigned')
-        ))
+        OR (d.department_id IS NOT NULL
+          AND private.user_has_department(pr.id, d.department_id)
+          AND (
+            d.created_by = (SELECT auth.uid())
+            OR d.current_owner_id = (SELECT auth.uid())
+            OR EXISTS (SELECT 1 FROM public.document_assignments da
+              WHERE da.document_id = d.id AND da.assignee_id = (SELECT auth.uid())
+                AND da.assignment_status = 'assigned')
+          ))
       )
   );
 $function$;
