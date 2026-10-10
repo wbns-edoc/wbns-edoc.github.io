@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(27);
+SELECT plan(29);
 
 SELECT has_column('public', 'documents', 'department_id',
   'documents has a department scope column');
@@ -227,6 +227,42 @@ SELECT ok(
   has_function_privilege('authenticated', 'public.register_incoming_document(text,uuid,text,date,timestamp with time zone,urgency_level,text,uuid)'::regprocedure, 'EXECUTE')
   AND has_function_privilege('authenticated', 'public.register_outgoing_document(text,text,text,text,date,urgency_level,uuid)'::regprocedure, 'EXECUTE'),
   'authenticated users can call the explicit-department registration RPCs'
+);
+
+
+-- Functional regression: legacy registration calls must fail closed when the
+-- authenticated profile has no department, rather than create unscoped records.
+INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
+VALUES (
+  '11111111-1111-4111-8111-111111111111',
+  'authenticated',
+  'authenticated',
+  'scope-test-no-department@example.invalid',
+  '',
+  now(),
+  now(),
+  now()
+)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.profiles (id, full_name, is_active, department_id)
+VALUES ('11111111-1111-4111-8111-111111111111', 'Scope Test No Department', true, NULL)
+ON CONFLICT (id) DO UPDATE SET department_id = NULL, is_active = true;
+
+SELECT set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
+
+SELECT throws_ok(
+  $SELECT public.register_incoming_document('must fail closed', NULL, NULL, NULL, now(), 'normal', NULL)$,
+  '23502',
+  'document_department_required',
+  'legacy incoming registration refuses profiles without a department'
+);
+
+SELECT throws_ok(
+  $SELECT public.register_outgoing_document('must fail closed', 'recipient', NULL, NULL, current_date, 'normal')$,
+  '23502',
+  'document_department_required',
+  'legacy outgoing registration refuses profiles without a department'
 );
 
 SELECT * FROM finish();
