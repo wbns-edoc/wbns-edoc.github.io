@@ -41,6 +41,11 @@ This is a repository/metadata comparison only. No Production schema, migration h
 | `protect_dedicated_workflow_rpc_transitions_v1` | `20261009005407_protect_dedicated_workflow_rpc_transitions_v1.sql` — candidate only |
 | `validate_approval_recipient_permission_v1` | `20261009005459_validate_approval_recipient_permission_v1.sql` — candidate only |
 
+## Git history recovery result (2026-10-10)
+- The only Git history entry for `supabase/migrations/20261007200000_foundation_schema_rbac_rls.sql` is commit `88ffb0154e13d6b540cf92f0987ff0fd6a59c9d3` (`db: add foundation migration marker`). That commit adds a four-line placeholder stating that the full SQL is maintained in the Supabase project; it does not contain the Foundation DDL.
+- Git history queries for the exact expected paths of `20261007133831_foundation_schema_rbac_rls.sql`, `20261007134728_document_registration_rpc.sql`, `20261007135356_seed_school_registers_2026.sql`, `20261007140240_audit_trail_v1.sql`, and `20261007140759_reporting_views_v1.sql` returned no commits.
+- This is evidence that the missing source is not recoverable from those exact repository paths in the available Git history. It does **not** prove that no equivalent SQL exists elsewhere or in operator/deployment artifacts. Continue recovery from authoritative deployment artifacts and inspect the live catalog only as a parity target, not as a substitute for source provenance.
+
 ## What is needed to complete reconciliation
 1. Retrieve authoritative SQL artifacts from the deployment history or the operator who applied each Production migration. Do not use current live function definitions as a substitute for the original migration SQL.
 2. Compare each artifact with the repository candidate and record exact equality or semantic differences; inspect live catalog state for objects and grants.
