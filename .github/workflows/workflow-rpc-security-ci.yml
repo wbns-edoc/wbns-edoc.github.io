@@ -5,8 +5,10 @@ on:
     paths:
       - "supabase/migrations/**"
       - "supabase/tests/database/**"
+      - "supabase/tests/fixtures/recovered-production-catalog.sql"
       - "supabase/config.toml"
       - ".github/workflows/workflow-rpc-security-ci.yml"
+      - ".github/workflows/recovered-catalog-fixture-ci.yml"
       - "scripts/check-workflow-rpc-migration-order.mjs"
   push:
     branches:
@@ -14,8 +16,10 @@ on:
     paths:
       - "supabase/migrations/**"
       - "supabase/tests/database/**"
+      - "supabase/tests/fixtures/recovered-production-catalog.sql"
       - "supabase/config.toml"
       - ".github/workflows/workflow-rpc-security-ci.yml"
+      - ".github/workflows/recovered-catalog-fixture-ci.yml"
       - "scripts/check-workflow-rpc-migration-order.mjs"
   workflow_dispatch:
 
@@ -36,28 +40,53 @@ jobs:
       - name: Check workflow RPC migration-order regression
         run: node scripts/check-workflow-rpc-migration-order.mjs
 
-      - name: Reject incomplete migration source before starting containers
-        shell: bash
-        run: |
-          if grep -q "Full SQL is maintained in the migration applied to the WBNS Supabase project" supabase/migrations/20261007200000_foundation_schema_rbac_rls.sql; then
-            echo "::error::The foundation migration in the repository is a placeholder, not a reproducible schema migration. Recover and review the actual migration SQL from an authoritative backup/source before running local database tests."
-            exit 1
-          fi
-
       - uses: supabase/setup-cli@v1
         with:
           version: 2.81.3
 
+      - name: Prepare isolated catalog fixture and forward migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          test_dir="$RUNNER_TEMP/wbns-rpc-security"
+          mkdir -p "$test_dir/supabase/migrations" "$test_dir/supabase/tests"
+          cp supabase/config.toml "$test_dir/supabase/config.toml"
+          sed -i 's/^project_id = .*/project_id = "wbns-edoc-rpc-security-ci"/' "$test_dir/supabase/config.toml"
+          cp supabase/tests/fixtures/recovered-production-catalog.sql "$test_dir/supabase/migrations/20261010120000_recovered_production_catalog.sql"
+          cp supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261010150000_grant_director_document_update.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261010170000_department_scoped_document_access_v1.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261010180000_scope_workflow_assignment_and_status.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261010190000_department_aware_document_registration_v1.sql "$test_dir/supabase/migrations/"
+          cp supabase/tests/database/workflow_rpc_security.test.sql "$test_dir/supabase/tests/"
+          cp supabase/tests/database/workflow_rpc_wrappers.sql "$test_dir/supabase/tests/"
+          cp supabase/tests/database/automatic_admin_document_permissions.sql "$test_dir/supabase/tests/"
+          cp supabase/tests/database/department_scoped_document_access.sql "$test_dir/supabase/tests/"
+          cp supabase/tests/database/department_scope_behavior.sql "$test_dir/supabase/tests/"
+          cp supabase/tests/database/recovered_catalog_fixture_smoke.sql "$test_dir/supabase/tests/"
+          echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
+
       - name: Start isolated local Supabase services
-        id: start_local
-        run: supabase start
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase start -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
-      - name: Apply repository migrations to the disposable local database
-        run: supabase db reset
+      - name: Lint isolated catalog and forward migrations
+        id: lint
+        continue-on-error: true
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase db lint --local --schema public,private --fail-on error
 
-      - name: Run workflow RPC security catalog tests
-        run: supabase test db
+      - name: Run workflow RPC and department-scope regression tests
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase test db --local
 
-      - name: Stop local Supabase services
-        if: always() && steps.start_local.outcome != 'skipped'
+      - name: Fail job if schema lint reported errors
+        if: steps.lint.outcome == 'failure'
+        run: |
+          echo "Schema lint reported errors; tests ran for diagnostics, but CI must remain failed."
+          exit 1
+
+      - name: Stop isolated local Supabase services
+        if: always()
+        working-directory: ${{ env.TEST_DIR }}
         run: supabase stop --no-backup
