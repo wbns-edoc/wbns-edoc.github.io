@@ -252,14 +252,14 @@ ON CONFLICT (id) DO UPDATE SET department_id = NULL, is_active = true;
 SELECT set_config('request.jwt.claim.sub', '11111111-1111-4111-8111-111111111111', true);
 
 SELECT throws_ok(
-  $SELECT public.register_incoming_document('must fail closed', NULL, NULL, NULL, now(), 'normal', NULL)$,
+  $$SELECT public.register_incoming_document('must fail closed', NULL, NULL, NULL, now(), 'normal', NULL)$$,
   '23502',
   'document_department_required',
   'legacy incoming registration refuses profiles without a department'
 );
 
 SELECT throws_ok(
-  $SELECT public.register_outgoing_document('must fail closed', 'recipient', NULL, NULL, current_date, 'normal')$,
+  $$SELECT public.register_outgoing_document('must fail closed', 'recipient', NULL, NULL, current_date, 'normal')$$,
   '23502',
   'document_department_required',
   'legacy outgoing registration refuses profiles without a department'
