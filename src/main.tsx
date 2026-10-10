@@ -118,7 +118,8 @@ function BacklogImport({permissions,setError,onClose,onDone}:{permissions:string
     setSummary(null);setRows([]);
     if(!file)return;
     try{
-      const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true});
+      if(file.size>10*1024*1024)throw new Error('ไฟล์ต้องมีขนาดไม่เกิน 10 MB');
+      const wb=XLSX.read(await file.arrayBuffer(),{type:'array',cellDates:true,cellFormula:false,cellHTML:false});
       const first=wb.SheetNames[0];if(!first)throw new Error('ไม่พบแผ่นงานในไฟล์');
       const sheet=wb.Sheets[first];
       const rawRows=XLSX.utils.sheet_to_json<Record<string,unknown>>(sheet,{defval:'',raw:false});
