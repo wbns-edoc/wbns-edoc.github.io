@@ -2,6 +2,7 @@
 -- Source project: iigzzwyfxxtqbgjawyom. Generated 2026-10-10.
 -- NOT a historical migration, NOT intended for Production deployment.
 -- Contains no production user/document rows. Recovered definitions must be reviewed.
+-- TEST-ONLY PATCH: qualify public.documents.id inside attach_document_file_version to avoid a known PL/pgSQL output-column ambiguity during fixture lint. This is NOT a Production fix; a forward-only migration and live catalog verification are still required.
 SET check_function_bodies = off;
 SET search_path = public, private, extensions, pg_catalog;
 CREATE SCHEMA IF NOT EXISTS private;
@@ -554,7 +555,7 @@ begin
     raise exception using errcode='22023',message='file_role_required';
   end if;
 
-  if not exists(select 1 from public.documents where id=p_document_id) then
+  if not exists(select 1 from public.documents where public.documents.id=p_document_id) then
     raise exception using errcode='22023',message='document_not_found';
   end if;
 
