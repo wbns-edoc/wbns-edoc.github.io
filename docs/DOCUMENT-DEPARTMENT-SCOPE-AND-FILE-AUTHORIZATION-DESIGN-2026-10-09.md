@@ -26,12 +26,18 @@ A read-only Production schema review confirmed:
 
 Therefore cross-department isolation is not verified. Do not represent PR #6 as fixing this issue.
 
+## Owner-approved visibility rule — 2026-10-10
+
+The owner confirmed that **System Admin and ผู้อำนวยการสถานศึกษา must be able to read all school documents automatically**, across all four departments. Implement this as an explicit role-based school-wide read grant, consistently enforced in RLS and trusted read paths and covered by allow/deny tests. Do not implement it as an unrestricted admin bypass.
+
+This is a read-only visibility decision. It does not automatically grant System Admin permission to register, assign, approve, issue commands, void records, or bypass workflow. The director's workflow mutations remain subject to the specific permissions and state transitions approved for those actions. เจ้าหน้าที่ธุรการ and รองผู้อำนวยการสถานศึกษา do not receive blanket all-document read access from this decision. All four roles remain central and must not be assigned to a department just to satisfy a schema assumption.
+
 ## Target authorization model (proposal)
 
 1. Add a nullable `documents.department_id` FK to `departments.id` in a reviewed migration. Keep it nullable during rollout to avoid inventing ownership for historical documents.
 2. New document creation must assign the department from the authenticated user's trusted `profiles.department_id` inside a server-side database function/policy. Never accept a department from editable user metadata or trust a browser-supplied department as authority.
 3. Existing documents with no department require a reviewed backfill mapping based on authoritative records. Do not blindly set all historical rows to the current user's department.
-4. Define explicit global-scope permissions separately from ordinary `document.view`. Model central roles independently from `profiles.department_id`: System Admin (technical administration), เจ้าหน้าที่ธุรการ (registry operations), ผู้อำนวยการสถานศึกษา (director review/approval/command), and รองผู้อำนวยการสถานศึกษา (delegated review/approval/command). Confirm allowed actions for each role before granting them; central organizational position does not imply identical permissions. Never remove or modify the sole existing System Admin assignment as part of testing.
+4. Define explicit global-scope permissions separately from ordinary `document.view`. Add an auditable all-document **read** grant for System Admin and the director as approved by the owner. Keep their mutation/workflow permissions separate. Model central roles independently from `profiles.department_id`: System Admin (technical administration plus approved global read), เจ้าหน้าที่ธุรการ (registry operations subject to approved scope), ผู้อำนวยการสถานศึกษา (global read plus separately authorized director workflow actions), and รองผู้อำนวยการสถานศึกษา (delegated actions and visibility subject to explicit approval). Never remove or modify the sole existing System Admin assignment as part of testing.
 5. Within-department access should be enforced consistently for SELECT, UPDATE, RPC operations, file metadata, and attachment. Assignment/approval workflows may grant explicit document-level access, but the exact rules must be specified and tested; creator/owner status alone must not accidentally bypass department restrictions.
 6. The file-attachment RPC must independently verify that the authenticated user may update the target document's scope, and that the file metadata row is eligible for attachment. A generic `document.update` permission alone is not sufficient.
 7. Use a single trusted authorization predicate/helper only after its semantics are reviewed. Any SECURITY DEFINER helper must have a fixed safe search_path, narrow EXECUTE grants, explicit auth checks, and tests for both allowed and denied paths.
@@ -70,7 +76,7 @@ Therefore cross-department isolation is not verified. Do not represent PR #6 as 
 
 - [x] School owner supplied the four department names for the design/test master list.
 - [x] Owner confirmed the four central roles are above/across the four departments and are not department members.
-- [ ] Confirm the initial role assignments for each existing profile and the exact school-wide document actions allowed to each central role.
+- [ ] Confirm the initial role assignments for each existing profile and the remaining action/visibility rules for เจ้าหน้าที่ธุรการ and รองผู้อำนวยการสถานศึกษา.
 - [ ] Department transfer/reassignment and cross-department delegation semantics approved.
 - [ ] Migration tested against a schema/data fixture matching Production.
 - [ ] All expected and denied authorization tests pass.
@@ -124,6 +130,10 @@ Production currently has zero department rows. Central-role users are intentiona
 ### Implementation constraint
 
 Do not implement the scope rules as a frontend-only filter. The same trusted predicate must be enforced in database RLS and every SECURITY DEFINER RPC that reads or mutates documents or file links. Before replacing live functions, compare the complete current function definitions and dependencies against repository migrations; migration-name parity is known to be incomplete. Test the exact SQL against a safe fixture before any Production approval.
+
+## Owner-approved read scope recorded — 2026-10-10
+
+The owner approved automatic all-document read access for System Admin and the director. This document records the intended design only. Production RLS, grants, RPCs, and application behavior have not been changed by this approval. Release gates, migration-source reconciliation, tests, backup/restore, and explicit deployment approval remain mandatory.
 
 ## Upload compensation race review — 2026-10-09
 
