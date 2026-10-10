@@ -7,6 +7,7 @@ on:
       - "src/upload-refresh.ts"
       - "tests/upload-error_test.ts"
       - "supabase/functions/drive-upload/**"
+      - "supabase/functions/user-import/**"
       - "supabase/config.toml"
       - ".github/workflows/drive-upload-ci.yml"
       - "package.json"
@@ -54,3 +55,7 @@ jobs:
         run: deno test --node-modules-dir=auto supabase/functions/drive-upload/file-validation_test.ts
       - name: Type-check Drive upload Edge Function
         run: deno check --node-modules-dir=auto supabase/functions/drive-upload/index.ts
+      - name: Test user-import permission separation
+        run: deno test --node-modules-dir=auto supabase/functions/user-import/authorization_test.ts
+      - name: Type-check user-import Edge Function
+        run: deno check --node-modules-dir=auto supabase/functions/user-import/index.ts
