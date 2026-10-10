@@ -94,3 +94,17 @@ Evidence:
 - [Drive Upload CI run 38031625655](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38031625655)
 
 This finding is an additional release blocker; **NO-GO remains in force**.
+
+
+## Production user-import function authorization review — 2026-10-10
+
+Read-only retrieval of the deployed `user-import` Edge Function found version **3**, `verify_jwt=true`. Its code supports bulk profile import, role assignment, `set_active`, and `resend_invitation`. It obtains a user-authenticated context and then uses the admin client for writes.
+
+Findings requiring remediation/tests before release:
+- The function's top-level gate accepts either `user.manage` **or** `role.manage` for all actions. Role assignment inside bulk import is not separately gated by `role.manage`, and profile/active-state operations are not separately gated by `user.manage`. The current Production role-permission mapping query showed both permissions assigned to `school_admin` and `system_admin` only, so this is a privilege-separation defect in the function's authorization contract; do not overstate it as a demonstrated current-role exploit.
+- The `set_active` action updates `profiles.is_active` through the admin client and has no visible guard against deactivating the final active System Admin. Production currently has only one profile and one System Admin assignment; avoid testing this path against the live account.
+- The code writes audit rows after mutations without consistently checking the audit insert result, and the batch import can partially succeed. These behaviors need explicit failure semantics and tests.
+- CORS includes `Access-Control-Allow-Origin: *`; confirm allowed school frontend origins before tightening it.
+- Repository `supabase/functions/user-import/index.ts` does not match the deployed version's `set_active` and `resend_invitation` actions. The repository must first reconcile this deployed-source drift so a future deploy does not accidentally remove existing behavior.
+
+No user-import invocation or mutation was performed. No Production change was made. Add this to the release gate: recover the deployed function source into version control, enforce action-specific permissions, add a transactional/serialized last-System-Admin guard at the database layer, test partial-import/audit failure behavior in isolation, and verify the live role mapping before deployment.
