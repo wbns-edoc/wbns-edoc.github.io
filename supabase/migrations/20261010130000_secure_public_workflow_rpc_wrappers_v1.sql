@@ -1,0 +1,252 @@
+-- Forward-only hardening for public workflow RPC entry points.
+-- Keep business checks inside the trusted private implementation; expose only
+-- SECURITY INVOKER wrappers to PostgREST. This migration must be validated
+-- against the recovered catalog fixture before any deployment.
+
+CREATE OR REPLACE FUNCTION private.assign_document(
+  p_document_id uuid,
+  p_assignee_id uuid,
+  p_instructions text DEFAULT NULL,
+  p_due_at timestamptz DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public'
+AS $function$
+DECLARE
+  v_id uuid;
+  v_actor uuid := auth.uid();
+  v_subject text;
+  v_old public.document_status;
+BEGIN
+  IF v_actor IS NULL OR NOT private.has_permission('document.assign') THEN
+    RAISE EXCEPTION 'permission_denied';
+  END IF;
+
+  IF p_due_at IS NOT NULL AND p_due_at <= now() THEN
+    RAISE EXCEPTION 'deadline_must_be_future';
+  END IF;
+
+  SELECT status, subject INTO v_old, v_subject
+  FROM public.documents
+  WHERE id = p_document_id
+  FOR UPDATE;
+
+  IF v_old IS NULL THEN
+    RAISE EXCEPTION 'document_not_found';
+  END IF;
+
+  IF v_old <> 'registered' THEN
+    RAISE EXCEPTION 'invalid_status_transition';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = p_assignee_id AND is_active = true
+  ) THEN
+    RAISE EXCEPTION 'assignee_not_found';
+  END IF;
+
+  INSERT INTO public.document_assignments
+    (document_id, assignee_id, assigned_by, instructions, assignment_status)
+  VALUES
+    (p_document_id, p_assignee_id, v_actor, p_instructions, 'assigned')
+  RETURNING id INTO v_id;
+
+  UPDATE public.documents
+  SET current_owner_id = p_assignee_id, status = 'assigned'
+  WHERE id = p_document_id;
+
+  INSERT INTO public.document_status_history
+    (document_id, from_status, to_status, changed_by, reason)
+  VALUES
+    (p_document_id, v_old, 'assigned', v_actor, 'มอบหมายงาน');
+
+  INSERT INTO public.notifications
+    (recipient_id, document_id, type, title, body, priority)
+  VALUES
+    (p_assignee_id, p_document_id, 'assignment', 'ได้รับมอบหมายงาน',
+     'คุณได้รับมอบหมายเรื่อง: ' || coalesce(v_subject, 'ไม่ระบุเรื่อง'), 'high');
+
+  IF p_due_at IS NOT NULL THEN
+    INSERT INTO public.deadlines
+      (document_id, assigned_to, due_at, reminder_at, escalation_at, status)
+    VALUES
+      (p_document_id, p_assignee_id, p_due_at,
+       p_due_at - interval '24 hours', p_due_at, 'open');
+  END IF;
+
+  RETURN v_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION private.set_document_deadline(
+  p_document_id uuid,
+  p_assigned_to uuid,
+  p_due_at timestamptz,
+  p_reminder_at timestamptz DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public'
+AS $function$
+DECLARE
+  v_id uuid;
+  v_actor uuid := auth.uid();
+BEGIN
+  IF v_actor IS NULL OR NOT private.has_permission('document.assign') THEN
+    RAISE EXCEPTION 'permission_denied';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM public.documents WHERE id = p_document_id) THEN
+    RAISE EXCEPTION 'document_not_found';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = p_assigned_to AND is_active = true
+  ) THEN
+    RAISE EXCEPTION 'assignee_not_found';
+  END IF;
+
+  IF p_due_at <= now() THEN
+    RAISE EXCEPTION 'deadline_must_be_future';
+  END IF;
+
+  IF p_reminder_at IS NOT NULL AND p_reminder_at > p_due_at THEN
+    RAISE EXCEPTION 'reminder_must_be_before_deadline';
+  END IF;
+
+  INSERT INTO public.deadlines
+    (document_id, assigned_to, due_at, reminder_at, escalation_at, status)
+  VALUES
+    (p_document_id, p_assigned_to, p_due_at,
+     coalesce(p_reminder_at, p_due_at - interval '24 hours'), p_due_at, 'open')
+  RETURNING id INTO v_id;
+
+  RETURN v_id;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION private.update_document_status(
+  p_document_id uuid,
+  p_to_status public.document_status,
+  p_reason text DEFAULT NULL
+)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public'
+AS $function$
+DECLARE
+  v_actor uuid := auth.uid();
+  v_from public.document_status;
+BEGIN
+  IF v_actor IS NULL THEN
+    RAISE EXCEPTION 'permission_denied';
+  END IF;
+
+  SELECT status INTO v_from
+  FROM public.documents
+  WHERE id = p_document_id
+  FOR UPDATE;
+
+  IF v_from IS NULL THEN
+    RAISE EXCEPTION 'document_not_found';
+  END IF;
+
+  IF v_from = p_to_status THEN
+    RETURN true;
+  END IF;
+
+  -- Transitions with mandatory side effects must use dedicated workflow RPCs.
+  IF p_to_status IN ('pending_approval', 'approved', 'assigned')
+     OR (v_from = 'pending_approval' AND p_to_status = 'draft') THEN
+    RAISE EXCEPTION 'use_dedicated_workflow_rpc';
+  END IF;
+
+  IF p_to_status = 'completed' THEN
+    IF NOT private.has_permission('document.complete') THEN
+      RAISE EXCEPTION 'permission_denied';
+    END IF;
+  ELSIF p_to_status = 'archived' THEN
+    IF NOT private.has_permission('document.archive') THEN
+      RAISE EXCEPTION 'permission_denied';
+    END IF;
+  ELSIF NOT private.has_permission('document.update') THEN
+    RAISE EXCEPTION 'permission_denied';
+  END IF;
+
+  IF NOT private.is_valid_document_transition(p_document_id, v_from, p_to_status) THEN
+    RAISE EXCEPTION 'invalid_status_transition';
+  END IF;
+
+  UPDATE public.documents SET status = p_to_status WHERE id = p_document_id;
+
+  INSERT INTO public.document_status_history
+    (document_id, from_status, to_status, changed_by, reason)
+  VALUES
+    (p_document_id, v_from, p_to_status, v_actor, p_reason);
+
+  IF p_to_status IN ('completed', 'archived') THEN
+    UPDATE public.deadlines
+    SET status = 'completed', completed_at = coalesce(completed_at, now())
+    WHERE document_id = p_document_id AND status = 'open';
+  END IF;
+
+  RETURN true;
+END;
+$function$;
+
+-- Public API wrappers do not execute with owner privileges. Their privileged
+-- work is delegated to private SECURITY DEFINER functions with explicit checks.
+CREATE OR REPLACE FUNCTION public.assign_document(
+  p_document_id uuid,
+  p_assignee_id uuid,
+  p_instructions text DEFAULT NULL,
+  p_due_at timestamptz DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+  SELECT private.assign_document(p_document_id, p_assignee_id, p_instructions, p_due_at);
+$function$;
+
+CREATE OR REPLACE FUNCTION public.set_document_deadline(
+  p_document_id uuid,
+  p_assigned_to uuid,
+  p_due_at timestamptz,
+  p_reminder_at timestamptz DEFAULT NULL
+)
+RETURNS uuid
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+  SELECT private.set_document_deadline(p_document_id, p_assigned_to, p_due_at, p_reminder_at);
+$function$;
+
+CREATE OR REPLACE FUNCTION public.update_document_status(
+  p_document_id uuid,
+  p_to_status public.document_status,
+  p_reason text DEFAULT NULL
+)
+RETURNS boolean
+LANGUAGE sql
+SECURITY INVOKER
+SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+  SELECT private.update_document_status(p_document_id, p_to_status, p_reason);
+$function$;
+
+REVOKE ALL ON FUNCTION public.assign_document(uuid, uuid, text, timestamptz) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.set_document_deadline(uuid, uuid, timestamptz, timestamptz) FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION public.update_document_status(uuid, public.document_status, text) FROM PUBLIC, anon;
+
+GRANT EXECUTE ON FUNCTION public.assign_document(uuid, uuid, text, timestamptz) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.set_document_deadline(uuid, uuid, timestamptz, timestamptz) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.update_document_status(uuid, public.document_status, text) TO authenticated, service_role;
