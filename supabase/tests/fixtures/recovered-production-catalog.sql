@@ -2,7 +2,7 @@
 -- Source project: iigzzwyfxxtqbgjawyom. Generated 2026-10-10.
 -- NOT a historical migration, NOT intended for Production deployment.
 -- Contains no production user/document rows. Recovered definitions must be reviewed.
--- TEST-ONLY PATCH: qualify public.documents.id inside attach_document_file_version to avoid a known PL/pgSQL output-column ambiguity during fixture lint. This is NOT a Production fix; a forward-only migration and live catalog verification are still required.
+-- TEST-ONLY PATCH: qualify public.documents.id and public.google_drive_files.id inside attach_document_file_version to avoid known PL/pgSQL output-column ambiguities during fixture lint. This is NOT a Production fix; a forward-only migration and live catalog verification are still required.
 SET check_function_bodies = off;
 SET search_path = public, private, extensions, pg_catalog;
 CREATE SCHEMA IF NOT EXISTS private;
@@ -559,7 +559,7 @@ begin
     raise exception using errcode='22023',message='document_not_found';
   end if;
 
-  if not exists(select 1 from public.google_drive_files where id=p_google_drive_file_id) then
+  if not exists(select 1 from public.google_drive_files where public.google_drive_files.id=p_google_drive_file_id) then
     raise exception using errcode='22023',message='google_drive_file_not_found';
   end if;
 
@@ -581,7 +581,7 @@ begin
 
   update public.google_drive_files
      set created_by=coalesce(created_by,auth.uid())
-   where id=p_google_drive_file_id;
+   where public.google_drive_files.id=p_google_drive_file_id;
 
   insert into public.document_files(
     document_id,google_drive_file_id,file_role,version_no,is_current,uploaded_by
