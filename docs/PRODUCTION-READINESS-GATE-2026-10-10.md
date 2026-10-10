@@ -9,6 +9,7 @@
 - 26 migrations are recorded in the live migration history.
 - The inspected public business tables have RLS enabled.
 - Current counts: 1 profile, 1 active profile, 0 departments, 0 documents, 1 assignment to the exact `System Admin` role.
+- Read-only role catalogue: canonical codes `system_admin` and `director` exist; `system_admin` has 1 assigned user and `director` has 0 assigned users in this snapshot. Other seeded codes are `deputy_director`, `registry_officer`, `school_admin`, `staff`, and `teacher`. Do not auto-map or grant permissions to the other codes based on name similarity.
 - The current `documents_select_authorized` policy permits `document.view` users to read documents without a department predicate; creator/current-owner clauses also independently grant visibility.
 - The public workflow functions `assign_document`, `set_document_deadline`, and `update_document_status` are SECURITY DEFINER and EXECUTE-granted to `authenticated`. Matching private implementations also exist and are SECURITY DEFINER. `create_approval` and `decide_approval` are SECURITY INVOKER.
 - `attach_document_file_version` is SECURITY DEFINER and callable by `authenticated`; its implementation must be reviewed for document scope and attachment ownership.
@@ -50,7 +51,7 @@ Important modeling rules:
 
 ### 1. Authorization model and document/file scope
 
-- Seed the five confirmed organizational units using stable identifiers and unique constraints; ensure migrations are repeatable and safe for an existing database.
+- Seed the four confirmed document-scope groups using stable identifiers and unique constraints. Represent ฝ่ายบริหาร as a central administrative unit/organizational grouping, not as an ordinary document-scope department unless a distinct scope requirement is approved. Ensure migrations are repeatable and safe for an existing database.
 - Approve and record the initial assignment of each staff profile to the correct unit before enforcing ordinary-user scope.
 - Add document scope in a forward-only migration after that mapping is approved; update both trusted incoming and outgoing registration paths.
 - Define an explicit authorization helper/policy that grants read-all to System Admin and ผู้อำนวยการโรงเรียน, and limits other users to approved department scope, active assignments, ownership, or designated workflow access.
@@ -70,7 +71,7 @@ Before changing function signatures or grants, verify exact live signatures, def
 
 ### 3. Protect the last System Admin
 
-- Identify the canonical role using a verified stable identifier or exact approved role mapping.
+- Use the verified stable role codes `system_admin` and `director` for the two approved read-all roles, after validating exact live function/policy semantics. The live catalogue currently shows zero users assigned to `director`; do not assign any user automatically.
 - Serialize concurrent role-removal/deactivation operations with a transaction-scoped lock or equivalent.
 - Reject any change that would leave no active System Admin; test sequential and concurrent attempts in a disposable database.
 - Never test destructive last-admin cases against the live Production account.
@@ -86,9 +87,9 @@ Before changing function signatures or grants, verify exact live signatures, def
 
 ## Release gate (all required)
 
-- [ ] Five organizational units match the school-approved structure above.
+- [ ] Four document-scope groups match the school-approved names; ฝ่ายบริหาร is represented separately as the central administrative unit.
 - [ ] Initial staff-to-unit mapping is approved and recorded.
-- [ ] System Admin and ผู้อำนวยการโรงเรียน read-all tests pass across all document types and files.
+- [ ] `system_admin` and `director` read-all tests pass across all document types and files; the existing profile-to-role assignment must be verified before enforcing the rule.
 - [ ] Other roles do not gain read-all or mutation privileges merely from belonging to ฝ่ายบริหาร.
 - [ ] Ordinary cross-department read and mutation attempts are denied unless explicitly authorized.
 - [ ] Sensitive public RPC wrappers and ACL regression tests pass.
