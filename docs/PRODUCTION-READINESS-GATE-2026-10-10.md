@@ -1,17 +1,17 @@
 # Production Readiness Gate — WBNS e-Document
 **Project:** ระบบสารบรรณอิเล็กทรอนิกส์ โรงเรียนวัดบึงน้ำใส  
 **Checked:** 2026-10-10  
-**Status:** BLOCKED — review plan only; no Production schema/data changed by this document.
+**Status:** BLOCKED for general rollout — partial remediation is live; full operational acceptance is still pending.
 
 ## Verified live snapshot (read-only)
 
 - Supabase project `wbns-edoc`, PostgreSQL 17, status ACTIVE_HEALTHY.
 - 26 migrations are recorded in the live migration history.
 - The inspected public business tables have RLS enabled.
-- Current counts: 1 profile, 1 active profile, 0 departments, 0 documents, 1 assignment to the exact `System Admin` role.
+- Current counts (2026-10-10): 1 active profile, 1 active System Admin assignment, 4 active document-scope departments, 2 active registers, 0 documents, and 0 active sender-directory entries. The public frontend deploy workflow completed successfully for commit `a821e640cca72811ce7406e67060161997dec881`.
 - Read-only role catalogue: canonical codes `system_admin` and `director` exist; `system_admin` has 1 assigned user and `director` has 0 assigned users in this snapshot. Other seeded codes are `deputy_director`, `registry_officer`, `school_admin`, `staff`, and `teacher`. Do not auto-map or grant permissions to the other codes based on name similarity.
-- The current `documents_select_authorized` policy permits `document.view` users to read documents without a department predicate; creator/current-owner clauses also independently grant visibility.
-- The public workflow functions `assign_document`, `set_document_deadline`, and `update_document_status` are SECURITY DEFINER and EXECUTE-granted to `authenticated`. Matching private implementations also exist and are SECURITY DEFINER. `create_approval` and `decide_approval` are SECURITY INVOKER.
+- The current `documents_select_authorized` policy delegates visibility to `private.can_access_document(id)`; department-scope and automatic System Admin/director read access have been added and passed isolated regression tests.
+- The public workflow entry points `assign_document`, `set_document_deadline`, and `update_document_status` are now SECURITY INVOKER wrappers; the isolated Workflow RPC Security CI passes. `create_approval` and `decide_approval` remain SECURITY INVOKER.
 - `attach_document_file_version` is SECURITY DEFINER and callable by `authenticated`; its implementation must be reviewed for document scope and attachment ownership.
 - The Security Advisor also reports public SECURITY DEFINER functions for role/department administration and permission lookup. Do not broadly revoke grants without validating application dependencies.
 
@@ -45,7 +45,7 @@ Important modeling rules:
 
 - System Admin and ผู้อำนวยการโรงเรียน must automatically be able to read, approve, and edit every document across ฝ่ายบริหาร and all four กลุ่มบริหาร, through role-level permissions.
 - Department-based restrictions for ordinary users must not override these approved capabilities for these two roles.
-- The role `director` already has `document.view` and `document.approve`; a forward-only migration must add `document.update`. `system_admin` already has all three permissions in the inspected role-permission catalogue.
+- Production now grants `document.view`, `document.approve`, and `document.update` to both role codes `system_admin` and `director`; the director role has not been assigned to any user.
 - This is a role permission change only; do not assign the `director` role to any user automatically.
 - Users in the other roles and groups must be restricted to their approved department scope, active assignments, ownership, or designated workflow access, subject to the final reviewed policy.
 - Read access to a document must govern access to its file metadata, file versions, and Drive download path as well; knowing a URL must not bypass authorization.
@@ -90,13 +90,13 @@ Before changing function signatures or grants, verify exact live signatures, def
 
 ## Release gate (all required)
 
-- [ ] Four document-scope groups match the school-approved names; ฝ่ายบริหาร is represented separately as the central administrative unit.
+- [x] Four document-scope groups match the school-approved names; ฝ่ายบริหาร remains separate from the four document-scope groups.
 - [ ] Initial staff-to-unit mapping is approved and recorded.
-- [ ] `system_admin` and `director` role-level `document.view`, `document.approve`, and `document.update` tests pass across all document types and files; no user is assigned the director role automatically.
+- [x] `system_admin` and `director` role-level `document.view`, `document.approve`, and `document.update` grants pass isolated catalogue regression tests; no user is assigned the director role automatically. Full real-file cross-role testing remains pending.
 - [ ] Other roles do not gain read-all or mutation privileges merely from belonging to ฝ่ายบริหาร.
 - [ ] Ordinary cross-department read and mutation attempts are denied unless explicitly authorized.
-- [ ] Sensitive public RPC wrappers and ACL regression tests pass.
-- [ ] Last-active-System-Admin protection passes sequential and concurrency tests.
+- [x] Sensitive public workflow RPC wrapper and ACL regression tests pass in isolated CI.
+- [ ] Last-active-System-Admin role-removal guard passes the isolated sequential regression test; concurrency and account-deactivation paths still require verification.
 - [ ] Full migration replay and upgrade-from-snapshot pass.
 - [ ] CI is green on the exact release commit.
 - [ ] Google Drive integration tests pass in non-Production.
@@ -112,4 +112,4 @@ Do not deploy this remediation directly to Production until it has been generate
 
 The owner has superseded the earlier read-only-only interpretation: **System Admin and the director role automatically receive document read, approval, and editing permissions.** This grants `document.approve` and `document.update` at the role-permission layer, not by assigning the director role to any individual account. `system_admin` already has these permissions in the live role-permission snapshot; `director` already has `document.view` and `document.approve`, and requires the additive `document.update` mapping.
 
-A forward-only idempotent migration and disposable-database regression test are being added to PR #6. This does not remove the separate Production release blockers: migration source reconciliation, department/file scope enforcement, live integration tests, and backup/restore evidence. No direct Production permission write was performed as part of this documentation update.
+The role-permission migration is applied in Production and the isolated regression test passes. Production hardening also now scopes document visibility by department and protects removal of the final active System Admin role. Remaining release blockers include complete migration-source reconciliation, real Google Drive integration/authorization tests, backup/restore evidence, Security Advisor review, and last-admin deactivation/concurrency checks.
