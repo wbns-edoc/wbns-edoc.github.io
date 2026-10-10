@@ -75,3 +75,22 @@ The three workflows triggered by evidence commit `a29554a83d01542168174285529f87
 - [Workflow RPC Security CI run 38031625679](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38031625679): **FAIL**, as expected from the current migration-order guard. The repository still has later SECURITY DEFINER definitions for public workflow RPCs, and the guard must not be weakened to manufacture a pass.
 
 This re-run changes no release decision: **NO-GO**. Do not merge PR #6 or deploy Edge Functions until authoritative migration history/source, scope enforcement, RPC authorization tests, and backup/restore evidence are complete.
+
+
+## Production Edge Function drift check — 2026-10-10
+
+A read-only retrieval of the currently deployed `drive-upload` Edge Function (Production version **2**, `verify_jwt=true`) was compared with the repository branch source:
+- Deployed source validates the user and permission, selects the document under the caller JWT, uploads the bytes to Google Drive, and returns the Drive response.
+- Deployed source does **not** contain the repository branch's `google_drive_files` metadata insertion, `attach_document_file_version` RPC call, or compensation cleanup path.
+- Branch source includes those additional steps and uses `SUPABASE_SERVICE_ROLE_KEY` server-side; it is not deployed.
+- Both sources currently contain wildcard CORS (`Access-Control-Allow-Origin: *`). Tightening CORS requires confirming the actual frontend origin(s), but should be included in release hardening.
+- This was a source inspection only. No live upload request was sent and no Edge Function version was deployed.
+
+**Impact:** A successful Google Drive upload from the deployed function does not establish that the file metadata was persisted or attached to the corresponding document. Production upload/attachment end-to-end behavior is therefore unverified and the deployed implementation is behind the current branch. Do not deploy the branch until department/document scope authorization and workflow RPC risks are resolved and the runtime integration test passes.
+
+Evidence:
+- [Production function listing / deployment history is available in Supabase Dashboard](https://supabase.com/dashboard/project/iigzzwyfxxtqbgjawyom/functions)
+- [Repository branch implementation](https://github.com/wbns-edoc/wbns-edoc.github.io/blob/fix/drive-upload-metadata-atomicity-2026-10-09/supabase/functions/drive-upload/index.ts)
+- [Drive Upload CI run 38031625655](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38031625655)
+
+This finding is an additional release blocker; **NO-GO remains in force**.
