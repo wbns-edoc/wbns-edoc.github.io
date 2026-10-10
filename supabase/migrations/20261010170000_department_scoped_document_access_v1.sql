@@ -188,10 +188,7 @@ WITH CHECK (
 DROP POLICY IF EXISTS approvals_select_authorized ON public.approvals;
 CREATE POLICY approvals_select_authorized ON public.approvals
 FOR SELECT TO authenticated
-USING (
-  approver_id = (SELECT auth.uid())
-  OR private.can_access_document(document_id)
-);
+USING (private.can_access_document(document_id));
 
 DROP POLICY IF EXISTS approvals_insert_authorized ON public.approvals;
 CREATE POLICY approvals_insert_authorized ON public.approvals
@@ -238,11 +235,7 @@ WITH CHECK (author_id = (SELECT auth.uid()) AND private.can_access_document(docu
 DROP POLICY IF EXISTS assignments_select_authorized ON public.document_assignments;
 CREATE POLICY assignments_select_authorized ON public.document_assignments
 FOR SELECT TO authenticated
-USING (
-  assignee_id = (SELECT auth.uid())
-  OR assigned_by = (SELECT auth.uid())
-  OR private.can_access_document(document_id)
-);
+USING (private.can_access_document(document_id));
 
 DROP POLICY IF EXISTS assignments_insert_authorized ON public.document_assignments;
 CREATE POLICY assignments_insert_authorized ON public.document_assignments
@@ -286,10 +279,7 @@ USING (private.can_access_document(document_id));
 DROP POLICY IF EXISTS deadlines_select_authorized ON public.deadlines;
 CREATE POLICY deadlines_select_authorized ON public.deadlines
 FOR SELECT TO authenticated
-USING (
-  assigned_to = (SELECT auth.uid())
-  OR private.can_access_document(document_id)
-);
+USING (private.can_access_document(document_id));
 
 DROP POLICY IF EXISTS deadlines_manage_authorized ON public.deadlines;
 CREATE POLICY deadlines_manage_authorized ON public.deadlines
