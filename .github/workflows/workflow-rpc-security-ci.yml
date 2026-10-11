@@ -89,7 +89,8 @@ jobs:
             department_scoped_rls_file_guards.test.sql \
             global_role_assignment_guard.test.sql \
             department_membership_management.test.sql \
-            explicit_active_department_membership.test.sql
+            explicit_active_department_membership.test.sql \
+            approval_authorization_denials.test.sql
           do
             cp "supabase/tests/database/$test_file" "$test_dir/supabase/tests/"
           done
