@@ -64,7 +64,7 @@ AS $function$
       AND pr.is_active = true
       AND (
         EXISTS (SELECT 1 FROM public.user_roles ur JOIN public.roles wr ON wr.id = ur.role_id WHERE ur.user_id = (SELECT auth.uid()) AND wr.code IN ('system_admin','director'))
-        AND p_permission IN ('document.view','document.approve','document.update')
+        AND p_permission IN ('document.view','document.create','document.approve','document.update')
         OR EXISTS (
           SELECT 1
           FROM public.user_department_roles udr
