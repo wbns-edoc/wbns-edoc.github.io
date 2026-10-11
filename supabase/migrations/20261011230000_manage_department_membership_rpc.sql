@@ -44,8 +44,15 @@ BEGIN
 
   IF p_enabled THEN
     SELECT EXISTS (
-      SELECT 1 FROM public.user_departments WHERE user_id=p_user_id AND is_primary
+      SELECT 1
+      FROM public.user_departments ud
+      JOIN public.departments d ON d.id=ud.department_id AND d.is_active
+      WHERE ud.user_id=p_user_id AND ud.is_primary
     ) INTO v_has_primary;
+    IF NOT v_has_primary THEN
+      UPDATE public.user_departments SET is_primary=false,updated_at=now()
+      WHERE user_id=p_user_id AND is_primary;
+    END IF;
     INSERT INTO public.user_departments(user_id,department_id,is_primary,assigned_by)
     VALUES(p_user_id,p_department_id,NOT v_has_primary,auth.uid())
     ON CONFLICT(user_id,department_id) DO UPDATE
@@ -63,8 +70,11 @@ BEGIN
     END IF;
     DELETE FROM public.user_departments WHERE user_id=p_user_id AND department_id=p_department_id;
     IF v_primary THEN
-      SELECT department_id INTO v_replacement FROM public.user_departments
-      WHERE user_id=p_user_id ORDER BY created_at,department_id LIMIT 1 FOR UPDATE;
+      SELECT ud.department_id INTO v_replacement
+      FROM public.user_departments ud
+      JOIN public.departments d ON d.id=ud.department_id AND d.is_active
+      WHERE ud.user_id=p_user_id
+      ORDER BY ud.created_at,ud.department_id LIMIT 1 FOR UPDATE OF ud;
       IF v_replacement IS NOT NULL THEN
         UPDATE public.user_departments SET is_primary=true,updated_at=now()
         WHERE user_id=p_user_id AND department_id=v_replacement;
