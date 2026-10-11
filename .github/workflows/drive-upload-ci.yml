@@ -55,8 +55,8 @@ jobs:
       - name: Run upload input validation unit tests
         run: deno test supabase/functions/drive-upload/file-validation_test.ts
       - name: Type-check Drive upload Edge Function
-        run: deno check supabase/functions/drive-upload/index.ts
+        run: deno check --node-modules-dir=auto supabase/functions/drive-upload/index.ts
       - name: Test user-import permission separation
         run: deno test supabase/functions/user-import/authorization_test.ts
       - name: Type-check user-import Edge Function
-        run: deno check supabase/functions/user-import/index.ts
+        run: deno check --node-modules-dir=auto supabase/functions/user-import/index.ts
