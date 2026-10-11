@@ -157,8 +157,8 @@ $function$;
 CREATE OR REPLACE FUNCTION private.assign_document(
   p_document_id uuid,
   p_assignee_id uuid,
-  p_instructions text,
-  p_due_at timestamp with time zone
+  p_instructions text DEFAULT NULL,
+  p_due_at timestamp with time zone DEFAULT NULL
 )
 RETURNS uuid
 LANGUAGE plpgsql
