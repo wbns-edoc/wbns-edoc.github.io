@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(4);
+SELECT plan(5);
 
 SELECT ok(
   to_regprocedure('public.admin_set_user_department_membership(uuid,uuid,boolean)') IS NOT NULL,
@@ -25,6 +25,11 @@ SELECT ok(
 SELECT ok(
   position('v_has_primary' IN pg_get_functiondef('public.admin_set_user_department_membership(uuid,uuid,boolean)'::regprocedure)) > 0,
   'adding a membership restores a primary department if none exists'
+);
+
+SELECT ok(
+  position('JOIN public.departments d ON d.id=ud.department_id AND d.is_active' IN pg_get_functiondef('public.admin_set_user_department_membership(uuid,uuid,boolean)'::regprocedure)) > 0,
+  'inactive departments are not selected as the primary department'
 );
 
 SELECT * FROM finish();
