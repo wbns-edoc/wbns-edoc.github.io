@@ -50,7 +50,10 @@ AS $function$
     WHERE d.id = p_document_id
       AND (
         (private.has_permission('document.view')
-          AND (private.has_document_wide_read_role()
+          AND (EXISTS (
+                 SELECT 1 FROM public.user_roles ur JOIN public.roles r ON r.id = ur.role_id
+                 WHERE ur.user_id = pr.id AND r.code IN ('system_admin','director')
+               )
             OR (d.department_id IS NOT NULL AND private.user_has_department(pr.id, d.department_id))))
         OR (d.department_id IS NOT NULL
           AND private.user_has_department(pr.id, d.department_id)
