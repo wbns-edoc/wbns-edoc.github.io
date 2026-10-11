@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(6);
+SELECT plan(8);
 
 SELECT ok(
   position('private.can_access_document(p_document_id)' in pg_get_functiondef('public.attach_document_file_version(uuid,uuid,text)'::regprocedure)) > 0,
@@ -32,6 +32,22 @@ SELECT ok(
     (SELECT polwithcheck FROM pg_policy WHERE polname='documents_insert_authorized' AND polrelid='public.documents'::regclass), 'public.documents'::regclass
   )) > 0,
   'document creation requires department-scoped permission'
+);
+
+SELECT ok(
+  position('private.has_department_permission(' in pg_get_expr(
+    (SELECT polqual FROM pg_policy WHERE polname='documents_update_authorized' AND polrelid='public.documents'::regclass), 'public.documents'::regclass
+  )) > 0,
+  'document updates require department-scoped edit permission'
+);
+SELECT ok(
+  position('document.approve' in pg_get_expr(
+    (SELECT polqual FROM pg_policy WHERE polname='documents_update_authorized' AND polrelid='public.documents'::regclass), 'public.documents'::regclass
+  )) = 0
+  AND position('document.assign' in pg_get_expr(
+    (SELECT polqual FROM pg_policy WHERE polname='documents_update_authorized' AND polrelid='public.documents'::regclass), 'public.documents'::regclass
+  )) = 0,
+  'approval and assignment permissions do not implicitly grant document edits'
 );
 
 SELECT * FROM finish();
