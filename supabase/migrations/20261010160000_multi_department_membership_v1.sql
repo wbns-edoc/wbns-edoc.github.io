@@ -54,19 +54,7 @@ BEGIN
 END;
 $function$;
 
-DROP POLICY IF EXISTS documents_insert_authorized ON public.documents;
-CREATE POLICY documents_insert_authorized ON public.documents
-FOR INSERT TO authenticated
-WITH CHECK (
-  created_by = (SELECT auth.uid())
-  AND private.has_permission('document.create')
-  AND (
-    department_id IS NULL
-    OR private.user_has_department((SELECT auth.uid()), department_id)
-    OR EXISTS (SELECT 1 FROM public.user_roles ur JOIN public.roles r ON r.id = ur.role_id
-      WHERE ur.user_id = (SELECT auth.uid()) AND r.code = 'system_admin')
-  )
-);
+-- Document insert policy is installed after documents.department_id exists, by the final scoped-RLS migration.
 
 REVOKE ALL ON FUNCTION private.user_has_department(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION private.user_has_department(uuid, uuid) TO authenticated, service_role;
