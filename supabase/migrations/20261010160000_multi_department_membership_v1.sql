@@ -58,7 +58,8 @@ $function$;
 
 REVOKE ALL ON FUNCTION private.user_has_department(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION private.user_has_department(uuid, uuid) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION private.can_access_document(uuid) TO authenticated, service_role;
+-- Execute permission for private.can_access_document is granted by its later defining migration.
+
 
 
 
