@@ -82,6 +82,54 @@ AS $function$
   );
 $function$;
 
+-- Read inheritance is one-way: a child member with document.view in their own
+-- department may read its direct parent's documents; sibling scopes never match.
+CREATE OR REPLACE FUNCTION private.can_access_document(p_document_id uuid)
+RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.documents d
+    JOIN public.profiles pr ON pr.id = (SELECT auth.uid()) AND pr.is_active = true
+    WHERE d.id = p_document_id
+      AND (
+        (private.has_document_wide_read_role() AND private.has_permission('document.view'))
+        OR (
+          d.department_id IS NOT NULL
+          AND (
+            (
+              private.has_department_permission('document.view', d.department_id)
+              AND (
+                private.user_has_department(pr.id, d.department_id)
+                OR EXISTS (
+                  SELECT 1 FROM public.user_departments child_ud
+                  JOIN public.departments child ON child.id = child_ud.department_id
+                  WHERE child_ud.user_id = pr.id
+                    AND child.parent_id = d.department_id
+                    AND private.has_department_permission('document.view', child.id)
+                )
+              )
+            )
+            OR (
+              private.user_has_department(pr.id, d.department_id)
+              AND (
+                d.created_by = (SELECT auth.uid())
+                OR d.current_owner_id = (SELECT auth.uid())
+                OR EXISTS (
+                  SELECT 1 FROM public.document_assignments da
+                  WHERE da.document_id = d.id AND da.assignee_id = (SELECT auth.uid())
+                    AND da.assignment_status = 'assigned'
+                )
+              )
+            )
+          )
+        )
+      )
+  );
+$function$;
+
 CREATE OR REPLACE FUNCTION public.admin_set_user_department_role(
   p_user_id uuid, p_department_id uuid, p_role_id uuid, p_enabled boolean
 ) RETURNS void
