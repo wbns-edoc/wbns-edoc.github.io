@@ -85,8 +85,15 @@ SELECT ok(
   'director can register outgoing documents'
 );
 SELECT ok(
-  (position('director' IN pg_get_expr(polwithcheck,polrelid)) > 0
-   OR position('has_department_permission' IN pg_get_expr(polwithcheck,polrelid)) > 0),
+  EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='documents'
+      AND policyname='documents_insert_authorized'
+      AND (
+        position('director' IN coalesce(with_check,'')) > 0
+        OR position('has_department_permission' IN coalesce(with_check,'')) > 0
+      )
+  ),
   'document insert RLS permits director cross-department creation'
 );
 
