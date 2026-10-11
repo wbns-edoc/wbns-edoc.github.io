@@ -72,7 +72,7 @@ jobs:
             20261011200000_guard_document_file_attachment.sql \
             20261011210000_require_department_membership_for_scoped_permissions.sql \
             20261011220000_prevent_global_role_escalation.sql \
-            20261011230000_manage_department_membership_rpc.sql \\
+            20261011230000_manage_department_membership_rpc.sql \
             20261011231000_require_active_membership_for_approvers.sql
           do
             cp "supabase/migrations/$migration" "$test_dir/supabase/migrations/"
