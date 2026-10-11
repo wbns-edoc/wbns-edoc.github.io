@@ -14,6 +14,8 @@ on:
       - "supabase/migrations/20261010170000_department_scoped_document_access_v1.sql"
       - "supabase/migrations/20261010180000_scope_workflow_assignment_and_status.sql"
       - "supabase/migrations/20261010190000_department_aware_document_registration_v1.sql"
+      - "supabase/migrations/20261011231000_require_active_membership_for_approvers.sql"
+      - "supabase/tests/database/department_scoped_access_final_correction.sql"
       - ".github/workflows/recovered-catalog-fixture-ci.yml"
   push:
     branches:
@@ -77,11 +79,13 @@ jobs:
           cp supabase/migrations/20261011190000_separate_document_edit_from_approve_assign.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261011200000_guard_document_file_attachment.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261011210000_require_department_membership_for_scoped_permissions.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011231000_require_active_membership_for_approvers.sql "$test_dir/supabase/migrations/"
           cp supabase/tests/database/recovered_catalog_fixture_smoke.sql "$test_dir/supabase/tests/recovered_catalog_fixture_smoke.sql"
           cp supabase/tests/database/workflow_rpc_wrappers.sql "$test_dir/supabase/tests/workflow_rpc_wrappers.sql"
           cp supabase/tests/database/automatic_admin_document_permissions.sql "$test_dir/supabase/tests/automatic_admin_document_permissions.sql"
           cp supabase/tests/database/department_scoped_document_access.sql "$test_dir/supabase/tests/department_scoped_document_access.sql"
           cp supabase/tests/database/department_scope_behavior.sql "$test_dir/supabase/tests/department_scope_behavior.sql"
+          cp supabase/tests/database/department_scoped_access_final_correction.sql "$test_dir/supabase/tests/department_scoped_access_final_correction.sql"
           echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
 
       - name: Apply recovered catalog and forward migration to disposable local database
