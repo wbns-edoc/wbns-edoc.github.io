@@ -21,6 +21,7 @@ Deno.serve(async (req: Request) => {
       const codes = new Set<string>((perms ?? []).map((x: any) => String(x.permission_code ?? "")));
       const hasRoleAssignment = rows.some((row: any) => String(row?.role ?? "").trim().length > 0);
       const { authorizeUserImport } = await import("./authorization.ts");
+      const { buildAuthUserPatch } = await import("./auth-admin-patch.ts");
       const authorization = authorizeUserImport({
         action: "import",
         permissionCodes: codes,
@@ -145,10 +146,26 @@ Deno.serve(async (req: Request) => {
           }
           userId = created.data.user.id;
           action = "created";
-        } else if (password) {
-          const changed = await admin.auth.admin.updateUserById(userId, { password });
-          if (changed.error) {
-            results.push({ row: rowNo, status:"error", code:"password_update_failed", message: changed.error.message });
+          if (!isActive) {
+            const disabled = await admin.auth.admin.updateUserById(
+              userId,
+              buildAuthUserPatch({ email, isActive: false }),
+            );
+            if (disabled.error) {
+              await admin.auth.admin.deleteUser(userId);
+              results.push({ row: rowNo, status:"error", code:"auth_deactivate_failed", message: disabled.error.message });
+              continue;
+            }
+          }
+        } else {
+          // Keep the Auth identity aligned with the spreadsheet, not just public.profiles.
+          // is_active is the account-status source of truth for this import workflow.
+          const authUpdate = await admin.auth.admin.updateUserById(
+            userId,
+            buildAuthUserPatch({ email, password: password || undefined, isActive }),
+          );
+          if (authUpdate.error) {
+            results.push({ row: rowNo, status:"error", code:"auth_update_failed", message: authUpdate.error.message });
             continue;
           }
         }
