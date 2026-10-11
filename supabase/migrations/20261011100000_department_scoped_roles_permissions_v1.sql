@@ -82,6 +82,23 @@ AS $function$
   );
 $function$;
 
+-- Canonical membership helper used by all scoped authorization functions.
+-- Membership is explicit; role grants alone do not create department membership.
+CREATE OR REPLACE FUNCTION private.user_has_department(
+  p_user_id uuid, p_department_id uuid
+) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+SET search_path TO 'pg_catalog','public','private'
+AS $function$
+  SELECT EXISTS (
+    SELECT 1 FROM public.user_departments ud
+    WHERE ud.user_id = p_user_id AND ud.department_id = p_department_id
+  );
+$function$;
+
+REVOKE ALL ON FUNCTION private.user_has_department(uuid,uuid) FROM PUBLIC,anon;
+GRANT EXECUTE ON FUNCTION private.user_has_department(uuid,uuid) TO authenticated,service_role;
+
 -- Read inheritance is one-way: a child member with document.view in their own
 -- department may read its direct parent's documents; sibling scopes never match.
 CREATE OR REPLACE FUNCTION private.can_access_document(p_document_id uuid)
