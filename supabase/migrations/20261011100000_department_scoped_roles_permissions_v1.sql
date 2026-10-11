@@ -100,17 +100,15 @@ AS $function$
           d.department_id IS NOT NULL
           AND (
             (
-              private.has_department_permission('document.view', d.department_id)
-              AND (
-                private.user_has_department(pr.id, d.department_id)
-                OR EXISTS (
-                  SELECT 1 FROM public.user_departments child_ud
-                  JOIN public.departments child ON child.id = child_ud.department_id
-                  WHERE child_ud.user_id = pr.id
-                    AND child.parent_id = d.department_id
-                    AND private.has_department_permission('document.view', child.id)
-                )
-              )
+              private.user_has_department(pr.id, d.department_id)
+              AND private.has_department_permission('document.view', d.department_id)
+            )
+            OR EXISTS (
+              SELECT 1 FROM public.user_departments child_ud
+              JOIN public.departments child ON child.id = child_ud.department_id
+              WHERE child_ud.user_id = pr.id
+                AND child.parent_id = d.department_id
+                AND private.has_department_permission('document.view', child.id)
             )
             OR (
               private.user_has_department(pr.id, d.department_id)
