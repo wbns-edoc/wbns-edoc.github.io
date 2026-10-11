@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(8);
+SELECT plan(9);
 
 SELECT ok(
   position('private.can_access_document(p_document_id)' in pg_get_functiondef('public.attach_document_file_version(uuid,uuid,text)'::regprocedure)) > 0,
@@ -48,6 +48,13 @@ SELECT ok(
     (SELECT polqual FROM pg_policy WHERE polname='documents_update_authorized' AND polrelid='public.documents'::regclass), 'public.documents'::regclass
   )) = 0,
   'approval and assignment permissions do not implicitly grant document edits'
+);
+
+SELECT ok(
+  position('JOIN public.user_departments ud' in pg_get_functiondef(
+    'private.has_department_permission(text,uuid)'::regprocedure
+  )) > 0,
+  'scoped role grants require current department membership'
 );
 
 SELECT * FROM finish();
