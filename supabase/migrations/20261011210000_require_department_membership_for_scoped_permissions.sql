@@ -23,7 +23,7 @@ AS $function$
             WHERE ur.user_id = (SELECT auth.uid())
               AND wr.code IN ('system_admin','director')
           )
-          AND p_permission IN ('document.view','document.approve','document.update')
+          AND p_permission IN ('document.view','document.create','document.approve','document.update')
         )
         OR EXISTS (
           SELECT 1
