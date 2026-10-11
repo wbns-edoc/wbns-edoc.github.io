@@ -65,6 +65,8 @@ jobs:
             20261011121000_department_scoped_read_rpc_fix.sql \
             20261011140000_department_scoped_write_rpc_guards.sql \
             20261011143751_prevent_global_role_escalation.sql \
+            20261011144307_grant_director_global_document_create.sql \
+            20261011143751_prevent_global_role_escalation.sql \
             20261011150000_department_scoped_access_final_correction.sql \
             20261011160000_department_scoped_approval_guards.sql \
             20261011170000_department_scoped_rls_and_file_guards.sql \
