@@ -1,4 +1,6 @@
--- Authorization completion gate: make document write RPCs honor scoped permissions.
+-- Authorization completion gate: department-scope document write RPCs.
+-- This migration deliberately does not replace approval workflow RPCs until their
+-- full state-transition and notification behavior has isolated regression tests.
 -- Forward-only; validate on isolated database before Production.
 BEGIN;
 
@@ -18,7 +20,7 @@ BEGIN
     FROM public.documents WHERE id=p_document_id FOR UPDATE;
   IF v_old IS NULL THEN RAISE EXCEPTION 'document_not_found'; END IF;
   IF v_old <> 'registered' THEN RAISE EXCEPTION 'invalid_status_transition'; END IF;
-  IF NOT private.can_access_document(p_document_id)
+  IF v_department IS NULL OR NOT private.can_access_document(p_document_id)
      OR NOT private.has_department_permission('document.assign',v_department) THEN
     RAISE EXCEPTION 'document_scope_denied';
   END IF;
@@ -58,7 +60,7 @@ BEGIN
   IF auth.uid() IS NULL THEN RAISE EXCEPTION 'permission_denied'; END IF;
   SELECT department_id INTO v_department FROM public.documents WHERE id=p_document_id;
   IF NOT FOUND THEN RAISE EXCEPTION 'document_not_found'; END IF;
-  IF NOT private.can_access_document(p_document_id)
+  IF v_department IS NULL OR NOT private.can_access_document(p_document_id)
      OR NOT private.has_department_permission('document.assign',v_department) THEN
     RAISE EXCEPTION 'document_scope_denied';
   END IF;
@@ -102,7 +104,7 @@ BEGIN
   v_permission := CASE WHEN p_to_status='completed' THEN 'document.complete'
                        WHEN p_to_status='archived' THEN 'document.archive'
                        ELSE 'document.update' END;
-  IF NOT private.has_department_permission(v_permission,v_department) THEN
+  IF v_department IS NULL OR NOT private.has_department_permission(v_permission,v_department) THEN
     RAISE EXCEPTION 'permission_denied';
   END IF;
   IF NOT private.is_valid_document_transition(p_document_id,v_from,p_to_status) THEN
@@ -119,64 +121,11 @@ BEGIN
 END;
 $function$;
 
--- Approval workflow requires both document scope and department-scoped approval permission.
-CREATE OR REPLACE FUNCTION private.create_approval(
-  p_document_id uuid,p_approver_id uuid,p_approval_step integer
-) RETURNS uuid
-LANGUAGE plpgsql SECURITY DEFINER
-SET search_path TO 'pg_catalog','public','private'
-AS $function$
-DECLARE v_id uuid; v_department uuid;
-BEGIN
-  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'permission_denied'; END IF;
-  SELECT department_id INTO v_department FROM public.documents WHERE id=p_document_id;
-  IF NOT FOUND THEN RAISE EXCEPTION 'document_not_found'; END IF;
-  IF NOT private.can_access_document(p_document_id)
-     OR NOT private.has_department_permission('document.approve',v_department) THEN
-    RAISE EXCEPTION 'document_scope_denied';
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id=p_approver_id AND is_active=true) THEN
-    RAISE EXCEPTION 'approver_not_found';
-  END IF;
-  INSERT INTO public.approvals(document_id,approver_id,approval_step,decision)
-    VALUES(p_document_id,p_approver_id,p_approval_step,'pending') RETURNING id INTO v_id;
-  RETURN v_id;
-END;
-$function$;
-
-CREATE OR REPLACE FUNCTION private.decide_approval(
-  p_approval_id uuid,p_decision public.approval_decision,p_comment text DEFAULT NULL
-) RETURNS boolean
-LANGUAGE plpgsql SECURITY DEFINER
-SET search_path TO 'pg_catalog','public','private'
-AS $function$
-DECLARE v_doc uuid; v_department uuid; v_actor uuid:=auth.uid();
-BEGIN
-  IF v_actor IS NULL THEN RAISE EXCEPTION 'permission_denied'; END IF;
-  SELECT a.document_id,d.department_id INTO v_doc,v_department
-    FROM public.approvals a JOIN public.documents d ON d.id=a.document_id
-    WHERE a.id=p_approval_id FOR UPDATE OF a;
-  IF v_doc IS NULL THEN RAISE EXCEPTION 'approval_not_found'; END IF;
-  IF NOT private.can_access_document(v_doc)
-     OR NOT private.has_department_permission('document.approve',v_department) THEN
-    RAISE EXCEPTION 'document_scope_denied';
-  END IF;
-  UPDATE public.approvals SET decision=p_decision,comment=p_comment,decided_at=now()
-    WHERE id=p_approval_id AND decision='pending';
-  IF NOT FOUND THEN RAISE EXCEPTION 'approval_not_pending'; END IF;
-  RETURN true;
-END;
-$function$;
-
 REVOKE ALL ON FUNCTION private.assign_document(uuid,uuid,text,timestamptz) FROM PUBLIC,anon;
 REVOKE ALL ON FUNCTION private.set_document_deadline(uuid,uuid,timestamptz,timestamptz) FROM PUBLIC,anon;
 REVOKE ALL ON FUNCTION private.update_document_status(uuid,public.document_status,text) FROM PUBLIC,anon;
-REVOKE ALL ON FUNCTION private.create_approval(uuid,uuid,integer) FROM PUBLIC,anon;
-REVOKE ALL ON FUNCTION private.decide_approval(uuid,public.approval_decision,text) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION private.assign_document(uuid,uuid,text,timestamptz) TO authenticated,service_role;
 GRANT EXECUTE ON FUNCTION private.set_document_deadline(uuid,uuid,timestamptz,timestamptz) TO authenticated,service_role;
 GRANT EXECUTE ON FUNCTION private.update_document_status(uuid,public.document_status,text) TO authenticated,service_role;
-GRANT EXECUTE ON FUNCTION private.create_approval(uuid,uuid,integer) TO authenticated,service_role;
-GRANT EXECUTE ON FUNCTION private.decide_approval(uuid,public.approval_decision,text) TO authenticated,service_role;
 
 COMMIT;
