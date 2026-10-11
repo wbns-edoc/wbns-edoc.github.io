@@ -168,12 +168,18 @@ Deno.serve(async (req: Request) => {
         }
 
         if (roleId) {
-          const roleWrite = await admin.from("user_department_roles").upsert({
+          // The spreadsheet's Role applies to every department listed on this row.
+          // This keeps multi-department staff authorized consistently in each unit.
+          const roleAssignments = resolvedDepartmentIds.map((depId) => ({
             user_id:userId,
-            department_id:departmentId,
+            department_id:depId,
             role_id:roleId,
             assigned_by:actorId || null,
-          }, { onConflict:"user_id,department_id,role_id" });
+          }));
+          const roleWrite = await admin.from("user_department_roles").upsert(
+            roleAssignments,
+            { onConflict:"user_id,department_id,role_id" }
+          );
           if (roleWrite.error) {
             results.push({ row: rowNo, status:"error", code:"role_assign_failed", message:roleWrite.error.message });
             continue;
