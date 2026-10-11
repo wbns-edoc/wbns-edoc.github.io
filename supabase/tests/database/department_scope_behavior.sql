@@ -1,7 +1,7 @@
 -- Behavioral RLS regression: department isolation and explicitly authorized wide readers.
 -- Runs only against the disposable recovered-catalog fixture.
 BEGIN;
-SELECT plan(8);
+SELECT plan(10);
 
 INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
 VALUES
@@ -114,6 +114,20 @@ SELECT is((SELECT count(*) FROM public.documents WHERE id='c3000000-0000-4000-80
           'child department member can read own department document');
 SELECT is((SELECT count(*) FROM public.documents WHERE id='c4000000-0000-4000-8000-000000000004'),0::bigint,
           'child department member cannot read sibling department document');
+SELECT is((
+  WITH changed AS (
+    UPDATE public.documents SET subject=subject
+    WHERE id='c2000000-0000-4000-8000-000000000002'
+    RETURNING id
+  ) SELECT count(*) FROM changed
+),0::bigint,'child department member cannot edit parent document without parent-scoped edit permission');
+SELECT is((
+  WITH changed AS (
+    UPDATE public.documents SET subject=subject
+    WHERE id='c4000000-0000-4000-8000-000000000004'
+    RETURNING id
+  ) SELECT count(*) FROM changed
+),0::bigint,'child department member cannot edit sibling department document');
 RESET ROLE;
 
 SELECT * FROM finish();
