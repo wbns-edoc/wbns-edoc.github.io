@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(8);
+SELECT plan(9);
 
 SELECT ok(
   position('has_document_wide_read_role' IN pg_get_functiondef('private.can_access_document(uuid)'::regprocedure)) = 0,
@@ -38,6 +38,12 @@ SELECT ok(
 SELECT ok(
   position('approver_not_authorized' IN pg_get_functiondef('private.create_approval(uuid,uuid,integer)'::regprocedure)) > 0,
   'approval creation rejects approvers without authorization in the document department'
+);
+
+SELECT ok(
+  position('JOIN public.user_departments ud' IN pg_get_functiondef('private.create_approval(uuid,uuid,integer)'::regprocedure)) > 0
+  AND position('dept.is_active=true' IN pg_get_functiondef('private.create_approval(uuid,uuid,integer)'::regprocedure)) > 0,
+  'approver selection requires current membership in an active department'
 );
 
 SELECT ok(
