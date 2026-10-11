@@ -1,7 +1,7 @@
 -- Behavioral RLS regression: department isolation and explicitly authorized wide readers.
 -- Runs only against the disposable recovered-catalog fixture.
 BEGIN;
-SELECT plan(10);
+SELECT plan(11);
 
 INSERT INTO auth.users (id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
 VALUES
@@ -90,10 +90,17 @@ SET LOCAL ROLE authenticated;
 SELECT is((SELECT count(*) FROM public.documents WHERE id='c0000000-0000-4000-8000-000000000003'), 1::bigint,
           'director can read a document in another department');
 SELECT lives_ok(
-  $$UPDATE public.documents
+  $UPDATE public.documents
     SET subject='Director cross-department edit verified'
-    WHERE id='c0000000-0000-4000-8000-000000000003'$$,
+    WHERE id='c0000000-0000-4000-8000-000000000003'$,
   'director can edit a document in another department'
+);
+SELECT lives_ok(
+  $INSERT INTO public.documents(id,document_type,department_id,subject,status,created_by,current_owner_id)
+    VALUES ('c5000000-0000-4000-8000-000000000005','incoming',
+            'b0000000-0000-4000-8000-000000000002','Director cross-department creation','draft',
+            'dddddddd-dddd-4ddd-8ddd-ddddddddddd4','dddddddd-dddd-4ddd-8ddd-ddddddddddd4')$,
+  'director can create a document in another department'
 );
 RESET ROLE;
 
