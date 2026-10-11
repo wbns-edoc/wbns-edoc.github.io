@@ -87,14 +87,20 @@ Deno.serve(async (req: Request) => {
 
         let roleId: string | null = null;
         if (roleValue) {
-          const role = await admin.from("roles").select("id").or(
+          const role = await admin.from("roles").select("id,code").or(
             "code.ilike." + roleValue.replace(/,/g, "") + ",name.ilike." + roleValue.replace(/,/g, "")
           ).limit(2);
           if (role.error || (role.data ?? []).length > 1) {
             results.push({ row: rowNo, status:"error", code: role.error ? "role_lookup_failed" : "role_ambiguous" });
             continue;
           }
-          if ((role.data ?? []).length === 1) roleId = role.data[0].id;
+          if ((role.data ?? []).length === 1) {
+            if (["system_admin","director"].includes(String(role.data[0].code))) {
+              results.push({ row: rowNo, status:"error", code:"global_role_not_allowed_in_excel_import" });
+              continue;
+            }
+            roleId = role.data[0].id;
+          }
           else {
             results.push({ row: rowNo, status:"error", code:"role_not_found" });
             continue;
@@ -162,11 +168,12 @@ Deno.serve(async (req: Request) => {
         }
 
         if (roleId) {
-          const roleWrite = await admin.from("user_roles").upsert({
+          const roleWrite = await admin.from("user_department_roles").upsert({
             user_id:userId,
+            department_id:departmentId,
             role_id:roleId,
             assigned_by:actorId || null,
-          }, { onConflict:"user_id,role_id" });
+          }, { onConflict:"user_id,department_id,role_id" });
           if (roleWrite.error) {
             results.push({ row: rowNo, status:"error", code:"role_assign_failed", message:roleWrite.error.message });
             continue;
