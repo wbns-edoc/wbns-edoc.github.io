@@ -58,5 +58,7 @@ jobs:
         run: deno check --node-modules-dir=auto supabase/functions/drive-upload/index.ts
       - name: Test user-import permission separation
         run: deno test supabase/functions/user-import/authorization_test.ts
+      - name: Test user-import Auth account-state synchronization
+        run: deno test supabase/functions/user-import/auth-admin-patch_test.ts
       - name: Type-check user-import Edge Function
         run: deno check --node-modules-dir=auto supabase/functions/user-import/index.ts
