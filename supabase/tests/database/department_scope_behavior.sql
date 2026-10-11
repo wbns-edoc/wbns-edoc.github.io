@@ -92,14 +92,14 @@ SELECT is((SELECT count(*) FROM public.documents WHERE id='c0000000-0000-4000-80
 SELECT lives_ok(
   $stmt$UPDATE public.documents
     SET subject='Director cross-department edit verified'
-    WHERE id='c0000000-0000-4000-8000-000000000003'$,
+    WHERE id='c0000000-0000-4000-8000-000000000003'$stmt$,
   'director can edit a document in another department'
 );
 SELECT lives_ok(
   $stmt$INSERT INTO public.documents(id,document_type,department_id,subject,status,created_by,current_owner_id)
     VALUES ('c5000000-0000-4000-8000-000000000005','incoming',
             'b0000000-0000-4000-8000-000000000002','Director cross-department creation','draft',
-            'dddddddd-dddd-4ddd-8ddd-ddddddddddd4','dddddddd-dddd-4ddd-8ddd-ddddddddddd4')$,
+            'dddddddd-dddd-4ddd-8ddd-ddddddddddd4','dddddddd-dddd-4ddd-8ddd-ddddddddddd4')$stmt$,
   'director can create a document in another department'
 );
 RESET ROLE;
