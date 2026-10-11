@@ -1,5 +1,18 @@
 import { createSupabaseContext } from "npm:@supabase/server@1";
 
+function parseIsActive(value: unknown): boolean | null {
+  if (value === undefined || value === null || value === "") return true;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1 ? true : value === 0 ? false : null;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "y", "active", "ใช่", "ใช้งาน"].includes(normalized)) return true;
+    if (["false", "0", "no", "n", "inactive", "ไม่", "ไม่ใช่", "ระงับ"].includes(normalized)) return false;
+    if (!normalized) return true;
+  }
+  return null;
+}
+
 const headers = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
@@ -46,10 +59,15 @@ Deno.serve(async (req: Request) => {
         const departmentName = String(r.department ?? "").trim();
         const additionalDepartmentNames = String(r.additional_departments ?? "").split(/[;,，；]/).map((x: string) => x.trim()).filter(Boolean);
         const roleValue = String(r.role ?? "").trim();
-        const isActive = r.is_active !== false;
+        const isActive = parseIsActive(r.is_active);
 
         if (!fullName || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           results.push({ row: rowNo, status:"error", code:"invalid_required_fields" });
+          continue;
+        }
+
+        if (isActive === null) {
+          results.push({ row: rowNo, status:"error", code:"invalid_is_active_value" });
           continue;
         }
 
@@ -208,10 +226,11 @@ Deno.serve(async (req: Request) => {
         const memberships = resolvedDepartmentIds.map((depId, index) => ({ user_id: userId, department_id: depId, is_primary: index === 0, assigned_by: actorId || null }));
         const membershipWrite = await admin.from("user_departments").upsert(memberships, { onConflict:"user_id,department_id" });
         if (membershipWrite.error) { results.push({ row: rowNo, status:"error", code:"department_membership_write_failed", message:membershipWrite.error.message }); continue; }
-        const staleMemberships = await admin.from("user_departments").delete().eq("user_id", userId).not("department_id", "in", "(" + resolvedDepartmentIds.join(",") + ")");
-        if (staleMemberships.error) { results.push({ row: rowNo, status:"error", code:"department_membership_sync_failed" }); continue; }
+        // Remove scoped role rows before memberships so membership-removal invariants remain valid.
         const staleRoles = await admin.from("user_department_roles").delete().eq("user_id", userId).not("department_id", "in", "(" + resolvedDepartmentIds.join(",") + ")");
         if (staleRoles.error) { results.push({ row: rowNo, status:"error", code:"department_role_sync_failed" }); continue; }
+        const staleMemberships = await admin.from("user_departments").delete().eq("user_id", userId).not("department_id", "in", "(" + resolvedDepartmentIds.join(",") + ")");
+        if (staleMemberships.error) { results.push({ row: rowNo, status:"error", code:"department_membership_sync_failed" }); continue; }
 
         await admin.from("audit_logs").insert({
           actor_id: actorId || null,
