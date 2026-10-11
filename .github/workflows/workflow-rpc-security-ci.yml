@@ -67,7 +67,8 @@ jobs:
             20261011150000_department_scoped_access_final_correction.sql \
             20261011160000_department_scoped_approval_guards.sql \
             20261011170000_department_scoped_rls_and_file_guards.sql \
-            20261011180000_close_remaining_department_rls_bypasses.sql
+            20261011180000_close_remaining_department_rls_bypasses.sql \
+            20261011190000_separate_document_edit_from_approve_assign.sql
           do
             cp "supabase/migrations/$migration" "$test_dir/supabase/migrations/"
           done
