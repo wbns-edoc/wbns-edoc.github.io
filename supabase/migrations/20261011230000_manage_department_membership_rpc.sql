@@ -24,27 +24,35 @@ AS $function$
 DECLARE
   v_primary boolean;
   v_replacement uuid;
+  v_has_primary boolean;
 BEGIN
   IF auth.uid() IS NULL OR (NOT private.has_permission('user.manage') AND NOT private.has_permission('role.manage')) THEN
     RAISE EXCEPTION USING ERRCODE='42501', MESSAGE='insufficient_privilege';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id=p_user_id) THEN
+  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id=p_user_id FOR UPDATE) THEN
     RAISE EXCEPTION USING ERRCODE='22023', MESSAGE='user_profile_not_found';
   END IF;
-  IF NOT EXISTS (SELECT 1 FROM public.departments WHERE id=p_department_id AND is_active) THEN
+  -- Adding membership requires an active department. Removing membership must
+  -- remain possible after a department is deactivated, otherwise stale access
+  -- rows cannot be cleaned up by administrators.
+  IF p_enabled AND NOT EXISTS (SELECT 1 FROM public.departments WHERE id=p_department_id AND is_active) THEN
     RAISE EXCEPTION USING ERRCODE='22023', MESSAGE='department_not_found_or_inactive';
+  END IF;
+  IF NOT p_enabled AND NOT EXISTS (SELECT 1 FROM public.departments WHERE id=p_department_id) THEN
+    RAISE EXCEPTION USING ERRCODE='22023', MESSAGE='department_not_found';
   END IF;
 
   IF p_enabled THEN
-    IF NOT EXISTS (SELECT 1 FROM public.user_departments WHERE user_id=p_user_id) THEN
-      INSERT INTO public.user_departments(user_id,department_id,is_primary,assigned_by)
-      VALUES(p_user_id,p_department_id,true,auth.uid())
-      ON CONFLICT(user_id,department_id) DO NOTHING;
+    SELECT EXISTS (
+      SELECT 1 FROM public.user_departments WHERE user_id=p_user_id AND is_primary
+    ) INTO v_has_primary;
+    INSERT INTO public.user_departments(user_id,department_id,is_primary,assigned_by)
+    VALUES(p_user_id,p_department_id,NOT v_has_primary,auth.uid())
+    ON CONFLICT(user_id,department_id) DO UPDATE
+      SET is_primary = public.user_departments.is_primary OR EXCLUDED.is_primary,
+          updated_at = now();
+    IF NOT v_has_primary THEN
       UPDATE public.profiles SET department_id=p_department_id,updated_at=now() WHERE id=p_user_id;
-    ELSE
-      INSERT INTO public.user_departments(user_id,department_id,is_primary,assigned_by)
-      VALUES(p_user_id,p_department_id,false,auth.uid())
-      ON CONFLICT(user_id,department_id) DO NOTHING;
     END IF;
   ELSE
     SELECT is_primary INTO v_primary FROM public.user_departments
