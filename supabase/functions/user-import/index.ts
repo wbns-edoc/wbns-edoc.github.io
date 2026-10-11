@@ -193,6 +193,8 @@ Deno.serve(async (req: Request) => {
         if (membershipWrite.error) { results.push({ row: rowNo, status:"error", code:"department_membership_write_failed", message:membershipWrite.error.message }); continue; }
         const staleMemberships = await admin.from("user_departments").delete().eq("user_id", userId).not("department_id", "in", "(" + resolvedDepartmentIds.join(",") + ")");
         if (staleMemberships.error) { results.push({ row: rowNo, status:"error", code:"department_membership_sync_failed" }); continue; }
+        const staleRoles = await admin.from("user_department_roles").delete().eq("user_id", userId).not("department_id", "in", "(" + resolvedDepartmentIds.join(",") + ")");
+        if (staleRoles.error) { results.push({ row: rowNo, status:"error", code:"department_role_sync_failed" }); continue; }
 
         await admin.from("audit_logs").insert({
           actor_id: actorId || null,
