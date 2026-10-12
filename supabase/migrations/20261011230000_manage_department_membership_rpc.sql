@@ -1,5 +1,6 @@
 BEGIN;
-CREATE OR REPLACE FUNCTION public.admin_get_user_department_memberships()
+
+CREATE OR REPLACE FUNCTION private.admin_get_user_department_memberships_impl()
 RETURNS TABLE(user_id uuid, department_id uuid, department_code text, department_name text, is_primary boolean)
 LANGUAGE plpgsql STABLE SECURITY DEFINER
 SET search_path TO 'pg_catalog', 'public', 'private'
@@ -15,7 +16,7 @@ BEGIN
 END;
 $function$;
 
-CREATE OR REPLACE FUNCTION public.admin_set_user_department_membership(
+CREATE OR REPLACE FUNCTION private.admin_set_user_department_membership_impl(
   p_user_id uuid, p_department_id uuid, p_enabled boolean
 ) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER
@@ -32,9 +33,6 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id=p_user_id FOR UPDATE) THEN
     RAISE EXCEPTION USING ERRCODE='22023', MESSAGE='user_profile_not_found';
   END IF;
-  -- Adding membership requires an active department. Removing membership must
-  -- remain possible after a department is deactivated, otherwise stale access
-  -- rows cannot be cleaned up by administrators.
   IF p_enabled AND NOT EXISTS (SELECT 1 FROM public.departments WHERE id=p_department_id AND is_active) THEN
     RAISE EXCEPTION USING ERRCODE='22023', MESSAGE='department_not_found_or_inactive';
   END IF;
@@ -44,8 +42,7 @@ BEGIN
 
   IF p_enabled THEN
     SELECT EXISTS (
-      SELECT 1
-      FROM public.user_departments ud
+      SELECT 1 FROM public.user_departments ud
       JOIN public.departments d ON d.id=ud.department_id AND d.is_active
       WHERE ud.user_id=p_user_id AND ud.is_primary
     ) INTO v_has_primary;
@@ -89,8 +86,31 @@ BEGIN
 END;
 $function$;
 
+REVOKE ALL ON FUNCTION private.admin_get_user_department_memberships_impl() FROM PUBLIC, anon;
+REVOKE ALL ON FUNCTION private.admin_set_user_department_membership_impl(uuid,uuid,boolean) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION private.admin_get_user_department_memberships_impl() TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION private.admin_set_user_department_membership_impl(uuid,uuid,boolean) TO authenticated, service_role;
+
+CREATE OR REPLACE FUNCTION public.admin_get_user_department_memberships()
+RETURNS TABLE(user_id uuid, department_id uuid, department_code text, department_name text, is_primary boolean)
+LANGUAGE sql STABLE SECURITY INVOKER
+SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+  SELECT * FROM private.admin_get_user_department_memberships_impl();
+$function$;
+
+CREATE OR REPLACE FUNCTION public.admin_set_user_department_membership(
+  p_user_id uuid, p_department_id uuid, p_enabled boolean
+) RETURNS void
+LANGUAGE sql SECURITY INVOKER
+SET search_path TO 'pg_catalog', 'public', 'private'
+AS $function$
+  SELECT private.admin_set_user_department_membership_impl(p_user_id,p_department_id,p_enabled);
+$function$;
+
 REVOKE ALL ON FUNCTION public.admin_get_user_department_memberships() FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.admin_set_user_department_membership(uuid,uuid,boolean) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.admin_get_user_department_memberships() TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.admin_set_user_department_membership(uuid,uuid,boolean) TO authenticated, service_role;
+
 COMMIT;
