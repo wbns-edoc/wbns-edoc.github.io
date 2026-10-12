@@ -12,6 +12,7 @@ on:
       - "supabase/tests/database/department_scoped_access_final_correction.sql"
       - "supabase/tests/database/explicit_active_department_membership.test.sql"
       - "supabase/tests/database/approval_authorization_denials.test.sql"
+      - "supabase/tests/database/department_scoped_identity_permissions.test.sql"
       - "supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql"
       - "supabase/migrations/20261010150000_grant_director_document_update.sql"
       - "supabase/migrations/20261010160000_multi_department_membership_v1.sql"
@@ -33,6 +34,7 @@ on:
       - "supabase/migrations/20261011210000_require_department_membership_for_scoped_permissions.sql"
       - "supabase/migrations/20261011231000_require_active_membership_for_approvers.sql"
       - "supabase/migrations/20261011232000_require_explicit_active_department_membership.sql"
+      - "supabase/migrations/20261012030000_include_department_scoped_permissions_in_identity.sql"
       - ".github/workflows/recovered-catalog-fixture-ci.yml"
   push:
     branches:
@@ -115,6 +117,7 @@ jobs:
           cp supabase/migrations/20261011210000_require_department_membership_for_scoped_permissions.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261011231000_require_active_membership_for_approvers.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261011232000_require_explicit_active_department_membership.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261012030000_include_department_scoped_permissions_in_identity.sql "$test_dir/supabase/migrations/"
           cp supabase/tests/database/recovered_catalog_fixture_smoke.sql "$test_dir/supabase/tests/recovered_catalog_fixture_smoke.sql"
           cp supabase/tests/database/workflow_rpc_wrappers.sql "$test_dir/supabase/tests/workflow_rpc_wrappers.sql"
           cp supabase/tests/database/automatic_admin_document_permissions.sql "$test_dir/supabase/tests/automatic_admin_document_permissions.sql"
@@ -123,6 +126,7 @@ jobs:
           cp supabase/tests/database/department_scoped_access_final_correction.sql "$test_dir/supabase/tests/department_scoped_access_final_correction.sql"
           cp supabase/tests/database/explicit_active_department_membership.test.sql "$test_dir/supabase/tests/explicit_active_department_membership.test.sql"
           cp supabase/tests/database/approval_authorization_denials.test.sql "$test_dir/supabase/tests/approval_authorization_denials.test.sql"
+          cp supabase/tests/database/department_scoped_identity_permissions.test.sql "$test_dir/supabase/tests/department_scoped_identity_permissions.test.sql"
           echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
 
       - name: Apply recovered catalog and forward migration to disposable local database
