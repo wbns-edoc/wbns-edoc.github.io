@@ -8,8 +8,8 @@ Status: release-blocking runbook. This document does not authorize production sc
 - Production records foundation as version `20261007133831` / name `foundation_schema_rbac_rls`.
 - Repository file `supabase/migrations/20261007200000_foundation_schema_rbac_rls.sql` is a placeholder, not a reproducible schema baseline.
 - The Production catalog recovery fixture at `supabase/tests/fixtures/recovered-production-catalog.sql` is a test fixture, not a historical migration. It represents a later schema state and must not be copied into the foundation migration or applied to Production.
-- Production does not currently contain `public.user_departments`, `public.user_department_roles`, or `public.department_role_permissions`. It does contain `public.documents.department_id` and `public.profiles.department_id`.
-- Production has verified hotfix versions `20261011143751` and `20261011144307`.
+- Production now contains `public.user_departments`, `public.user_department_roles`, and `public.department_role_permissions`; the permission matrix has 168 rows. The existing profile has no primary department, and no memberships or scoped roles have been fabricated.
+- Production has verified hotfix versions `20261011143751` and `20261011144307`, plus direct rollout migrations from `20261012011549` through `20261012024916` (see the rollout section below).
 
 ## Known local/remote version divergence
 
@@ -23,6 +23,38 @@ Status: release-blocking runbook. This document does not authorize production sc
 | `20261010190000_department_aware_document_registration_v1.sql` | `20261010085034` | `20261010190000_department_aware_document_registration_v1` |
 
 The local multi-department implementation also has ordering dependencies that differ from this historic Production sequence. Do not rename these files mechanically to remote versions: migration order affects whether referenced tables/functions exist when a migration executes.
+
+
+## Production rollout — 2026-10-12 (verified)
+
+The following changes were applied directly to the WBNS Supabase project. These production history entries do not yet make the original migration history reproducible from a clean install:
+
+| Production version | Recorded migration name |
+| --- | --- |
+| `20261012011549` | `production_multi_department_membership_v1` |
+| `20261012011559` | `production_department_scoped_roles_permissions_v1` |
+| `20261012011633` | `production_department_role_matrix_seed_fix` |
+| `20261012011639` | `production_department_scoped_read_rpc_fix` |
+| `20261012011646` | `production_department_scoped_write_rpc_guards` |
+| `20261012011653` | `production_department_scoped_access_final_correction` |
+| `20261012011659` | `production_department_scoped_approval_guards` |
+| `20261012011708` | `production_department_scoped_rls_and_file_guards` |
+| `20261012011719` | `production_close_remaining_department_rls_bypasses` |
+| `20261012011729` | `production_separate_document_edit_from_approve_assign` |
+| `20261012011736` | `production_guard_document_file_attachment` |
+| `20261012011746` | `production_require_department_membership_for_scoped_permissions` |
+| `20261012011831` | `production_require_explicit_active_department_membership` |
+| `20261012024902` | `secure_department_membership_management_rpc` |
+| `20261012024916` | `active_department_membership_approval_guard` |
+
+Read-only verification after these changes:
+- Membership, scoped-role, and permission tables exist; permission matrix count is 168.
+- Counts are currently 0 membership rows, 0 scoped-role rows, 1 profile, and 0 profiles with a primary department. This is intentionally left unmapped pending confirmation of the real user's department membership.
+- Public membership RPCs exist as `SECURITY INVOKER` wrappers, authenticated execution is granted, and anonymous execution is revoked. Their privileged implementations are in the `private` schema and perform permission checks.
+- `private.create_approval` checks the target approver's current active membership in the document's department and the department-scoped approval permission.
+- Security advisor still reports the three RLS-enabled membership/permission tables without direct table policies, and pre-existing exposed `SECURITY DEFINER` functions elsewhere. These require continued review before a full release.
+
+The repository migration `20261011230000_manage_department_membership_rpc.sql` and its static regression test were updated to reflect the hardened wrapper/implementation split. The new production entries above still need deliberate reconciliation with the repository's migration ordering; do not use `db push` to force-align them.
 
 ## Mandatory recovery procedure
 
