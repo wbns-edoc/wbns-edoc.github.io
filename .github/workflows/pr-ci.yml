@@ -1,0 +1,43 @@
+name: Pull Request CI
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+permissions:
+  contents: read
+concurrency:
+  group: pr-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Upload generated lockfile for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-package-lock
+          path: package-lock.json
+          if-no-files-found: error
+          retention-days: 7
+      - name: Verify clean lockfile install
+        run: npm ci
+      - name: Build with isolated non-production configuration
+        env:
+          VITE_SUPABASE_URL: https://ci-placeholder.supabase.co
+          VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+        run: npm run build
+      - name: Test build configuration validation
+        run: node scripts/test-build-env.mjs
+      - name: Verify missing configuration fails closed
+        run: |
+          if env -u VITE_SUPABASE_URL -u VITE_SUPABASE_PUBLISHABLE_KEY node scripts/validate-build-env.mjs; then
+            echo "Expected missing configuration to fail, but validation succeeded."
+            exit 1
+          fi

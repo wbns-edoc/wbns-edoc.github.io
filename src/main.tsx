@@ -6,10 +6,21 @@ import './styles.css';
 import { getUploadErrorMessage } from './upload-error';
 import { getUploadRefreshMessage } from './upload-refresh';
 
-const supabase=createClient(
-  (import.meta.env.VITE_SUPABASE_URL as string|undefined)||'https://iigzzwyfxxtqbgjawyom.supabase.co',
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string|undefined)||'sb_publishable_sp528zkiQCVvcbZ4FoHtzg_b_9_aPbI'
-);
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+if (!supabaseUrl || !supabasePublishableKey) {
+  throw new Error('Missing required Supabase public configuration. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY before building.');
+}
+let parsedSupabaseUrl: URL;
+try {
+  parsedSupabaseUrl = new URL(supabaseUrl);
+} catch {
+  throw new Error('VITE_SUPABASE_URL must be a valid HTTPS URL.');
+}
+if (parsedSupabaseUrl.protocol !== 'https:' || !parsedSupabaseUrl.hostname.endsWith('.supabase.co')) {
+  throw new Error('VITE_SUPABASE_URL must use an HTTPS Supabase project URL.');
+}
+const supabase = createClient(supabaseUrl, supabasePublishableKey);
 
 type Page='dashboard'|'incoming'|'outgoing'|'reports'|'senders'|'tasks'|'approvals'|'audit'|'admin'|'departments'|'permissions';
 type Profile={id:string;full_name:string;email:string|null;employee_code:string|null;department_id:string|null};
