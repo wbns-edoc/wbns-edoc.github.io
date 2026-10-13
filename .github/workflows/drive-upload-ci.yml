@@ -49,14 +49,18 @@ jobs:
         with:
           deno-version: v2.x
       - name: Run localized upload error unit tests
-        run: deno test --node-modules-dir=auto tests/upload-error_test.ts
+        run: deno test tests/upload-error_test.ts
       - name: Run upload cleanup policy unit tests
-        run: deno test --node-modules-dir=auto supabase/functions/drive-upload/cleanup-policy_test.ts
+        run: deno test supabase/functions/drive-upload/cleanup-policy_test.ts
       - name: Run upload input validation unit tests
-        run: deno test --node-modules-dir=auto supabase/functions/drive-upload/file-validation_test.ts
+        run: deno test supabase/functions/drive-upload/file-validation_test.ts
       - name: Type-check Drive upload Edge Function
         run: deno check --node-modules-dir=auto supabase/functions/drive-upload/index.ts
       - name: Test user-import permission separation
-        run: deno test --node-modules-dir=auto supabase/functions/user-import/authorization_test.ts
+        run: deno test supabase/functions/user-import/authorization_test.ts
+      - name: Test user-import Auth account-state synchronization
+        run: deno test supabase/functions/user-import/auth-admin-patch_test.ts
+      - name: Test user-import spreadsheet status normalization
+        run: deno test supabase/functions/user-import/import-row-normalization_test.ts
       - name: Type-check user-import Edge Function
         run: deno check --node-modules-dir=auto supabase/functions/user-import/index.ts
