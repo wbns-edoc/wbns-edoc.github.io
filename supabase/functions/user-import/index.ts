@@ -1,5 +1,7 @@
 import { createSupabaseContext } from "npm:@supabase/server@1";
 
+import { parseIsActive } from "./import-row-normalization.ts";
+
 const headers = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +23,7 @@ Deno.serve(async (req: Request) => {
       const codes = new Set<string>((perms ?? []).map((x: any) => String(x.permission_code ?? "")));
       const hasRoleAssignment = rows.some((row: any) => String(row?.role ?? "").trim().length > 0);
       const { authorizeUserImport } = await import("./authorization.ts");
+      const { buildAuthUserPatch } = await import("./auth-admin-patch.ts");
       const authorization = authorizeUserImport({
         action: "import",
         permissionCodes: codes,
@@ -43,11 +46,17 @@ Deno.serve(async (req: Request) => {
         const phone = String(r.phone ?? "").trim() || null;
         const password = String(r.password ?? "");
         const departmentName = String(r.department ?? "").trim();
+        const additionalDepartmentNames = String(r.additional_departments ?? "").split(/[;,，；]/).map((x: string) => x.trim()).filter(Boolean);
         const roleValue = String(r.role ?? "").trim();
-        const isActive = r.is_active !== false;
+        const isActive = parseIsActive(r.is_active);
 
         if (!fullName || !email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
           results.push({ row: rowNo, status:"error", code:"invalid_required_fields" });
+          continue;
+        }
+
+        if (isActive === null) {
+          results.push({ row: rowNo, status:"error", code:"invalid_is_active_value" });
           continue;
         }
 
@@ -57,35 +66,49 @@ Deno.serve(async (req: Request) => {
         }
 
         let departmentId: string | null = null;
-        if (departmentName) {
-          const dep = await admin.from("departments").select("id").or(
-            "code.ilike." + departmentName.replace(/,/g, "") + ",name.ilike." + departmentName.replace(/,/g, "")
-          ).limit(2);
+        const resolvedDepartmentIds: string[] = [];
+        const departmentNames = [departmentName, ...additionalDepartmentNames].filter(Boolean);
+        if (!departmentName) { results.push({ row: rowNo, status:"error", code:"primary_department_required" }); continue; }
+        let departmentLookupFailed = false;
+        for (const depName of departmentNames) {
+          const safeName = depName.replace(/[,()%_]/g, "");
+          const dep = await admin.from("departments").select("id,code,name").or(
+            "code.ilike." + safeName + ",name.ilike." + safeName
+          ).eq("is_active", true).limit(2);
           if (dep.error) {
             results.push({ row: rowNo, status:"error", code:"department_lookup_failed" });
-            continue;
+            departmentLookupFailed = true; break;
           }
           if ((dep.data ?? []).length > 1) {
-            results.push({ row: rowNo, status:"error", code:"department_ambiguous" });
-            continue;
+            results.push({ row: rowNo, status:"error", code:"department_ambiguous", department: depName });
+            departmentLookupFailed = true; break;
           }
-          if ((dep.data ?? []).length === 1) departmentId = dep.data[0].id;
+          if ((dep.data ?? []).length === 1) resolvedDepartmentIds.push(dep.data[0].id);
           else {
-            results.push({ row: rowNo, status:"error", code:"department_not_found" });
-            continue;
+            results.push({ row: rowNo, status:"error", code:"department_not_found", department: depName });
+            departmentLookupFailed = true; break;
           }
         }
+        if (departmentLookupFailed) continue;
+        departmentId = resolvedDepartmentIds[0] ?? null;
+        if (new Set(resolvedDepartmentIds).size !== resolvedDepartmentIds.length) { results.push({ row: rowNo, status:"error", code:"duplicate_department" }); continue; }
 
         let roleId: string | null = null;
         if (roleValue) {
-          const role = await admin.from("roles").select("id").or(
+          const role = await admin.from("roles").select("id,code").or(
             "code.ilike." + roleValue.replace(/,/g, "") + ",name.ilike." + roleValue.replace(/,/g, "")
           ).limit(2);
           if (role.error || (role.data ?? []).length > 1) {
             results.push({ row: rowNo, status:"error", code: role.error ? "role_lookup_failed" : "role_ambiguous" });
             continue;
           }
-          if ((role.data ?? []).length === 1) roleId = role.data[0].id;
+          if ((role.data ?? []).length === 1) {
+            if (["system_admin","director"].includes(String(role.data[0].code))) {
+              results.push({ row: rowNo, status:"error", code:"global_role_not_allowed_in_excel_import" });
+              continue;
+            }
+            roleId = role.data[0].id;
+          }
           else {
             results.push({ row: rowNo, status:"error", code:"role_not_found" });
             continue;
@@ -130,10 +153,26 @@ Deno.serve(async (req: Request) => {
           }
           userId = created.data.user.id;
           action = "created";
-        } else if (password) {
-          const changed = await admin.auth.admin.updateUserById(userId, { password });
-          if (changed.error) {
-            results.push({ row: rowNo, status:"error", code:"password_update_failed", message: changed.error.message });
+          if (!isActive) {
+            const disabled = await admin.auth.admin.updateUserById(
+              userId,
+              buildAuthUserPatch({ email, isActive: false }),
+            );
+            if (disabled.error) {
+              await admin.auth.admin.deleteUser(userId);
+              results.push({ row: rowNo, status:"error", code:"auth_deactivate_failed", message: disabled.error.message });
+              continue;
+            }
+          }
+        } else {
+          // Keep the Auth identity aligned with the spreadsheet, not just public.profiles.
+          // is_active is the account-status source of truth for this import workflow.
+          const authUpdate = await admin.auth.admin.updateUserById(
+            userId,
+            buildAuthUserPatch({ email, password: password || undefined, isActive }),
+          );
+          if (authUpdate.error) {
+            results.push({ row: rowNo, status:"error", code:"auth_update_failed", message: authUpdate.error.message });
             continue;
           }
         }
@@ -153,23 +192,41 @@ Deno.serve(async (req: Request) => {
         }
 
         if (roleId) {
-          const roleWrite = await admin.from("user_roles").upsert({
+          // The spreadsheet's Role applies to every department listed on this row.
+          // This keeps multi-department staff authorized consistently in each unit.
+          const roleAssignments = resolvedDepartmentIds.map((depId) => ({
             user_id:userId,
+            department_id:depId,
             role_id:roleId,
             assigned_by:actorId || null,
-          }, { onConflict:"user_id,role_id" });
+          }));
+          const roleWrite = await admin.from("user_department_roles").upsert(
+            roleAssignments,
+            { onConflict:"user_id,department_id,role_id" }
+          );
           if (roleWrite.error) {
             results.push({ row: rowNo, status:"error", code:"role_assign_failed", message:roleWrite.error.message });
             continue;
           }
         }
 
+        const clearPrimary = await admin.from("user_departments").update({ is_primary: false }).eq("user_id", userId);
+        if (clearPrimary.error) { results.push({ row: rowNo, status:"error", code:"department_primary_reset_failed" }); continue; }
+        const memberships = resolvedDepartmentIds.map((depId, index) => ({ user_id: userId, department_id: depId, is_primary: index === 0, assigned_by: actorId || null }));
+        const membershipWrite = await admin.from("user_departments").upsert(memberships, { onConflict:"user_id,department_id" });
+        if (membershipWrite.error) { results.push({ row: rowNo, status:"error", code:"department_membership_write_failed", message:membershipWrite.error.message }); continue; }
+        // Remove scoped role rows before memberships so membership-removal invariants remain valid.
+        const staleRoles = await admin.from("user_department_roles").delete().eq("user_id", userId).not("department_id", "in", "(" + resolvedDepartmentIds.join(",") + ")");
+        if (staleRoles.error) { results.push({ row: rowNo, status:"error", code:"department_role_sync_failed" }); continue; }
+        const staleMemberships = await admin.from("user_departments").delete().eq("user_id", userId).not("department_id", "in", "(" + resolvedDepartmentIds.join(",") + ")");
+        if (staleMemberships.error) { results.push({ row: rowNo, status:"error", code:"department_membership_sync_failed" }); continue; }
+
         await admin.from("audit_logs").insert({
           actor_id: actorId || null,
           action: "user_import_" + action,
           entity_type: "profiles",
           entity_id: userId,
-          new_data: { employee_code: employeeCode, full_name: fullName, email, role: roleValue || null },
+          new_data: { employee_code: employeeCode, full_name: fullName, email, role: roleValue || null, department_ids: resolvedDepartmentIds },
         });
 
         results.push({ row: rowNo, status:"ok", action, user_id:userId });
