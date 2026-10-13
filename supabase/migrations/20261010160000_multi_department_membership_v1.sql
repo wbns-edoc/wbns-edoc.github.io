@@ -38,32 +38,7 @@ AS $function$
   );
 $function$;
 
-CREATE OR REPLACE FUNCTION private.can_access_document(p_document_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER
-SET search_path TO 'pg_catalog', 'public', 'private'
-AS $function$
-  SELECT EXISTS (
-    SELECT 1
-    FROM public.documents d
-    JOIN public.profiles pr ON pr.id = (SELECT auth.uid()) AND pr.is_active = true
-    WHERE d.id = p_document_id
-      AND (
-        (private.has_permission('document.view')
-          AND (private.has_document_wide_read_role()
-            OR (d.department_id IS NOT NULL AND private.user_has_department(pr.id, d.department_id))))
-        OR (d.department_id IS NOT NULL
-          AND private.user_has_department(pr.id, d.department_id)
-          AND (
-            d.created_by = (SELECT auth.uid())
-            OR d.current_owner_id = (SELECT auth.uid())
-            OR EXISTS (SELECT 1 FROM public.document_assignments da
-              WHERE da.document_id = d.id AND da.assignee_id = (SELECT auth.uid())
-                AND da.assignment_status = 'assigned')
-          ))
-      )
-  );
-$function$;
+-- The canonical department-scoped can_access_document implementation is installed by the later authorization correction migration.
 
 CREATE OR REPLACE FUNCTION private.default_document_department()
 RETURNS trigger
@@ -79,23 +54,12 @@ BEGIN
 END;
 $function$;
 
-DROP POLICY IF EXISTS documents_insert_authorized ON public.documents;
-CREATE POLICY documents_insert_authorized ON public.documents
-FOR INSERT TO authenticated
-WITH CHECK (
-  created_by = (SELECT auth.uid())
-  AND private.has_permission('document.create')
-  AND (
-    department_id IS NULL
-    OR private.user_has_department((SELECT auth.uid()), department_id)
-    OR EXISTS (SELECT 1 FROM public.user_roles ur JOIN public.roles r ON r.id = ur.role_id
-      WHERE ur.user_id = (SELECT auth.uid()) AND r.code = 'system_admin')
-  )
-);
+-- Document insert policy is installed after documents.department_id exists, by the final scoped-RLS migration.
 
 REVOKE ALL ON FUNCTION private.user_has_department(uuid, uuid) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION private.user_has_department(uuid, uuid) TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION private.can_access_document(uuid) TO authenticated, service_role;
+-- Execute permission for private.can_access_document is granted by its later defining migration.
+
 
 
 
@@ -193,8 +157,8 @@ $function$;
 CREATE OR REPLACE FUNCTION private.assign_document(
   p_document_id uuid,
   p_assignee_id uuid,
-  p_instructions text,
-  p_due_at timestamp with time zone
+  p_instructions text DEFAULT NULL,
+  p_due_at timestamp with time zone DEFAULT NULL
 )
 RETURNS uuid
 LANGUAGE plpgsql
