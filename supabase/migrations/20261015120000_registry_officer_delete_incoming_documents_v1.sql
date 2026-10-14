@@ -108,6 +108,14 @@ BEGIN
   IF NOT private.can_access_document(p_document_id) THEN
     RAISE EXCEPTION USING ERRCODE='42501', MESSAGE='document_scope_denied';
   END IF;
+  IF NOT EXISTS (
+       SELECT 1 FROM public.user_roles ur
+       JOIN public.roles r ON r.id=ur.role_id
+       WHERE ur.user_id=v_actor AND r.code IN ('system_admin','director')
+     )
+     AND NOT private.user_has_department(v_actor,v_doc.department_id) THEN
+    RAISE EXCEPTION USING ERRCODE='42501', MESSAGE='incoming_delete_department_scope_denied';
+  END IF;
   IF EXISTS (SELECT 1 FROM public.document_assignments da WHERE da.document_id=p_document_id)
      OR EXISTS (SELECT 1 FROM public.approvals a WHERE a.document_id=p_document_id) THEN
     RAISE EXCEPTION USING ERRCODE='42501', MESSAGE='document_already_assigned_or_approved';
