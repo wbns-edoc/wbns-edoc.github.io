@@ -133,12 +133,27 @@ Deno.serve(async (req) => {
   try {
     const access = await token(sa);
     driveAccessToken = access;
-    const meta = new Blob([JSON.stringify({ name: file.name, parents: [folder] })], { type: "application/json" });
-    const body = new FormData();
-    body.append("metadata", meta);
-    body.append("file", file, file.name);
+    // Drive API uploadType=multipart requires multipart/related (not browser FormData's multipart/form-data).
+    // Construct the body explicitly so Google Drive can parse the metadata part and preserve arbitrary binary files.
+    const boundary = `wbns_drive_${crypto.randomUUID().replaceAll("-", "")}`;
+    const metadataPart = new TextEncoder().encode(
+      `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: file.name, parents: [folder] })}\r\n--${boundary}\r\nContent-Type: ${file.type || "application/octet-stream"}\r\n\r\n`
+    );
+    const fileBytes = new Uint8Array(await file.arrayBuffer());
+    const closingPart = new TextEncoder().encode(`\r\n--${boundary}--`);
+    const body = new Uint8Array(metadataPart.length + fileBytes.length + closingPart.length);
+    body.set(metadataPart, 0);
+    body.set(fileBytes, metadataPart.length);
+    body.set(closingPart, metadataPart.length + fileBytes.length);
     const params = new URLSearchParams({ uploadType: "multipart", fields: "id,name,mimeType,size,md5Checksum,webViewLink,parents" });
-    const r = await fetch(`${DRIVE_API}?${params}`, { method: "POST", headers: { Authorization: `Bearer ${access}` }, body });
+    const r = await fetch(`${DRIVE_API}?${params}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${access}`,
+        "Content-Type": `multipart/related; boundary=${boundary}`
+      },
+      body
+    });
     if (!r.ok) {
       const t = await r.text();
       console.error("Drive upload failed", r.status, t.slice(0, 800));
