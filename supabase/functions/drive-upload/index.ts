@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { importPKCS8, SignJWT } from "npm:jose@6";
 import { mayDeleteDriveObject, mayDeleteUploadResources } from "./cleanup-policy.ts";
-import { MAX_UPLOAD_BYTES, validateUploadInput } from "./file-validation.ts";
+import { MAX_UPLOAD_BYTES, validateUploadInput, isValidFileRole } from "./file-validation.ts";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DRIVE_API = "https://www.googleapis.com/drive/v3/files";
