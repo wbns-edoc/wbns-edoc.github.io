@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { importPKCS8, SignJWT } from "npm:jose@6";
 import { mayDeleteDriveObject, mayDeleteUploadResources } from "./cleanup-policy.ts";
-import { MAX_UPLOAD_BYTES, validateUploadInput } from "./file-validation.ts";
+import { MAX_UPLOAD_BYTES, validateUploadInput, isValidFileRole } from "./file-validation.ts";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DRIVE_API = "https://www.googleapis.com/drive/v3/files";
@@ -48,7 +48,9 @@ Deno.serve(async (req) => {
   try { form = await req.formData(); } catch { return out({ ok: false, code: "INVALID_MULTIPART_FORM" }, 400); }
   const file = form.get("file");
   const documentId = String(form.get("document_id") || "");
+  const fileRole = String(form.get("file_role") || "main");
   if (!(file instanceof File) || !documentId) return out({ ok: false, code: "FILE_AND_DOCUMENT_REQUIRED" }, 400);
+  if (!isValidFileRole(fileRole)) return out({ ok: false, code: "INVALID_FILE_ROLE" }, 400);
   const validationError = validateUploadInput(file);
   if (validationError) {
     const status = validationError === "FILE_TOO_LARGE" ? 413 : 400;
@@ -177,7 +179,7 @@ Deno.serve(async (req) => {
     const { data: attachment, error: attachmentError } = await sb.rpc("attach_document_file_version", {
       p_document_id: documentId,
       p_google_drive_file_id: fileRow.id,
-      p_file_role: "main"
+      p_file_role: fileRole
     });
     if (attachmentError || !Array.isArray(attachment) || attachment.length === 0) {
       console.error("Document file attachment failed", attachmentError?.message || "NO_ATTACHMENT_ROW");
