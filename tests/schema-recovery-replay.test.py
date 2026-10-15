@@ -164,7 +164,7 @@ def main():
     # definitions by references to other captured SQL functions so dependencies
     # such as private.user_has_department exist before private.can_access_document.
     function_name = re.compile(
-        r"CREATE(?: OR REPLACE)? FUNCTION\s+((?:public|private)\.[A-Za-z_][A-Za-z_0-9$]*)\s*\(",
+        r"CREATE(?: OR REPLACE)? FUNCTION\s+((?:public|private)\.[A-Za-z_][A-Za-z_0-9$]*)\s*\()",
         re.IGNORECASE,
     )
     called_name = re.compile(r"\b(public|private)\.([A-Za-z_][A-Za-z_0-9$]*)\s*\(", re.IGNORECASE)
