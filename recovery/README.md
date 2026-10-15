@@ -15,6 +15,7 @@ Read-only catalog queries were executed against the connected Wat Bueng Nam Sai 
 - `catalog/migration-reconstruction-plan.md`: current gate status, historical migration gaps, stop conditions, and the safe path toward a reproducible clean-install candidate.
 - `catalog/migration-coverage-matrix.md`: row-by-row mapping of all 55 Production migration history entries to repository SQL filename candidates or missing-source blockers.
 - `catalog/fixture-drift-report.md`: name-level comparison of the October 10 test fixture with October 15 catalog evidence; documents why the old fixture is not a clean-install baseline.
+- `catalog/missing-migration-history-search.md`: read-only GitHub path-history search for missing migration sources, including the limits of that search.
 - `tests/schema-recovery-snapshot.test.cjs`: static consistency checks for the recovery artifacts.
 - `.github/workflows/schema-recovery-snapshot-ci.yml`: CI workflow for the static checks.
 
