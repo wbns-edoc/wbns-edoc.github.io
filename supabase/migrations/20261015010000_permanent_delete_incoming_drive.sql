@@ -192,5 +192,7 @@ REVOKE ALL ON FUNCTION private.prepare_permanent_delete_incoming_document(uuid,t
 REVOKE ALL ON FUNCTION private.finalize_permanent_delete_incoming_document(uuid,text) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.prepare_permanent_delete_incoming_document(uuid,text) FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.finalize_permanent_delete_incoming_document(uuid,text) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION private.prepare_permanent_delete_incoming_document(uuid,text) TO authenticated;
+GRANT EXECUTE ON FUNCTION private.finalize_permanent_delete_incoming_document(uuid,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.prepare_permanent_delete_incoming_document(uuid,text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.finalize_permanent_delete_incoming_document(uuid,text) TO authenticated;
