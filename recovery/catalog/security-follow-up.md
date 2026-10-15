@@ -55,3 +55,11 @@ A further read-only check on 2026-10-15 confirmed:
 
 These results narrow the anonymous-function concern but do not replace the broader review of table grants, default privileges, and all SECURITY DEFINER function authorization paths.
 
+
+
+## Semantic authorization review — 2026-10-15
+- Added `authorization-semantic-review.md` after comparing candidate SQL with recovered Production function bodies.
+- The recovered `private.has_department_permission(text, uuid)` checks active profile and explicit membership/role/permission rows, but does not itself check `departments.is_active`. Paths relying on this helper need review; current stale data has not been established.
+- The replay behavior test now explicitly checks System Admin and director create/update/approve global permissions.
+- Required before deployment: regression tests for inactive departments and membership changes, a reviewed corrective candidate, and validation of all dependent RLS/RPC paths in disposable PostgreSQL and a fresh local Supabase stack.
+- No Production writes; deployment remains NOT APPROVED.
