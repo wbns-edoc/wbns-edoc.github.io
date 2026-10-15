@@ -106,7 +106,7 @@ DO $$ DECLARE n integer; BEGIN
 END $$;
 
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000006', true);
-DO $ DECLARE n integer; BEGIN
+DO $$ DECLARE n integer; BEGIN
   SELECT count(*) INTO n FROM public.documents;
   IF n <> 2 THEN RAISE EXCEPTION 'multi-group user should read documents from both assigned groups; got %', n; END IF;
 END $;
