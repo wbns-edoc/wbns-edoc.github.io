@@ -1,6 +1,6 @@
 # Google Apps Script Drive bridge (WBNS e-Document)
 
-This is a server-side bridge prototype for writing files to the school-owned Google Drive as the Apps Script owner. It is **not production-ready** until the Supabase Edge Functions are integrated and end-to-end security tests succeed.
+This is a server-side bridge prototype for writing files to the school-owned Google Drive as the Apps Script owner. It is **not production-ready** until live end-to-end security tests succeed.
 
 ## Setup
 
@@ -9,9 +9,10 @@ This is a server-side bridge prototype for writing files to the school-owned Goo
 3. In **Project Settings → Script properties**, set:
    - `WBNS_BRIDGE_SECRET`: generate a unique random secret of at least 32 bytes.
    - `WBNS_DRIVE_FOLDER_ID`: ID of the school’s destination folder.
-4. Do not deploy yet. First implement and test the matching Supabase Edge Function signing protocol.
-5. After security review, deploy as a Web app executing as **Me**. Restrict access as much as deployment settings permit; signed requests are still required.
-6. Save the deployment URL as Supabase Edge Function secret `GOOGLE_APPS_SCRIPT_BRIDGE_URL`; save the same secret value as `GOOGLE_APPS_SCRIPT_BRIDGE_SECRET`. Never expose either to the frontend.
+4. The matching Supabase Edge Function signing protocol is implemented in this repository branch. Deploying the Apps Script web app is needed for live integration testing; it does **not** switch Production to the bridge by itself.
+5. For testing, deploy as a Web app executing as **Me**. Restrict access as deployment settings permit; signed requests are still required. Use a new deployment version whenever you change `Code.gs`.
+6. Save the deployment URL as Supabase Edge Function secret `GOOGLE_APPS_SCRIPT_BRIDGE_URL`; save the same secret value as `GOOGLE_APPS_SCRIPT_BRIDGE_SECRET`. Never expose either to the frontend or commit them.
+7. Do not deploy the bridge Edge Functions to Production or merge this PR until the live security and end-to-end checklist below passes.
 
 ## Request signing protocol
 
@@ -33,5 +34,5 @@ This is a server-side bridge prototype for writing files to the school-owned Goo
 - Google Apps Script execution quotas and Drive quotas still apply.
 - HMAC authentication does not replace Supabase user JWT validation and document permission checks. Those must remain in the Edge Function before any bridge call.
 - The `permanent-delete-incoming` Edge Function may permanently remove database records only after all required Drive files are confirmed moved to Trash. Its response must say `drive_files_moved_to_trash`, not claim that the Drive files were permanently erased. Partial failures must preserve database records for reconciliation.
-- Do not deploy to Production until the Edge Function integration, upload, read, trash, replay rejection, invalid-signature rejection, and cross-folder deletion tests pass.
-- The bridge returns generic errors to callers. Do not log secrets, signatures, file contents, or tokens.
+- Before Production deployment, test signed health, upload, reading the uploaded file, trashing the test file, replay rejection, invalid-signature rejection, cross-folder deletion rejection, and partial-failure retries. Verify Google Apps Script web-app redirect behavior and missing-file errors with actual requests.
+- Do not log secrets, signatures, file contents, or tokens.
