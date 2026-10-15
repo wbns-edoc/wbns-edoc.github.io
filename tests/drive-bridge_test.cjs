@@ -206,3 +206,18 @@ test("refuses to trash a file outside the configured folder", () => {
   assert.deepEqual(result, { ok: false, code: "FILE_OUTSIDE_CONFIGURED_FOLDER" });
   assert.notEqual(otherFile.trashed, true);
 });
+test("upload cleanup moves the Drive object to Trash before deleting its metadata", () => {
+  const uploadSource = fs.readFileSync("supabase/functions/drive-upload/index.ts", "utf8");
+  const cleanupStart = uploadSource.indexOf("async function cleanupCreatedResources()");
+  const cleanupEnd = uploadSource.indexOf("\n\n  try {\n    const bytes", cleanupStart);
+  assert.notEqual(cleanupStart, -1, "cleanup function must exist");
+  assert.notEqual(cleanupEnd, -1, "cleanup function boundary must exist");
+  const cleanup = uploadSource.slice(cleanupStart, cleanupEnd);
+  const trashIndex = cleanup.indexOf('await signedBridgeRequest("delete", { fileId: driveFileId })');
+  const metadataDeleteIndex = cleanup.indexOf('.from("google_drive_files").delete()');
+  assert.notEqual(trashIndex, -1, "cleanup must request Drive trash");
+  assert.notEqual(metadataDeleteIndex, -1, "cleanup must delete metadata only after Drive cleanup");
+  assert.ok(trashIndex < metadataDeleteIndex, "Drive trash must succeed before metadata is removed");
+  assert.match(cleanup.slice(trashIndex, metadataDeleteIndex), /catch\s*\(error\)[\s\S]*?return;/,
+    "if Drive trash fails, metadata must be retained for reconciliation");
+});
