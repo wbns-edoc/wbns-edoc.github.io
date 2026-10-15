@@ -26,7 +26,23 @@ def statements(path: Path):
     return result
 
 def classify(statement: str):
-    normalized = statement.lstrip().upper()
+    # pglast statement locations may include comments immediately preceding a
+    # statement. Remove leading SQL comments for classification while keeping
+    # the original statement text intact in generated replay phases.
+    normalized = statement.lstrip()
+    while True:
+        if normalized.startswith("--"):
+            newline = normalized.find("\\n")
+            normalized = "" if newline < 0 else normalized[newline + 1:].lstrip()
+            continue
+        if normalized.startswith("/*"):
+            end = normalized.find("*/", 2)
+            if end < 0:
+                raise AssertionError("Unterminated leading SQL comment")
+            normalized = normalized[end + 2:].lstrip()
+            continue
+        break
+    normalized = normalized.upper()
     if normalized.startswith("CREATE TYPE "):
         return "types"
     if normalized.startswith("CREATE TABLE "):
