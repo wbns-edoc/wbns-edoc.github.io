@@ -31,11 +31,11 @@ BEGIN
     RAISE EXCEPTION USING ERRCODE='42501', MESSAGE='incoming_delete_permission_denied';
   END IF;
   RETURN QUERY
-  SELECT d.id,d.subject,d.status,d.deleted_at,d.deletion_reason,d.department_id,
+  SELECT d.id,d.subject,d.status::text,d.deleted_at,d.deletion_reason,d.department_id,
          inc.registered_number,inc.external_document_no
   FROM public.documents d
   LEFT JOIN public.incoming_document_details inc ON inc.document_id=d.id
-  WHERE d.document_type='incoming' AND d.deleted_at IS NOT NULL
+  WHERE d.document_type='incoming'::public.document_type AND d.deleted_at IS NOT NULL
     AND (
       EXISTS (SELECT 1 FROM public.user_roles ur JOIN public.roles r ON r.id=ur.role_id
               WHERE ur.user_id=v_actor AND r.code IN ('system_admin','director'))
