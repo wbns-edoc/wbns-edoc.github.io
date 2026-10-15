@@ -8,4 +8,4 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE SCHEMA IF NOT EXISTS private;
 CREATE SCHEMA IF NOT EXISTS auth;
 CREATE TABLE auth.users (id uuid PRIMARY KEY);
-CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $ SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid $;
+CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT NULLIF(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
