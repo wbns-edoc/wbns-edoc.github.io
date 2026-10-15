@@ -1,0 +1,31 @@
+name: Schema Recovery Snapshot CI
+
+on:
+  pull_request:
+    paths:
+      - "recovery/**"
+      - "tests/schema-recovery-snapshot.test.cjs"
+      - ".github/workflows/schema-recovery-snapshot-ci.yml"
+  push:
+    branches:
+      - "recovery/production-schema-catalog-2026-10-15"
+    paths:
+      - "recovery/**"
+      - "tests/schema-recovery-snapshot.test.cjs"
+      - ".github/workflows/schema-recovery-snapshot-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  static-snapshot-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Validate recovery evidence artifacts
+        run: node tests/schema-recovery-snapshot.test.cjs
