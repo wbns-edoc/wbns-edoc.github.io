@@ -16,6 +16,9 @@ const fixtureDrift = read("recovery/catalog/fixture-drift-report.md");
 const sourceSearch = read("recovery/catalog/missing-migration-history-search.md");
 const branchCandidateReview = read("recovery/catalog/branch-candidate-review.md");
 const authorizationSemanticReview = read("recovery/catalog/authorization-semantic-review.md");
+const authorizationCandidate = read("recovery/catalog/candidate-has-department-permission-active-department.sql");
+const replayWorkflow = read(".github/workflows/schema-recovery-postgres-replay.yml");
+const rlsBehavior = read("tests/schema-recovery-rls-behavior.sql");
 
 const count = (text, regex) => (text.match(regex) || []).length;
 
@@ -62,6 +65,11 @@ assert.match(readme, /authorization-semantic-review\.md/);
 assert.match(authorizationSemanticReview, /departments\.is_active/);
 assert.match(authorizationSemanticReview, /assert create, update, and approve for both System Admin and director/i);
 assert.match(authorizationSemanticReview, /No Production writes were performed/i);
+assert.match(authorizationCandidate, /JOIN public\.departments d[\s\S]*?d\.is_active = true/i);
+assert.match(authorizationCandidate, /wr\.code IN \(\x27system_admin\x27,\x27director\x27\)/i);
+assert.match(replayWorkflow, /Apply isolated authorization correction candidate \(disposable DB only\)/i);
+assert.match(rlsBehavior, /ordinary user must not retain scoped permission in inactive department/i);
+assert.match(rlsBehavior, /director global permission exception must remain effective/i);
 for (const fn of ["audit_row_change", "default_document_department", "guard_document_department_change", "set_updated_at"]) {
   assert.ok(privateFunctions.includes(fn) || publicFunctions.includes(fn), `missing captured trigger function: ${fn}`);
 }
