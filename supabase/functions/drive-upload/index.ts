@@ -113,16 +113,21 @@ Deno.serve(async (req) => {
         return;
       }
 
+      if (driveFileId) {
+        try {
+          await signedBridgeRequest("delete", { fileId: driveFileId });
+          driveFileId = null;
+        } catch (error) {
+          console.error("Apps Script cleanup failed; preserving metadata for reconciliation", error);
+          return;
+        }
+      }
       const { error } = await admin.from("google_drive_files").delete().eq("id", metadataRowId);
       if (!mayDeleteDriveObject(Boolean(error))) {
-        console.error("Drive metadata cleanup failed; preserving Drive object for reconciliation", error?.message);
+        console.error("Drive metadata cleanup failed; object is in Trash and metadata is retained for reconciliation", error?.message);
         return;
       }
       metadataRowId = null;
-    }
-    if (driveFileId) {
-      try { await signedBridgeRequest("delete", { fileId: driveFileId }); driveFileId = null; }
-      catch (error) { console.error("Apps Script cleanup failed; reconcile manually if needed", error); }
     }
   }
 
