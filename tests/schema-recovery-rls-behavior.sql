@@ -156,19 +156,19 @@ END $$;
 -- An active user with explicit membership, role and permission must still be denied
 -- department-scoped access when that department is inactive.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000007', true);
-DO $ BEGIN
+DO $$ BEGIN
   IF private.has_department_permission('document.view', '20000000-0000-0000-0000-000000000004') THEN
     RAISE EXCEPTION 'ordinary user must not retain scoped permission in inactive department';
   END IF;
-END $;
+END $$;
 
 -- The explicit global role exception remains effective for an active director.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', true);
-DO $ BEGIN
+DO $$ BEGIN
   IF NOT private.has_department_permission('document.view', '20000000-0000-0000-0000-000000000004') THEN
     RAISE EXCEPTION 'director global permission exception must remain effective for inactive department';
   END IF;
-END $;
+END $$;
 
 RESET ROLE;
 ROLLBACK;
