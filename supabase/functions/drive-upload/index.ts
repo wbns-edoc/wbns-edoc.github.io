@@ -6,6 +6,7 @@ import { MAX_UPLOAD_BYTES, validateUploadInput, isValidFileRole } from "./file-v
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DRIVE_API = "https://www.googleapis.com/drive/v3/files";
+const DRIVE_UPLOAD_API = "https://www.googleapis.com/upload/drive/v3/files";
 const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
 type SA = { client_email: string; private_key: string; token_uri?: string };
 
@@ -146,7 +147,7 @@ Deno.serve(async (req) => {
     body.set(fileBytes, metadataPart.length);
     body.set(closingPart, metadataPart.length + fileBytes.length);
     const params = new URLSearchParams({ uploadType: "multipart", fields: "id,name,mimeType,size,md5Checksum,webViewLink,parents" });
-    const r = await fetch(`${DRIVE_API}?${params}`, {
+    const r = await fetch(`${DRIVE_UPLOAD_API}?${params}`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${access}`,
