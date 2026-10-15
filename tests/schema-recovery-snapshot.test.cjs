@@ -11,6 +11,7 @@ const readme = read("recovery/README.md");
 const security = read("recovery/catalog/security-follow-up.md");
 const replayAudit = read("recovery/catalog/replay-dependency-audit.md");
 const migrationPlan = read("recovery/catalog/migration-reconstruction-plan.md");
+const migrationMatrix = read("recovery/catalog/migration-coverage-matrix.md");
 
 const count = (text, regex) => (text.match(regex) || []).length;
 
@@ -34,6 +35,10 @@ assert.match(migrationPlan, /Historical migration reproducibility.*BLOCKED/i);
 assert.match(migrationPlan, /Production deployment readiness.*NOT APPROVED/i);
 assert.match(migrationPlan, /unavailable historical migration is being guessed from its name/i);
 assert.match(migrationPlan, /October 15 Production catalog/i);
+assert.equal(count(migrationMatrix, /^\\| 202610[0-9]+ \\|/gm), 55, "expected all 55 Production migration history entries in coverage matrix");
+assert.match(migrationMatrix, /Foundation placeholder/i);
+assert.match(migrationMatrix, /Missing source candidate/i);
+assert.match(migrationMatrix, /No Production migration or schema change was applied/i);
 for (const fn of ["audit_row_change", "default_document_department", "guard_document_department_change", "set_updated_at"]) {
   assert.ok(privateFunctions.includes(fn) || publicFunctions.includes(fn), `missing captured trigger function: ${fn}`);
 }
