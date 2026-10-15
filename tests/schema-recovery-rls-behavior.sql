@@ -68,6 +68,8 @@ GRANT USAGE ON SCHEMA public, private, auth TO authenticated;
 GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA private TO authenticated;
 GRANT SELECT ON public.documents TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_set_global_user_role(uuid, uuid, boolean) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.admin_set_department_role_permission(uuid, uuid, uuid, boolean) TO authenticated;
 
 SET LOCAL ROLE authenticated;
 
@@ -110,6 +112,32 @@ DO $$ DECLARE n integer; BEGIN
   SELECT count(*) INTO n FROM public.documents;
   IF n <> 2 THEN RAISE EXCEPTION 'multi-group user should read documents from both assigned groups; got %', n; END IF;
 END $$;
+
+-- SECURITY DEFINER RPCs are callable by authenticated, but must reject users without admin permissions.
+SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000006', true);
+DO $ BEGIN
+  BEGIN
+    PERFORM public.admin_set_global_user_role(
+      '10000000-0000-0000-0000-000000000006',
+      '30000000-0000-0000-0000-000000000002',
+      true
+    );
+    RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='ordinary user unexpectedly changed a global role';
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    NULL;
+  END;
+  BEGIN
+    PERFORM public.admin_set_department_role_permission(
+      '20000000-0000-0000-0000-000000000001',
+      '30000000-0000-0000-0000-000000000003',
+      '40000000-0000-0000-0000-000000000001',
+      false
+    );
+    RAISE EXCEPTION USING ERRCODE='P0001', MESSAGE='ordinary user unexpectedly changed department permissions';
+  EXCEPTION WHEN SQLSTATE '42501' THEN
+    NULL;
+  END;
+END $;
 
 RESET ROLE;
 ROLLBACK;
