@@ -27,7 +27,7 @@ assert.match(readme, /not a verified, standalone schema dump/i);
 assert.match(readme, /Never apply these files to Production/i);
 assert.match(security, /no policies explicitly target/i);
 assert.match(replayAudit, /naive replay/i);
-assert.match(replayAudit, /clean PostgreSQL replay has \\*\\*not\\*\\* yet been proven/i);
+assert.match(replayAudit, /clean PostgreSQL replay has \*\*not\*\* yet been proven/i);
 for (const fn of ["audit_row_change", "default_document_department", "guard_document_department_change", "set_updated_at"]) {
   assert.ok(privateFunctions.includes(fn) || publicFunctions.includes(fn), `missing captured trigger function: ${fn}`);
 }
