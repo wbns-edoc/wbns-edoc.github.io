@@ -68,6 +68,8 @@ jobs:
             psql -v ON_ERROR_STOP=1 -f "$phase"
             echo "::endgroup::"
           done
+      - name: Apply isolated authorization correction candidate (disposable DB only)
+        run: psql -v ON_ERROR_STOP=1 -f recovery/catalog/candidate-has-department-permission-active-department.sql
       - name: Verify reconstructed object inventory
         run: |
           psql -v ON_ERROR_STOP=1 <<'SQL'
