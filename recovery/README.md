@@ -14,11 +14,12 @@ Read-only catalog queries were executed against the connected Wat Bueng Nam Sai 
 - `catalog/replay-dependency-audit.md`: verified trigger-function ordering requirements and the disposable PostgreSQL replay evidence.
 - `catalog/migration-reconstruction-plan.md`: current gate status, historical migration gaps, stop conditions, and the safe path toward a reproducible clean-install candidate.
 - `catalog/migration-coverage-matrix.md`: row-by-row mapping of all 55 Production migration history entries to repository SQL filename candidates or missing-source blockers.
+- `catalog/fixture-drift-report.md`: name-level comparison of the October 10 test fixture with October 15 catalog evidence; documents why the old fixture is not a clean-install baseline.
 - `tests/schema-recovery-snapshot.test.cjs`: static consistency checks for the recovery artifacts.
 - `.github/workflows/schema-recovery-snapshot-ci.yml`: CI workflow for the static checks.
 
 ## Validation status
-The latest GitHub Actions static snapshot check passed: [run 38754023251](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38754023251). The latest isolated PostgreSQL 17 replay also passed: [run 38754023297](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38754023297). This verifies replay in the compatibility harness and the included RBAC/RLS behavior checks; it **does not** prove full Supabase clean-install parity or Production readiness.
+The latest GitHub Actions static snapshot check passed: [run 38757712729](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38757712729). The latest isolated PostgreSQL 17 replay also passed: [run 38757712321](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38757712321). This verifies replay in the compatibility harness and the included RBAC/RLS behavior checks; it **does not** prove full Supabase clean-install parity or Production readiness.
 
 ## Critical limitations
 These files are **not a verified, standalone schema dump** and are **not ready to execute**. A catalog-generated script can miss or fail to fully preserve:
