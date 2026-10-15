@@ -27,3 +27,13 @@ Disposable PostgreSQL replay does not prove a complete Supabase clean install wi
 ## Decision
 
 No Production writes were performed. No migration is approved for deployment. Keep PR #27 Draft until the findings and remaining reconstruction blockers are resolved.
+
+
+## Follow-up validation — 2026-10-15
+
+A recovery-only candidate was added at `recovery/catalog/candidate-has-department-permission-active-department.sql`. The PostgreSQL Replay workflow applies it **after** replaying the recovered catalog, and only to the disposable PostgreSQL service. The behavioral fixture includes an active ordinary user with a valid role/permission attached to an inactive department and asserts denial, plus an active director and asserts the explicit global-role exception remains effective.
+
+- Disposable PostgreSQL Replay: **PASS** — [run 38764539643](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38764539643)
+- Static Snapshot CI: **PASS** — [run 38764539979](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38764539979)
+
+An earlier replay attempt failed because the new PL/pgSQL test block had malformed dollar quoting; that test syntax was corrected and the later run passed. The passing run establishes only that this candidate behaves as asserted in the disposable PostgreSQL harness. It does not establish full Supabase compatibility, catalog equivalence, or production readiness. The candidate is not in `supabase/migrations`, was not applied to Production, and remains **NOT APPROVED** for deployment.
