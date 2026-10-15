@@ -25,12 +25,13 @@ This is a server-side bridge prototype for writing files to the school-owned Goo
 
 - `health`: verifies that the configured folder can be opened.
 - `upload`: creates a file in the configured folder.
-- `delete`: trashes a file only if it is a child of that configured folder.
+- `delete`: moves a file to Google Drive Trash only if it is a child of that configured folder. This is **not permanent deletion from Drive**; a Drive owner or administrator may be able to restore it or empty Trash later.
 
 ## Limits and safety
 
 - This prototype caps raw file bytes at 10 MiB because JSON/base64 transport increases payload size and Apps Script web-app request limits vary. It is not compatible with a 25 MiB Edge Function limit until a different transport is designed and tested.
 - Google Apps Script execution quotas and Drive quotas still apply.
 - HMAC authentication does not replace Supabase user JWT validation and document permission checks. Those must remain in the Edge Function before any bridge call.
-- Do not deploy to Production until the Edge Function integration, upload, read, delete, replay rejection, invalid-signature rejection, and cross-folder deletion tests pass.
+- The `permanent-delete-incoming` Edge Function may permanently remove database records only after all required Drive files are confirmed moved to Trash. Its response must say `drive_files_moved_to_trash`, not claim that the Drive files were permanently erased. Partial failures must preserve database records for reconciliation.
+- Do not deploy to Production until the Edge Function integration, upload, read, trash, replay rejection, invalid-signature rejection, and cross-folder deletion tests pass.
 - The bridge returns generic errors to callers. Do not log secrets, signatures, file contents, or tokens.
