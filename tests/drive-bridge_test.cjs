@@ -12,6 +12,7 @@ const OTHER_FOLDER_ID = "other-folder-id-123456789";
 function makeBridge() {
   const cache = new Map();
   const files = new Map();
+  let lastError = "";
   let nextId = 1;
   const folder = {
     getId: () => FOLDER_ID,
@@ -45,7 +46,7 @@ function makeBridge() {
   };
 
   const sandbox = {
-    console: { error() {} },
+    console: { error(...args) { lastError = args.join(" "); } },
     Date,
     JSON,
     Math,
@@ -110,7 +111,9 @@ function makeBridge() {
     const raw = typeof payloadOrRaw === "string" ? payloadOrRaw : signed(payloadOrRaw);
     const output = sandbox.doPost({ postData: { contents: raw } });
     assert.equal(output.mimeType, "application/json");
-    return JSON.parse(output.text);
+    const result = JSON.parse(output.text);
+    if (result.code === "BRIDGE_OPERATION_FAILED") throw new Error("Bridge exception: " + lastError);
+    return result;
   }
   return { call, files, folder, cache };
 }
