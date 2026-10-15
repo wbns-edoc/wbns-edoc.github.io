@@ -15,6 +15,35 @@ PUBLIC = CATALOG / "public-functions.sql"
 
 def statements(path: Path):
     sql = path.read_text(encoding="utf-8")
+    if path in (PRIVATE, PUBLIC):
+        # pg_get_functiondef snapshots are separated by explicit markers.
+        # Parse complete definitions directly instead of using pglast statement
+        # offsets, which can truncate function bodies after header comments are
+        # filtered or when the parser reports a statement length without the
+        # trailing delimiter.
+        blocks = sql.split("-- ===== NEXT FUNCTION =====")
+        result = []
+        for block in blocks:
+            lines = block.splitlines()
+            lines = [
+                line for line in lines
+                if not line.strip().startswith((
+                    "-- READ-ONLY RECOVERY SNAPSHOT FROM PRODUCTION CATALOG",
+                    "-- Project ref:",
+                    "-- Captured:",
+                    "-- Not a migration.",
+                ))
+            ]
+            statement = "\n".join(lines).strip()
+            if not statement:
+                continue
+            if not statement.upper().startswith(("CREATE OR REPLACE FUNCTION ", "CREATE FUNCTION ")):
+                raise AssertionError("Unexpected content in function snapshot: " + statement[:120])
+            if not statement.endswith(";"):
+                statement += ";"
+            parse_sql(statement)
+            result.append(statement)
+        return result
     # pglast's statement lengths exclude leading comments in some cases, so
     # slicing by stmt_location/stmt_len can produce a comment-only truncated
     # chunk. Remove only known catalog headers/section separators before parse;
