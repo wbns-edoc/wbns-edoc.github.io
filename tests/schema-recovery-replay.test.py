@@ -180,9 +180,19 @@ def main():
     if args.out_dir:
         args.out_dir.mkdir(parents=True, exist_ok=True)
         for name, statements_in_phase in phases.items():
+            # Catalog snapshots are alphabetically grouped, not dependency ordered.
+            # On the disposable replay only, defer function-body validation until
+            # all function definitions exist; later views and inventory checks
+            # still verify that the complete captured object set can be created.
+            # This does not make the snapshot a production migration.
+            prefix = "-- GENERATED FOR DISPOSABLE REPLAY ONLY; DO NOT APPLY TO PRODUCTION.\n\n"
+            if name in ("06-functions-plpgsql.sql", "07-functions-sql.sql"):
+                prefix += "SET check_function_bodies = off;\n"
+                suffix = "\nSET check_function_bodies = on;\n"
+            else:
+                suffix = ""
             (args.out_dir / name).write_text(
-                "-- GENERATED FOR DISPOSABLE REPLAY ONLY; DO NOT APPLY TO PRODUCTION.\n\n"
-                + "\n\n".join(statements_in_phase) + "\n",
+                prefix + "\n\n".join(statements_in_phase) + suffix + "\n",
                 encoding="utf-8",
             )
     print("Parsed and classified SQL statements (no SQL executed by this script):")
