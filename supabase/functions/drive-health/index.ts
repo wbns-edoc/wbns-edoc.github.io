@@ -16,13 +16,13 @@ function json(data: unknown, status = 200): Response {
 function base64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/=/g, "").replace(/\\+/g, "-").replace(/\\//g, "_");
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 }
 
 async function signedBridgeHealth() {
   const url = Deno.env.get("GOOGLE_APPS_SCRIPT_BRIDGE_URL");
   const secret = Deno.env.get("GOOGLE_APPS_SCRIPT_BRIDGE_SECRET");
-  if (!url || !secret || !/^https:\\/\\//i.test(url)) {
+  if (!url || !secret || !url.startsWith("https://")) {
     throw new Error("APPS_SCRIPT_BRIDGE_CONFIGURATION_INVALID");
   }
 
