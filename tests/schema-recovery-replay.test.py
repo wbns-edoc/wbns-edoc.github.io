@@ -32,7 +32,7 @@ def classify(statement: str):
     normalized = statement.lstrip()
     while True:
         if normalized.startswith("--"):
-            newline = normalized.find("\\n")
+            newline = normalized.find("\n")
             normalized = "" if newline < 0 else normalized[newline + 1:].lstrip()
             continue
         if normalized.startswith("/*"):
