@@ -130,8 +130,8 @@ test("rejects an invalid HMAC before executing an operation", () => {
     filename: "test.txt", mimeType: "text/plain",
     contentBase64: Buffer.from("safe test").toString("base64"),
   });
-  const raw = JSON.parse(bridge.call(JSON.stringify({ ...payload, signature: "invalid" })) && "{}");
-  assert.deepEqual(raw, {});
+  const result = bridge.call(JSON.stringify({ ...payload, signature: "invalid" }));
+  assert.deepEqual(result, { ok: false, code: "SIGNATURE_INVALID" });
   assert.equal(bridge.files.size, 0);
 });
 
