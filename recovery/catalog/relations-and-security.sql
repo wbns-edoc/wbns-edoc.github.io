@@ -499,3 +499,8 @@ CREATE OR REPLACE VIEW public.document_report_summary AS  SELECT document_type,
    FROM documents
   WHERE (deleted_at IS NULL)
   GROUP BY document_type, status, urgency;;
+
+-- Preserve Production view security options. These must remain in place
+-- because the view queries read from RLS-protected public.documents.
+ALTER VIEW public.document_monthly_summary SET (security_invoker = true);
+ALTER VIEW public.document_report_summary SET (security_invoker = true);
