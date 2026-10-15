@@ -129,17 +129,24 @@ def main():
     plpgsql = [s for s in all_functions if "language plpgsql" in s.lower()]
     sql_functions = [s for s in all_functions if "language sql" in s.lower()]
     other_functions = [s for s in all_functions if s not in plpgsql and s not in sql_functions]
+    constraints = buckets.get("constraints", [])
+    # Add PRIMARY KEY/UNIQUE/CHECK constraints before FOREIGN KEY constraints.
+    # A referencing FK may target a table whose primary key would otherwise be
+    # added later in the same phase (e.g. approvals -> profiles).
+    key_constraints = [s for s in constraints if " FOREIGN KEY " not in s.upper()]
+    foreign_keys = [s for s in constraints if " FOREIGN KEY " in s.upper()]
     phases = {
         "01-types.sql": buckets.get("types", []),
         "02-tables.sql": buckets.get("tables", []),
-        "03-constraints.sql": buckets.get("constraints", []),
-        "04-indexes.sql": buckets.get("indexes", []),
-        "05-functions-plpgsql.sql": plpgsql,
-        "06-functions-sql.sql": sql_functions + other_functions,
-        "07-rls.sql": buckets.get("rls", []),
-        "08-policies.sql": buckets.get("policies", []),
-        "09-triggers.sql": buckets.get("triggers", []),
-        "10-views.sql": buckets.get("views", []) + view_options,
+        "03-key-and-check-constraints.sql": key_constraints,
+        "04-foreign-key-constraints.sql": foreign_keys,
+        "05-indexes.sql": buckets.get("indexes", []),
+        "06-functions-plpgsql.sql": plpgsql,
+        "07-functions-sql.sql": sql_functions + other_functions,
+        "08-rls.sql": buckets.get("rls", []),
+        "09-policies.sql": buckets.get("policies", []),
+        "10-triggers.sql": buckets.get("triggers", []),
+        "11-views.sql": buckets.get("views", []) + view_options,
     }
     if args.out_dir:
         args.out_dir.mkdir(parents=True, exist_ok=True)
