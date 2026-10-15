@@ -32,7 +32,7 @@ assert.match(replayAudit, /disposable PostgreSQL 17 replay completed successfull
 assert.match(migrationPlan, /Do not replace .*foundation_schema_rbac_rls\.sql/i);
 assert.match(migrationPlan, /Historical migration reproducibility.*BLOCKED/i);
 assert.match(migrationPlan, /Production deployment readiness.*NOT APPROVED/i);
-assert.match(migrationPlan, /Never infer SQL from a migration name/i);
+assert.match(migrationPlan, /unavailable historical migration is being guessed from its name/i);
 assert.match(migrationPlan, /Production schema/i);
 for (const fn of ["audit_row_change", "default_document_department", "guard_document_department_change", "set_updated_at"]) {
   assert.ok(privateFunctions.includes(fn) || publicFunctions.includes(fn), `missing captured trigger function: ${fn}`);
