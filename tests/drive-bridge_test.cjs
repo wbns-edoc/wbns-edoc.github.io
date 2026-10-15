@@ -220,4 +220,7 @@ test("upload cleanup moves the Drive object to Trash before deleting its metadat
   assert.ok(trashIndex < metadataDeleteIndex, "Drive trash must succeed before metadata is removed");
   assert.match(cleanup.slice(trashIndex, metadataDeleteIndex), /catch\s*\(error\)[\s\S]*?return;/,
     "if Drive trash fails, metadata must be retained for reconciliation");
+  assert.match(cleanup,
+    /if \(metadataRowId\) \{[\s\S]*?\n    \}\n\n    \/\/ The Drive upload can succeed even if inserting its metadata fails\.[\s\S]*?\n    if \(driveFileId\) \{/,
+    "Drive cleanup must also run when upload succeeds but metadata insertion fails");
 });
