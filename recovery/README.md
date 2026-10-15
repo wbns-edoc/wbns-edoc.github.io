@@ -11,12 +11,13 @@ Read-only catalog queries were executed against the connected Wat Bueng Nam Sai 
 - `catalog/relations-and-security.sql`: catalog-derived reconstruction of enum types, table columns, constraints, indexes, RLS flags, policies, triggers, and views. The captured `security_invoker=true` view options are explicitly restored at the end.
 - `catalog/migration-history.md`: comparison of Production migration history with SQL files in GitHub main.
 - `catalog/security-follow-up.md`: read-only privilege findings and review items.
-- `catalog/replay-dependency-audit.md`: verified trigger-function ordering requirements and the safe design for a future disposable PostgreSQL replay harness.
+- `catalog/replay-dependency-audit.md`: verified trigger-function ordering requirements and the disposable PostgreSQL replay evidence.
+- `catalog/migration-reconstruction-plan.md`: current gate status, historical migration gaps, stop conditions, and the safe path toward a reproducible clean-install candidate.
 - `tests/schema-recovery-snapshot.test.cjs`: static consistency checks for the recovery artifacts.
 - `.github/workflows/schema-recovery-snapshot-ci.yml`: CI workflow for the static checks.
 
 ## Validation status
-The GitHub Actions static snapshot check passed: [run 38733539436](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38733539436). This verifies the expected artifact counts, the view security options, safety caveats, and absence of obvious destructive DDL. It **does not** prove that the SQL can be replayed successfully on PostgreSQL.
+The latest GitHub Actions static snapshot check passed: [run 38754023251](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38754023251). The latest isolated PostgreSQL 17 replay also passed: [run 38754023297](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38754023297). This verifies replay in the compatibility harness and the included RBAC/RLS behavior checks; it **does not** prove full Supabase clean-install parity or Production readiness.
 
 ## Critical limitations
 These files are **not a verified, standalone schema dump** and are **not ready to execute**. A catalog-generated script can miss or fail to fully preserve:
@@ -27,11 +28,7 @@ These files are **not a verified, standalone schema dump** and are **not ready t
 The relation script is an evidence artifact for review. It may require fixes before it can run in a clean test database. Never apply these files to Production.
 
 ## Next validation steps
-1. Compare this catalog snapshot with every versioned migration on all relevant branches.
-2. Build a disposable/non-production database and validate reconstructed DDL there.
-3. Compare table/column/constraint/index/function/policy/trigger/view inventories against Production.
-4. Rebuild the Foundation migration and later migration sequence only after equivalence tests pass.
-5. Keep Production untouched until a tested recovery plan is approved.
+Follow [`catalog/migration-reconstruction-plan.md`](catalog/migration-reconstruction-plan.md) for the explicit go/no-go gates. In short: reconcile all 55 Production history entries with the 31 main-branch SQL files; build a separate clean-install candidate; validate grants, ownership, default ACLs, extensions and Supabase-managed dependencies; replay in a fresh local Supabase stack; then compare final catalogs and run security regressions. Keep Production untouched until every gate passes.
 
 ## Current finding
 GitHub main contains a placeholder for `20261007200000_foundation_schema_rbac_rls.sql`; Production records 55 migrations, while main has 31 SQL migration files. Migration versions and names differ, so a naïve timestamp comparison would produce false positives.
