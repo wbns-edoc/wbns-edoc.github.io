@@ -7,6 +7,7 @@ on:
       - "src/upload-refresh.ts"
       - "tests/upload-error_test.ts"
       - "supabase/functions/drive-upload/**"
+      - "supabase/functions/permanent-delete-incoming/**"
       - "supabase/functions/user-import/**"
       - "supabase/config.toml"
       - ".github/workflows/drive-upload-ci.yml"
@@ -17,6 +18,7 @@ on:
     paths:
       - "src/main.tsx"
       - "supabase/functions/drive-upload/**"
+      - "supabase/functions/permanent-delete-incoming/**"
       - "supabase/functions/user-import/**"
       - "supabase/config.toml"
       - ".github/workflows/drive-upload-ci.yml"
@@ -34,8 +36,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Require JWT verification for Drive upload
-        run: grep -F -A1 '[functions.drive-upload]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
+      - name: Require JWT verification for Drive upload and permanent delete
+        run: |
+          grep -F -A1 '[functions.drive-upload]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
+          grep -F -A1 '[functions.permanent-delete-incoming]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
       - name: Prevent server secrets in frontend source
         run: "! grep -R -n -E 'SUPABASE_SERVICE_ROLE_KEY|GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON' src"
       - name: Install frontend dependencies
@@ -56,6 +60,8 @@ jobs:
         run: deno test supabase/functions/drive-upload/file-validation_test.ts
       - name: Type-check Drive upload Edge Function
         run: deno check --node-modules-dir=auto supabase/functions/drive-upload/index.ts
+      - name: Type-check permanent delete Edge Function
+        run: deno check --node-modules-dir=auto supabase/functions/permanent-delete-incoming/index.ts
       - name: Test user-import permission separation
         run: deno test supabase/functions/user-import/authorization_test.ts
       - name: Test user-import Auth account-state synchronization

@@ -8,3 +8,6 @@ verify_jwt = true
 
 [functions.drive-upload]
 verify_jwt = true
+
+[functions.permanent-delete-incoming]
+verify_jwt = true
