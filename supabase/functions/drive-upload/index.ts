@@ -83,8 +83,7 @@ Deno.serve(async (req) => {
 
   const bridgeUrl = Deno.env.get("GOOGLE_APPS_SCRIPT_BRIDGE_URL");
   const bridgeSecret = Deno.env.get("GOOGLE_APPS_SCRIPT_BRIDGE_SECRET");
-  const folder = Deno.env.get("GOOGLE_DRIVE_ROOT_FOLDER_ID");
-  if (!bridgeUrl || !bridgeSecret || !folder) return out({ ok:false, code:"APPS_SCRIPT_BRIDGE_CONFIGURATION_MISSING" }, 500);
+  if (!bridgeUrl || !bridgeSecret) return out({ ok:false, code:"APPS_SCRIPT_BRIDGE_CONFIGURATION_MISSING" }, 500);
 
   let driveFileId: string | null = null;
   let metadataRowId: string | null = null;
@@ -143,6 +142,11 @@ Deno.serve(async (req) => {
     const uploaded = await signedBridgeRequest("upload", { filename:file.name, mimeType:file.type || "application/octet-stream", contentBase64:btoa(binary) });
     if (typeof uploaded.file_id !== "string" || !uploaded.file_id) return out({ ok:false, code:"GOOGLE_DRIVE_RESPONSE_INVALID" }, 502);
     driveFileId = uploaded.file_id;
+    if (typeof uploaded.folder_id !== "string" || !uploaded.folder_id) {
+      await cleanupCreatedResources();
+      return out({ ok:false, code:"GOOGLE_DRIVE_RESPONSE_INVALID" }, 502);
+    }
+    const folder = uploaded.folder_id;
     const driveUrl = typeof uploaded.url === "string" ? uploaded.url : `https://drive.google.com/open?id=${uploaded.file_id}`;
     const d = { id:uploaded.file_id, name:typeof uploaded.name==="string"?uploaded.name:file.name,
       mimeType:typeof uploaded.mime_type==="string"?uploaded.mime_type:(file.type || "application/octet-stream"),
