@@ -14,6 +14,7 @@ const migrationPlan = read("recovery/catalog/migration-reconstruction-plan.md");
 const migrationMatrix = read("recovery/catalog/migration-coverage-matrix.md");
 const fixtureDrift = read("recovery/catalog/fixture-drift-report.md");
 const sourceSearch = read("recovery/catalog/missing-migration-history-search.md");
+const branchCandidateReview = read("recovery/catalog/branch-candidate-review.md");
 
 const count = (text, regex) => (text.match(regex) || []).length;
 
@@ -51,6 +52,11 @@ assert.match(readme, /missing-migration-history-search\.md/);
 assert.match(sourceSearch, /No commits were returned/i);
 assert.match(sourceSearch, /does \*\*not\*\* prove the SQL never existed/i);
 assert.match(sourceSearch, /Production deployment remains \*\*NOT APPROVED\*\*/i);
+assert.match(readme, /branch-candidate-review\.md/);
+assert.match(branchCandidateReview, /16 reviewed files declare 20 distinct schema-qualified function names/i);
+assert.match(branchCandidateReview, /name-only consistency signal/i);
+assert.match(branchCandidateReview, /Production deployment is \*\*NOT APPROVED\*\*/i);
+assert.match(branchCandidateReview, /No migration was applied to Supabase/i);
 for (const fn of ["audit_row_change", "default_document_department", "guard_document_department_change", "set_updated_at"]) {
   assert.ok(privateFunctions.includes(fn) || publicFunctions.includes(fn), `missing captured trigger function: ${fn}`);
 }
