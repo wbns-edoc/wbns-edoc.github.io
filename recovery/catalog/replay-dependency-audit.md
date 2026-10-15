@@ -55,7 +55,7 @@ Before the snapshot can replace the placeholder foundation migration, the team m
 
 - Catalog evidence and static assertions have passed.
 - On 2026-10-15, disposable PostgreSQL 17 replay completed successfully, including the object-count inventory checks (25 public tables, 5 public enums, 45 policies, 12 non-internal public triggers, 54 non-extension-owned public/private functions, and 2 public views).
-- The replay workflow also passed the isolated behavior test for admin/director access, parent/subgroup visibility boundaries, and users with multiple department memberships (run `38748131969`).
+- The replay workflow passed the isolated behavior test for admin/director access, parent/subgroup visibility boundaries, and users with multiple department memberships on the latest corrected test commit `e1e2417f714dde994ece54f8d938026611579e86` (run [38752648315](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38752648315)). Earlier run `38748131969` covered the base behavior checks before the multi-membership assertion was added.
 - This successful replay proves that the captured statements can be replayed in the compatibility harness; it does **not** establish full schema parity with Production or faithful Supabase Auth/Storage/runtime behavior.
 - The follow-up CI assertions for RLS enabled on every public table, `security_invoker=true` on both public views, and no policies targeting anon/PUBLIC passed on 2026-10-15 (static snapshot CI run `38748132095`; replay run `38748131969`). Treat this as evidence for the captured snapshot only, not proof of full Production parity.
 - No Production schema changes are authorized or performed by this recovery work.
