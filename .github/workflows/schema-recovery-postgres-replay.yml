@@ -101,6 +101,8 @@ jobs:
             IF broad_policies <> 0 THEN RAISE EXCEPTION 'expected no public policies targeting anon/PUBLIC, found %', broad_policies; END IF;
           END $$;
           SQL
+      - name: Test admin and department document RLS behavior
+        run: psql -v ON_ERROR_STOP=1 -f tests/schema-recovery-rls-behavior.sql
       - name: Run static snapshot assertions
         uses: actions/setup-node@v4
         with:
