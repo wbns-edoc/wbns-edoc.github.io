@@ -249,3 +249,13 @@ test("upload metadata folder ID comes from the signed bridge response, not a sep
   assert.match(source, /folder_name:folder\.getName\(\), folder_id:folder\.getId\(\)/);
   assert.match(source, /url:file\.getUrl\(\), folder_id:folder\.getId\(\)/);
 });
+
+
+test("permanent-delete response distinguishes database deletion from Drive Trash", () => {
+  const deleteSource = fs.readFileSync("supabase/functions/permanent-delete-incoming/index.ts", "utf8");
+  assert.match(deleteSource, /drive_files_moved_to_trash:\s*trashed\.length/);
+  assert.match(deleteSource, /database_records_deleted:\s*true/);
+  assert.doesNotMatch(deleteSource, /permanently_deleted:\s*true/);
+  assert.doesNotMatch(deleteSource, /drive_files_permanently_deleted:\s*true/);
+  assert.match(source, /file\.setTrashed\(true\)/);
+});
