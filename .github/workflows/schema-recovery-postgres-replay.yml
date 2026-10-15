@@ -82,7 +82,7 @@ jobs:
             SELECT count(*) INTO type_count FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname='public' AND t.typtype='e';
             SELECT count(*) INTO policy_count FROM pg_policies WHERE schemaname='public';
             SELECT count(*) INTO trigger_count FROM pg_trigger tr JOIN pg_class c ON c.oid=tr.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND NOT tr.tgisinternal;
-            SELECT count(*) INTO function_count FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('public','private');
+            SELECT count(*) INTO function_count FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('public','private') AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e');
             SELECT count(*) INTO view_count FROM pg_views WHERE schemaname='public';
             IF table_count <> 25 THEN RAISE EXCEPTION 'expected 25 public tables, got %', table_count; END IF;
             IF type_count <> 5 THEN RAISE EXCEPTION 'expected 5 public enums, got %', type_count; END IF;
