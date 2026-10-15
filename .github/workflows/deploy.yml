@@ -26,6 +26,10 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
       - run: cp dist/index.html dist/404.html
+      - name: Include OAuth legal pages in the published site
+        run: |
+          cp privacy.html dist/privacy.html
+          cp terms.html dist/terms.html
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
