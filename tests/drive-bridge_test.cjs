@@ -122,9 +122,9 @@ function request(action, extra = {}, requestId = "a3c6a29a-5ed0-4bd4-96f1-21d1ac
   return { action, timestamp: Math.floor(Date.now() / 1000), requestId, ...extra };
 }
 
-test("health accepts a valid HMAC and returns configured folder name", () => {
+test("health accepts a valid HMAC and returns configured folder identity", () => {
   const bridge = makeBridge();
-  assert.deepEqual(bridge.call(request("health")), { ok: true, folder_name: "WBNS test folder" });
+  assert.deepEqual(bridge.call(request("health")), { ok: true, folder_name: "WBNS test folder", folder_id: FOLDER_ID });
 });
 
 test("rejects an invalid HMAC before executing an operation", () => {
@@ -160,6 +160,7 @@ test("uploads a small file into the configured folder", () => {
     contentBase64: Buffer.from("school document").toString("base64"),
   }));
   assert.equal(result.ok, true);
+  assert.equal(result.folder_id, FOLDER_ID);
   assert.equal(result.name, "minutes.txt");
   assert.equal(result.size_bytes, Buffer.byteLength("school document"));
   assert.equal(bridge.files.size, 1);
@@ -238,4 +239,13 @@ test("Drive health Edge Function signs a read-only health request and requires J
   assert.match(healthSource, /Cache-Control/);
   assert.match(config, /\[functions\.drive-health\]\s+verify_jwt = true/);
   assert.doesNotMatch(healthSource, /GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON/);
+});
+
+test("upload metadata folder ID comes from the signed bridge response, not a separate environment setting", () => {
+  const uploadSource = fs.readFileSync("supabase/functions/drive-upload/index.ts", "utf8");
+  assert.match(uploadSource, /uploaded\.folder_id/);
+  assert.match(uploadSource, /const folder = uploaded\.folder_id/);
+  assert.doesNotMatch(uploadSource, /Deno\.env\.get\("GOOGLE_DRIVE_ROOT_FOLDER_ID"\)/);
+  assert.match(source, /folder_name:folder\.getName\(\), folder_id:folder\.getId\(\)/);
+  assert.match(source, /url:file\.getUrl\(\), folder_id:folder\.getId\(\)/);
 });
