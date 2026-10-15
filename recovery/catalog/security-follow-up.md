@@ -37,3 +37,12 @@ The live Security Advisor reported the following items. These are triage finding
 
 The Advisor findings strengthen the case for a staged security review, but they do not justify a blanket grant/revoke or policy migration. Keep the recovery PR in Draft until function-level negative tests, the intended RPC-only access pattern for the three policy-free tables, and a least-privilege grants/default-privileges review are documented. No Production changes were made by this Advisor check.
 
+## Regression coverage added
+
+On commit `61679bd01651fe2e0cf5390cae0612b8bdcfcd56`, the disposable replay test now verifies:
+- an ordinary authenticated multi-department user cannot call `admin_set_global_user_role` successfully;
+- the same user cannot call `admin_set_department_role_permission` successfully;
+- direct SELECT from `user_department_roles` and `department_role_permissions` returns zero rows when their RLS-enabled tables have no policies, even when SELECT is granted in the test harness.
+
+The latest replay run is [38753606946](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38753606946), which passed, and static snapshot CI is [38753615253](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38753615253), also passed. These are useful regression checks, not full adversarial tests of all 13 SECURITY DEFINER functions or proof of full Supabase Production parity.
+
