@@ -60,7 +60,7 @@ assert.match(branchCandidateReview, /Production deployment is \*\*NOT APPROVED\*
 assert.match(branchCandidateReview, /No migration was applied to Supabase/i);
 assert.match(readme, /authorization-semantic-review\.md/);
 assert.match(authorizationSemanticReview, /departments\.is_active/);
-assert.match(authorizationSemanticReview, /System Admin and director create\/update\/approve/i);
+assert.match(authorizationSemanticReview, /assert create, update, and approve for both System Admin and director/i);
 assert.match(authorizationSemanticReview, /No Production writes were performed/i);
 for (const fn of ["audit_row_change", "default_document_department", "guard_document_department_change", "set_updated_at"]) {
   assert.ok(privateFunctions.includes(fn) || publicFunctions.includes(fn), `missing captured trigger function: ${fn}`);
