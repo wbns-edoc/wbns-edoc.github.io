@@ -4,6 +4,7 @@
 Requires pglast==7.10. Never use generated files against Production.
 """
 import argparse
+import re
 from pathlib import Path
 from pglast import parse_sql
 
@@ -158,6 +159,45 @@ def main():
     plpgsql = [s for s in all_functions if "language plpgsql" in s.lower()]
     sql_functions = [s for s in all_functions if "language sql" in s.lower()]
     other_functions = [s for s in all_functions if s not in plpgsql and s not in sql_functions]
+
+    # SQL-language bodies are validated at CREATE FUNCTION time. Order those
+    # definitions by references to other captured SQL functions so dependencies
+    # such as private.user_has_department exist before private.can_access_document.
+    function_name = re.compile(
+        r"CREATE(?: OR REPLACE)? FUNCTION\\s+((?:public|private)\\.[A-Za-z_][A-Za-z_0-9$]*)\\s*\\(",
+        re.IGNORECASE,
+    )
+    called_name = re.compile(r"\\b(public|private)\\.([A-Za-z_][A-Za-z_0-9$]*)\\s*\\(", re.IGNORECASE)
+    named_sql = []
+    for statement in sql_functions:
+        match = function_name.search(statement)
+        if not match:
+            raise AssertionError("Could not identify SQL function name: " + statement[:120])
+        named_sql.append((match.group(1).lower(), statement))
+    sql_names = {name for name, _ in named_sql}
+    remaining = list(named_sql)
+    ordered_sql = []
+    created_names = set()
+    while remaining:
+        ready = []
+        for name, statement in remaining:
+            dependencies = {
+                (match.group(1) + "." + match.group(2)).lower()
+                for match in called_name.finditer(statement)
+            } & sql_names
+            dependencies.discard(name)
+            if dependencies <= created_names:
+                ready.append((name, statement))
+        if not ready:
+            # Preserve evidence and make any genuine dependency cycle visible
+            # as a replay failure rather than silently dropping definitions.
+            ordered_sql.extend(statement for _, statement in remaining)
+            break
+        for item in ready:
+            ordered_sql.append(item[1])
+            created_names.add(item[0])
+            remaining.remove(item)
+    sql_functions = ordered_sql
     constraints = buckets.get("constraints", [])
     # Add PRIMARY KEY/UNIQUE/CHECK constraints before FOREIGN KEY constraints.
     # A referencing FK may target a table whose primary key would otherwise be
