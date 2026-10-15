@@ -9,6 +9,7 @@ const privateFunctions = read("recovery/catalog/private-functions.sql");
 const publicFunctions = read("recovery/catalog/public-functions.sql");
 const readme = read("recovery/README.md");
 const security = read("recovery/catalog/security-follow-up.md");
+const replayAudit = read("recovery/catalog/replay-dependency-audit.md");
 
 const count = (text, regex) => (text.match(regex) || []).length;
 
@@ -25,6 +26,11 @@ assert.match(relations, /ALTER VIEW public\.document_report_summary SET \(securi
 assert.match(readme, /not a verified, standalone schema dump/i);
 assert.match(readme, /Never apply these files to Production/i);
 assert.match(security, /no policies explicitly target/i);
+assert.match(replayAudit, /naive replay/i);
+assert.match(replayAudit, /clean PostgreSQL replay has \\*\\*not\\*\\* yet been proven/i);
+for (const fn of ["audit_row_change", "default_document_department", "guard_document_department_change", "set_updated_at"]) {
+  assert.ok(privateFunctions.includes(fn) || publicFunctions.includes(fn), `missing captured trigger function: ${fn}`);
+}
 
 // Guard this evidence branch from accidentally becoming a destructive migration.
 for (const [name, sql] of [
