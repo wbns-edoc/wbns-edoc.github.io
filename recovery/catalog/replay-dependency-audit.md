@@ -52,6 +52,8 @@ Before the snapshot can replace the placeholder foundation migration, the team m
 
 ## Current status
 
-- Catalog evidence and static assertions have passed in earlier runs.
-- A clean PostgreSQL replay has **not** yet been proven; the latest disposable replay result has not been independently confirmed in this note.
+- Catalog evidence and static assertions have passed.
+- On 2026-10-15, disposable PostgreSQL 17 replay completed successfully, including the object-count inventory checks (25 public tables, 5 public enums, 45 policies, 12 non-internal public triggers, 54 non-extension-owned public/private functions, and 2 public views).
+- This successful replay proves that the captured statements can be replayed in the compatibility harness; it does **not** establish full schema parity with Production or faithful Supabase Auth/Storage/runtime behavior.
+- A follow-up CI change now adds explicit assertions for RLS enabled on every public table, `security_invoker=true` on both public views, and no policies targeting anon/PUBLIC. These stronger assertions must pass before the replay evidence is considered current.
 - No Production schema changes are authorized or performed by this recovery work.
