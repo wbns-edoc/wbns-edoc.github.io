@@ -15,6 +15,25 @@ PUBLIC = CATALOG / "public-functions.sql"
 
 def statements(path: Path):
     sql = path.read_text(encoding="utf-8")
+    # pglast's statement lengths exclude leading comments in some cases, so
+    # slicing by stmt_location/stmt_len can produce a comment-only truncated
+    # chunk. Remove only known catalog headers/section separators before parse;
+    # do not strip arbitrary comments from function bodies.
+    metadata_prefixes = (
+        "-- READ-ONLY RECOVERY SNAPSHOT FROM PRODUCTION CATALOG",
+        "-- Project ref:",
+        "-- Captured:",
+        "-- IMPORTANT:",
+        "-- Review identity/generated columns,",
+        "-- Do not execute on Production.",
+        "-- Preserve Production view security options.",
+        "-- because the view queries read from RLS-protected",
+        "-- ===== NEXT FUNCTION =====",
+    )
+    sql = "\\n".join(
+        line for line in sql.splitlines()
+        if not any(line.strip().startswith(prefix) for prefix in metadata_prefixes)
+    )
     raw = sql.encode("utf-8")
     parsed = parse_sql(sql)
     result = []
