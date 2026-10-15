@@ -40,12 +40,13 @@ def statements(path: Path):
         line for line in sql.splitlines()
         if not any(line.strip().startswith(prefix) for prefix in metadata_prefixes)
     )
-    raw = sql.encode("utf-8")
     parsed = parse_sql(sql)
     result = []
     for node in parsed:
         start, length = node.stmt_location, node.stmt_len
-        chunk = (raw[start:] if length == 0 else raw[start:start + length]).decode("utf-8").strip()
+        # pglast locations index the decoded SQL text here; slicing UTF-8 bytes
+        # can split Thai/non-ASCII characters and raise UnicodeDecodeError.
+        chunk = (sql[start:] if length == 0 else sql[start:start + length]).strip()
         if chunk:
             result.append(chunk.rstrip(";") + ";")
     return result
