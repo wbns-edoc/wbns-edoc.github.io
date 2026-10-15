@@ -20,7 +20,8 @@ The `relations-and-security.sql` snapshot mixes table definitions, constraints, 
 The branch now includes:
 
 - `tests/schema-recovery-replay.test.py`: uses pinned `pglast==7.10` to parse top-level statements and generate dependency phases. It does not execute SQL.
-- `tests/schema-recovery-replay-bootstrap.sql`: minimal compatibility objects for a disposable database only; its `auth.uid()` stub returns NULL and is not a faithful Supabase Auth implementation.
+- `tests/schema-recovery-replay-bootstrap.sql`: minimal compatibility objects for a disposable database only; its `auth.uid()` stub reads the test JWT subject setting and is not a full Supabase Auth implementation.
+- `tests/schema-recovery-rls-behavior.sql`: isolated regression checks for System Admin/director access, parent/subgroup boundaries, and multi-department membership.
 - `.github/workflows/schema-recovery-postgres-replay.yml`: starts an isolated PostgreSQL 17 service, generates phases, replays them with `ON_ERROR_STOP=1`, and checks the expected object counts.
 
 The intended phase order is:
@@ -54,6 +55,7 @@ Before the snapshot can replace the placeholder foundation migration, the team m
 
 - Catalog evidence and static assertions have passed.
 - On 2026-10-15, disposable PostgreSQL 17 replay completed successfully, including the object-count inventory checks (25 public tables, 5 public enums, 45 policies, 12 non-internal public triggers, 54 non-extension-owned public/private functions, and 2 public views).
+- The replay workflow also passed the isolated behavior test for admin/director access, parent/subgroup visibility boundaries, and users with multiple department memberships (run `38748131969`).
 - This successful replay proves that the captured statements can be replayed in the compatibility harness; it does **not** establish full schema parity with Production or faithful Supabase Auth/Storage/runtime behavior.
-- The follow-up CI assertions for RLS enabled on every public table, `security_invoker=true` on both public views, and no policies targeting anon/PUBLIC passed on 2026-10-15 (run `38747338782` for static snapshot CI; run `38747338835` is the newer replay run for the same commit and was in progress at the time of this note). Treat this as evidence for the captured snapshot only, not proof of full Production parity.
+- The follow-up CI assertions for RLS enabled on every public table, `security_invoker=true` on both public views, and no policies targeting anon/PUBLIC passed on 2026-10-15 (static snapshot CI run `38748132095`; replay run `38748131969`). Treat this as evidence for the captured snapshot only, not proof of full Production parity.
 - No Production schema changes are authorized or performed by this recovery work.
