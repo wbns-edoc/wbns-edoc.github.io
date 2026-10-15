@@ -14,9 +14,9 @@ Updated: 2026-10-15. This is a manual reconciliation aid based on the read-only 
 | Production version | Production migration name | Repository candidate / status |
 |---|---|---|
 | 20261007133831 | foundation_schema_rbac_rls | **Foundation placeholder** — `20261007200000_foundation_schema_rbac_rls.sql` is only 285 bytes |
-| 20261007134222 | harden_rls_and_indexes | **Missing source candidate** |
+| 20261007134222 | harden_rls_and_indexes | **Missing source candidate** — no matching candidate found in reviewed feature branch; exact path search also returned none |
 | 20261007134728 | document_registration_rpc | Related candidate: `20261010190000_department_aware_document_registration_v1.sql`; not assumed equivalent |
-| 20261007135044 | seed_school_registers_2026 | **Missing source candidate** |
+| 20261007135044 | seed_school_registers_2026 | **Missing source candidate** — no matching candidate found in reviewed feature branch |
 | 20261007135356 | workflow_engine_v1 | Filename candidate: `20261007205000_workflow_engine_v1.sql` |
 | 20261007135756 | notification_deadline_engine_v1 | Filename candidate: `20261007210000_notification_deadline_engine_v1.sql` |
 | 20261007135857 | move_pg_trgm_to_extensions | Filename candidate: `20261007210500_move_pg_trgm_to_extensions.sql` |
@@ -45,29 +45,33 @@ Updated: 2026-10-15. This is a manual reconciliation aid based on the read-only 
 | 20261010085031 | 20261010180000_scope_workflow_assignment_and_status | Filename candidate: `20261010180000_scope_workflow_assignment_and_status.sql` |
 | 20261010085034 | 20261010190000_department_aware_document_registration_v1 | Filename candidate: `20261010190000_department_aware_document_registration_v1.sql` |
 | 20261010090253 | guard_last_active_system_admin_role_removal_v1 | Filename candidate: `20261010200000_guard_last_active_system_admin_role_removal_v1.sql` |
-| 20261011143751 | prevent_global_role_escalation | **Missing source candidate** |
-| 20261011144307 | grant_director_global_document_create | **Missing source candidate** |
-| 20261012011549 | production_multi_department_membership_v1 | **Missing source candidate** |
-| 20261012011559 | production_department_scoped_roles_permissions_v1 | **Missing source candidate** |
-| 20261012011633 | production_department_role_matrix_seed_fix | **Missing source candidate** |
-| 20261012011639 | production_department_scoped_read_rpc_fix | **Missing source candidate** |
-| 20261012011646 | production_department_scoped_write_rpc_guards | **Missing source candidate** |
-| 20261012011653 | production_department_scoped_access_final_correction | **Missing source candidate** |
-| 20261012011659 | production_department_scoped_approval_guards | **Missing source candidate** |
-| 20261012011708 | production_department_scoped_rls_and_file_guards | **Missing source candidate** |
-| 20261012011719 | production_close_remaining_department_rls_bypasses | **Missing source candidate** |
-| 20261012011729 | production_separate_document_edit_from_approve_assign | **Missing source candidate** |
-| 20261012011736 | production_guard_document_file_attachment | **Missing source candidate** |
-| 20261012011746 | production_require_department_membership_for_scoped_permissions | **Missing source candidate** |
-| 20261012011831 | production_require_explicit_active_department_membership | **Missing source candidate** |
-| 20261012024902 | secure_department_membership_management_rpc | **Missing source candidate** |
-| 20261012024916 | active_department_membership_approval_guard | **Missing source candidate** |
-| 20261013001230 | include_department_scoped_permissions_in_identity | **Missing source candidate** |
+| 20261011143751 | prevent_global_role_escalation | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011143751_prevent_global_role_escalation.sql`; review exact contents before treating as equivalent |
+| 20261011144307 | grant_director_global_document_create | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011144307_grant_director_global_document_create.sql`; review exact contents before treating as equivalent |
+| 20261012011549 | production_multi_department_membership_v1 | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261010160000_multi_department_membership_v1.sql`; name/version differ, not assumed equivalent |
+| 20261012011559 | production_department_scoped_roles_permissions_v1 | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011100000_department_scoped_roles_permissions_v1.sql`; not assumed equivalent |
+| 20261012011633 | production_department_role_matrix_seed_fix | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011120000_department_role_matrix_seed_fix.sql`; not assumed equivalent |
+| 20261012011639 | production_department_scoped_read_rpc_fix | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011121000_department_scoped_read_rpc_fix.sql`; not assumed equivalent |
+| 20261012011646 | production_department_scoped_write_rpc_guards | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011140000_department_scoped_write_rpc_guards.sql`; not assumed equivalent |
+| 20261012011653 | production_department_scoped_access_final_correction | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011150000_department_scoped_access_final_correction.sql`; not assumed equivalent |
+| 20261012011659 | production_department_scoped_approval_guards | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011160000_department_scoped_approval_guards.sql`; not assumed equivalent |
+| 20261012011708 | production_department_scoped_rls_and_file_guards | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011170000_department_scoped_rls_and_file_guards.sql`; not assumed equivalent |
+| 20261012011719 | production_close_remaining_department_rls_bypasses | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011180000_close_remaining_department_rls_bypasses.sql`; not assumed equivalent |
+| 20261012011729 | production_separate_document_edit_from_approve_assign | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011190000_separate_document_edit_from_approve_assign.sql`; not assumed equivalent |
+| 20261012011736 | production_guard_document_file_attachment | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011200000_guard_document_file_attachment.sql`; not assumed equivalent |
+| 20261012011746 | production_require_department_membership_for_scoped_permissions | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011210000_require_department_membership_for_scoped_permissions.sql`; not assumed equivalent |
+| 20261012011831 | production_require_explicit_active_department_membership | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011232000_require_explicit_active_department_membership.sql`; not assumed equivalent |
+| 20261012024902 | secure_department_membership_management_rpc | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011230000_manage_department_membership_rpc.sql`; not assumed equivalent |
+| 20261012024916 | active_department_membership_approval_guard | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261011231000_require_active_membership_for_approvers.sql`; not assumed equivalent |
+| 20261013001230 | include_department_scoped_permissions_in_identity | Branch candidate: `feature/department-scoped-permissions-2026-10-11:supabase/migrations/20261013001230_include_department_scoped_permissions_in_identity.sql`; not assumed equivalent |
 | 20261014162126 | admin_global_role_management_v1 | Filename candidate: `20261014162126_admin_global_role_management_v1.sql` |
 | 20261014202558 | registry_officer_delete_incoming_documents_v1 | Filename candidate: `20261015120000_registry_officer_delete_incoming_documents_v1.sql` |
 | 20261015005425 | permanent_delete_incoming_drive_v1 | Filename candidate: `20261015130000_permanent_delete_incoming_drive.sql` |
 | 20261015005428 | list_deleted_incoming_documents_v1 | Filename candidate: `20261015131000_list_deleted_incoming_documents.sql` |
-| 20261015023421 | fix_list_deleted_incoming_status_enum_cast | **Missing source candidate** |
+| 20261015023421 | fix_list_deleted_incoming_status_enum_cast | **Missing source candidate** — no matching file found in reviewed branch trees |
+
+## Additional branch review
+
+The branch `feature/department-scoped-permissions-2026-10-11` contains several SQL files absent from `main`, including candidates for most department-membership and department-scoped permission corrections. These are now listed above as **branch candidates**, not confirmed matches. Their SQL contents and behavior must be compared with the October 15 catalog and Production behavior before reuse. This branch is not merged to `main` and is not itself a reproducible Production migration chain.
 
 ## Interpretation
 
