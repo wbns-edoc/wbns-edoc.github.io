@@ -1,24 +1,24 @@
-name: Schema Recovery PostgreSQL Replay
+name: Schema Recovery PostgreSQL Prerequisite Check
 
 on:
   pull_request:
     paths:
       - "recovery/catalog/**"
-      - "tests/schema-recovery-replay.test.cjs"
+      - "tests/schema-recovery-snapshot.test.cjs"
       - ".github/workflows/schema-recovery-postgres-replay.yml"
   push:
     branches:
       - "recovery/production-schema-catalog-2026-10-15"
     paths:
       - "recovery/catalog/**"
-      - "tests/schema-recovery-replay.test.cjs"
+      - "tests/schema-recovery-snapshot.test.cjs"
       - ".github/workflows/schema-recovery-postgres-replay.yml"
 
 permissions:
   contents: read
 
 jobs:
-  replay-prerequisite-check:
+  postgres-prerequisite-check:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -43,12 +43,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-      - name: Confirm isolated PostgreSQL 17 and inventory dependency requirements
+      - name: Confirm isolated PostgreSQL 17 and captured trigger dependencies
+        shell: bash
         run: |
           set -euo pipefail
           psql -v ON_ERROR_STOP=1 -c 'SELECT version();'
-          node tests/schema-recovery-replay.test.cjs
+          for fn in audit_row_change default_document_department guard_document_department_change set_updated_at; do
+            if ! grep -q "$fn" recovery/catalog/private-functions.sql && ! grep -q "$fn" recovery/catalog/public-functions.sql; then
+              echo "Missing captured trigger function: $fn" >&2
+              exit 1
+            fi
+          done
+          node tests/schema-recovery-snapshot.test.cjs
+          echo "PostgreSQL prerequisite and static snapshot checks passed."
+          echo "This is not a schema replay test; snapshot application to Production remains prohibited until dependency-aware clean replay is validated."
