@@ -11,6 +11,7 @@ Read-only catalog queries were executed against the connected Wat Bueng Nam Sai 
 - `catalog/relations-and-security.sql`: catalog-derived reconstruction of enum types, table columns, constraints, indexes, RLS flags, policies, triggers, and views. The captured `security_invoker=true` view options are explicitly restored at the end.
 - `catalog/migration-history.md`: comparison of Production migration history with SQL files in GitHub main.
 - `catalog/security-follow-up.md`: read-only privilege findings and review items.
+- `catalog/replay-dependency-audit.md`: verified trigger-function ordering requirements and the safe design for a future disposable PostgreSQL replay harness.
 - `tests/schema-recovery-snapshot.test.cjs`: static consistency checks for the recovery artifacts.
 - `.github/workflows/schema-recovery-snapshot-ci.yml`: CI workflow for the static checks.
 
