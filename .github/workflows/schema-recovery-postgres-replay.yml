@@ -99,7 +99,7 @@ jobs:
             IF tables_without_rls <> 0 THEN RAISE EXCEPTION 'expected all public tables to enable RLS, found % without RLS', tables_without_rls; END IF;
             IF views_without_invoker <> 0 THEN RAISE EXCEPTION 'expected all public views to use security_invoker=true, found % without it', views_without_invoker; END IF;
             IF broad_policies <> 0 THEN RAISE EXCEPTION 'expected no public policies targeting anon/PUBLIC, found %', broad_policies; END IF;
-          END $;
+          END $$;
           SQL
       - name: Run static snapshot assertions
         uses: actions/setup-node@v4
