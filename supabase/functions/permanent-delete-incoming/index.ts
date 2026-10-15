@@ -1,11 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { importPKCS8, SignJWT } from "npm:jose@6";
 
 const DRIVE_API = "https://www.googleapis.com/drive/v3/files";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
-type SA = { client_email: string; private_key: string; token_uri?: string };
 
 function out(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: {
@@ -16,15 +13,20 @@ function out(data: unknown, status = 200) {
     "Access-Control-Allow-Methods": "POST, OPTIONS"
   }});
 }
-async function driveToken(sa: SA) {
-  const now = Math.floor(Date.now() / 1000);
-  const key = await importPKCS8(sa.private_key, "RS256");
-  const jwt = await new SignJWT({ iss: sa.client_email, scope: DRIVE_SCOPE, aud: sa.token_uri || TOKEN_URL })
-    .setProtectedHeader({ alg: "RS256", typ: "JWT" }).setIssuedAt(now).setExpirationTime(now + 3600).sign(key);
-  const response = await fetch(sa.token_uri || TOKEN_URL, {
+async function driveToken() {
+  const clientId = Deno.env.get("GOOGLE_DRIVE_OAUTH_CLIENT_ID");
+  const clientSecret = Deno.env.get("GOOGLE_DRIVE_OAUTH_CLIENT_SECRET");
+  const refreshToken = Deno.env.get("GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN");
+  if (!clientId || !clientSecret || !refreshToken) throw new Error("GOOGLE_DRIVE_OAUTH_CONFIGURATION_MISSING");
+  const response = await fetch(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt })
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token"
+    })
   });
   if (!response.ok) throw new Error("GOOGLE_TOKEN_EXCHANGE_FAILED");
   const payload = await response.json();
@@ -41,8 +43,12 @@ Deno.serve(async (req) => {
   const url = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const saRaw = Deno.env.get("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON");
-  if (!url || !anonKey || !serviceKey || !saRaw) return out({ ok: false, code: "SERVER_CONFIGURATION_MISSING" }, 500);
+  if (!url || !anonKey || !serviceKey) return out({ ok: false, code: "SERVER_CONFIGURATION_MISSING" }, 500);
+  if (!Deno.env.get("GOOGLE_DRIVE_OAUTH_CLIENT_ID") ||
+      !Deno.env.get("GOOGLE_DRIVE_OAUTH_CLIENT_SECRET") ||
+      !Deno.env.get("GOOGLE_DRIVE_OAUTH_REFRESH_TOKEN")) {
+    return out({ ok: false, code: "GOOGLE_DRIVE_OAUTH_CONFIGURATION_MISSING" }, 500);
+  }
 
   const userClient = createClient(url, anonKey, {
     global: { headers: { Authorization: authorization } },
@@ -69,10 +75,8 @@ Deno.serve(async (req) => {
     return out({ ok: false, code: "PERMANENT_DELETE_PREPARATION_FAILED" }, 409);
   }
 
-  let sa: SA;
-  try { sa = JSON.parse(saRaw); } catch { return out({ ok: false, code: "GOOGLE_DRIVE_CONFIGURATION_INVALID" }, 500); }
   let accessToken: string;
-  try { accessToken = await driveToken(sa); } catch (error) {
+  try { accessToken = await driveToken(); } catch (error) {
     console.error("Google Drive token failed", error);
     return out({ ok: false, code: "GOOGLE_DRIVE_AUTH_FAILED" }, 502);
   }
