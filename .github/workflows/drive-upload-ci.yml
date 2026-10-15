@@ -1,4 +1,5 @@
 name: Drive Upload CI
+# Apps Script bridge security tests run against the pull-request merge ref.
 on:
   pull_request:
     paths:
