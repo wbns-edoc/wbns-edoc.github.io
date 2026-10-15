@@ -84,8 +84,8 @@ def main():
     # exists. Function bodies are ordered PL/pgSQL first, then SQL functions;
     # this helps SQL wrappers resolve underlying functions in the common case.
     all_functions = private_functions + public_functions
-    plpgsql = [s for s in all_functions if "LANGUAGE plpgsql" in s.lower()]
-    sql_functions = [s for s in all_functions if "LANGUAGE sql" in s.lower()]
+    plpgsql = [s for s in all_functions if "language plpgsql" in s.lower()]
+    sql_functions = [s for s in all_functions if "language sql" in s.lower()]
     other_functions = [s for s in all_functions if s not in plpgsql and s not in sql_functions]
     phases = {
         "01-types.sql": buckets.get("types", []),
