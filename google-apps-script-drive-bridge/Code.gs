@@ -51,7 +51,7 @@ function doPost(e) {
 
     if (req.action === "health") {
       const folder = DriveApp.getFolderById(folderId);
-      return json_({ok:true, folder_name:folder.getName()});
+      return json_({ok:true, folder_name:folder.getName(), folder_id:folder.getId()});
     }
 
     if (req.action === "upload") {
@@ -74,7 +74,7 @@ function doPost(e) {
       const blob = Utilities.newBlob(bytes, req.mimeType || "application/octet-stream", req.filename);
       const file = folder.createFile(blob);
       return json_({ok:true, file_id:file.getId(), name:file.getName(),
-        mime_type:file.getMimeType(), size_bytes:file.getSize(), url:file.getUrl()});
+        mime_type:file.getMimeType(), size_bytes:file.getSize(), url:file.getUrl(), folder_id:folder.getId()});
     }
 
     if (req.action === "delete") {
