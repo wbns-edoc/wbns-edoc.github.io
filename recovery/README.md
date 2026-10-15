@@ -13,6 +13,7 @@ Read-only catalog queries were executed against the connected Wat Bueng Nam Sai 
 - `catalog/security-follow-up.md`: read-only privilege findings and review items.
 - `catalog/replay-dependency-audit.md`: verified trigger-function ordering requirements and the disposable PostgreSQL replay evidence.
 - `catalog/migration-reconstruction-plan.md`: current gate status, historical migration gaps, stop conditions, and the safe path toward a reproducible clean-install candidate.
+- `catalog/migration-coverage-matrix.md`: row-by-row mapping of all 55 Production migration history entries to repository SQL filename candidates or missing-source blockers.
 - `tests/schema-recovery-snapshot.test.cjs`: static consistency checks for the recovery artifacts.
 - `.github/workflows/schema-recovery-snapshot-ci.yml`: CI workflow for the static checks.
 
