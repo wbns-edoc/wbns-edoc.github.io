@@ -77,6 +77,9 @@ jobs:
             trigger_count integer;
             function_count integer;
             view_count integer;
+            tables_without_rls integer;
+            views_without_invoker integer;
+            broad_policies integer;
           BEGIN
             SELECT count(*) INTO table_count FROM pg_tables WHERE schemaname = 'public';
             SELECT count(*) INTO type_count FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname='public' AND t.typtype='e';
@@ -84,13 +87,19 @@ jobs:
             SELECT count(*) INTO trigger_count FROM pg_trigger tr JOIN pg_class c ON c.oid=tr.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND NOT tr.tgisinternal;
             SELECT count(*) INTO function_count FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('public','private') AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e');
             SELECT count(*) INTO view_count FROM pg_views WHERE schemaname='public';
+            SELECT count(*) INTO tables_without_rls FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND NOT c.relrowsecurity;
+            SELECT count(*) INTO views_without_invoker FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='v' AND (c.reloptions IS NULL OR NOT ('security_invoker=true' = ANY(c.reloptions)));
+            SELECT count(*) INTO broad_policies FROM pg_policies WHERE schemaname='public' AND ('anon' = ANY(roles) OR 'public' = ANY(roles));
             IF table_count <> 25 THEN RAISE EXCEPTION 'expected 25 public tables, got %', table_count; END IF;
             IF type_count <> 5 THEN RAISE EXCEPTION 'expected 5 public enums, got %', type_count; END IF;
             IF policy_count <> 45 THEN RAISE EXCEPTION 'expected 45 public policies, got %', policy_count; END IF;
             IF trigger_count <> 12 THEN RAISE EXCEPTION 'expected 12 public triggers, got %', trigger_count; END IF;
             IF function_count <> 54 THEN RAISE EXCEPTION 'expected 54 public/private functions, got %', function_count; END IF;
             IF view_count <> 2 THEN RAISE EXCEPTION 'expected 2 public views, got %', view_count; END IF;
-          END $$;
+            IF tables_without_rls <> 0 THEN RAISE EXCEPTION 'expected all public tables to enable RLS, found % without RLS', tables_without_rls; END IF;
+            IF views_without_invoker <> 0 THEN RAISE EXCEPTION 'expected all public views to use security_invoker=true, found % without it', views_without_invoker; END IF;
+            IF broad_policies <> 0 THEN RAISE EXCEPTION 'expected no public policies targeting anon/PUBLIC, found %', broad_policies; END IF;
+          END $;
           SQL
       - name: Run static snapshot assertions
         uses: actions/setup-node@v4
