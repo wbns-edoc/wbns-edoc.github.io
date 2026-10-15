@@ -68,6 +68,7 @@ GRANT USAGE ON SCHEMA public, private, auth TO authenticated;
 GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA private TO authenticated;
 GRANT SELECT ON public.documents TO authenticated;
+GRANT SELECT ON public.department_role_permissions, public.user_department_roles TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_set_global_user_role(uuid, uuid, boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_set_department_role_permission(uuid, uuid, uuid, boolean) TO authenticated;
 
@@ -108,10 +109,14 @@ DO $$ DECLARE n integer; BEGIN
 END $$;
 
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000006', true);
-DO $$ DECLARE n integer; BEGIN
+DO $ DECLARE n integer; BEGIN
   SELECT count(*) INTO n FROM public.documents;
   IF n <> 2 THEN RAISE EXCEPTION 'multi-group user should read documents from both assigned groups; got %', n; END IF;
-END $$;
+  SELECT count(*) INTO n FROM public.user_department_roles;
+  IF n <> 0 THEN RAISE EXCEPTION 'direct user_department_roles read should return no rows without a policy; got %', n; END IF;
+  SELECT count(*) INTO n FROM public.department_role_permissions;
+  IF n <> 0 THEN RAISE EXCEPTION 'direct department_role_permissions read should return no rows without a policy; got %', n; END IF;
+END $;
 
 -- SECURITY DEFINER RPCs are callable by authenticated, but must reject users without admin permissions.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000006', true);
