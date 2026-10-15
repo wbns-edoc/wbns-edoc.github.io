@@ -35,7 +35,7 @@ assert.match(migrationPlan, /Historical migration reproducibility.*BLOCKED/i);
 assert.match(migrationPlan, /Production deployment readiness.*NOT APPROVED/i);
 assert.match(migrationPlan, /unavailable historical migration is being guessed from its name/i);
 assert.match(migrationPlan, /October 15 Production catalog/i);
-assert.equal(count(migrationMatrix, /^\\| 202610[0-9]+ \\|/gm), 55, "expected all 55 Production migration history entries in coverage matrix");
+assert.equal(count(migrationMatrix, /^\| 202610[0-9]+ \|/gm), 55, "expected all 55 Production migration history entries in coverage matrix");
 assert.match(migrationMatrix, /Foundation placeholder/i);
 assert.match(migrationMatrix, /Missing source candidate/i);
 assert.match(migrationMatrix, /No Production migration or schema change was applied/i);
