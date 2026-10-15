@@ -13,7 +13,7 @@ The catalog currently contains 12 non-internal triggers across the captured publ
 | `guard_document_department_change()` | `private` | yes |
 | `set_updated_at()` | `public` | yes |
 
-The `relations-and-security.sql` snapshot mixes table definitions, constraints, indexes, RLS, policies, triggers, views, and view options. Replaying it as one unit before the function snapshots can fail when trigger creation references functions not yet created. Applying all functions first can also fail because functions refer to captured types and tables.
+The `relations-and-security.sql` snapshot mixes table definitions, constraints, indexes, RLS, policies, triggers, views, and view options. A naive replay of this file as one unit before the function snapshots can fail when trigger creation references functions not yet created. Applying all functions first can also fail because functions refer to captured types and tables.
 
 ## Disposable replay harness
 
@@ -53,5 +53,5 @@ Before the snapshot can replace the placeholder foundation migration, the team m
 ## Current status
 
 - Catalog evidence and static assertions have passed in earlier runs.
-- The latest disposable PostgreSQL replay result has not been independently confirmed in this note.
+- A clean PostgreSQL replay has **not** yet been proven; the latest disposable replay result has not been independently confirmed in this note.
 - No Production schema changes are authorized or performed by this recovery work.
