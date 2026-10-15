@@ -12,8 +12,8 @@ The original foundation SQL is absent from version control. Production's current
 
 | Gate | Result | What it proves |
 |---|---|---|
-| Static snapshot CI | PASS — [run 38754023251](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38754023251) | Expected captured inventory and safety assertions remain consistent |
-| Disposable PostgreSQL 17 replay | PASS — [run 38754023297](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38754023297) | Captured SQL phases replay in the compatibility harness and the included RBAC/RLS tests pass |
+| Static snapshot CI | PASS — [run 38756863089](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38756863089) | Latest commit validates the snapshot evidence and migration-coverage matrix assertions |
+| Disposable PostgreSQL 17 replay | PASS — [run 38756862972](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38756862972) | Latest commit replays the captured SQL phases in isolated PostgreSQL 17 and passes the included RBAC/RLS behavior tests |
 | Full Supabase clean-install parity | NOT PROVEN | The harness is plain PostgreSQL with compatibility stubs, not full Supabase Auth/Storage/PostgREST |
 | Historical migration reproducibility | BLOCKED | Production records 55 migration history entries; main contains 31 SQL files and the foundation file is a 285-byte placeholder |
 | Production deployment readiness | NOT APPROVED | Grants, ownership, default ACLs, extensions, platform objects, historical gaps, and runtime parity remain to be reconciled |
