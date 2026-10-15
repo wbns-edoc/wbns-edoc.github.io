@@ -2,11 +2,11 @@
 
 Updated: 2026-10-15  
 Repository: `wbns-edoc/wbns-edoc.github.io`  
-Method: read-only GitHub commit-history queries for exact, guessed `supabase/migrations/<Production-version>_<Production-name>.sql` paths corresponding to rows currently marked as missing-source candidates.
+Method: read-only GitHub commit-history queries for exact, guessed `supabase/migrations/<Production-version>_<Production-name>.sql` paths, followed by read-only recursive tree inspection of existing feature branches. The path-specific history query was against the default branch and does not enumerate every branch.
 
-## Result
+## Initial default-branch path search
 
-No commits were returned for the exact guessed paths checked for these entries:
+No commits were returned for the exact guessed paths in the default-branch path-history endpoint for these entries. That result was incomplete as a repository-wide source search:
 
 - `harden_rls_and_indexes`
 - `seed_school_registers_2026`
@@ -34,10 +34,14 @@ No commits were returned for the exact guessed paths checked for these entries:
 - `include_department_scoped_permissions_in_identity`
 - `fix_list_deleted_incoming_status_enum_cast`
 
+## Follow-up branch discovery
+
+Inspection of `feature/department-scoped-permissions-2026-10-11` found branch-only candidate SQL files for most department-scoped authorization changes, including multi-department membership, department-role permissions, read/write/approval guards, membership-management RPCs, and global-role/director permission corrections. The current coverage matrix now maps those candidate paths explicitly. These files remain candidates, not confirmed reproductions of Production migrations; versions and names differ and semantic validation is still required.
+
 ## Interpretation and limits
 
-- This only proves that GitHub's path-specific commit-history endpoint returned no history for those exact guessed paths.
-- It does **not** prove the SQL never existed. A migration may have used another filename/path, lived on another repository or private branch, or been applied directly to Supabase without being committed.
+- The default-branch path-history endpoint returned no history for the exact guessed paths, but a later branch-tree inspection found relevant SQL candidates on a feature branch.
+- This does **not** prove the SQL never existed or that the branch candidates are the exact SQL applied to Production. A migration may have used another filename/path, lived on another repository/private branch, or been applied directly to Supabase without being committed.
 - Do not reconstruct historical SQL by simply copying the Production name into a filename or inventing SQL from the name.
 - Next source-recovery avenues: inspect all repository branches/tags and broader commit history for relevant function names, ask whether a local working copy/backups exist, and use the captured October 15 catalog to validate a separate clean-install candidate.
 
