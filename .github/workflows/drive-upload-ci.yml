@@ -6,6 +6,8 @@ on:
       - "src/upload-error.ts"
       - "src/upload-refresh.ts"
       - "tests/upload-error_test.ts"
+      - "tests/drive-bridge_test.cjs"
+      - "google-apps-script-drive-bridge/**"
       - "supabase/functions/drive-upload/**"
       - "supabase/functions/permanent-delete-incoming/**"
       - "supabase/functions/user-import/**"
@@ -36,6 +38,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Test Apps Script Drive bridge protocol and folder safety
+        run: node --test tests/drive-bridge_test.cjs
       - name: Require JWT verification for Drive upload and permanent delete
         run: |
           grep -F -A1 '[functions.drive-upload]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
