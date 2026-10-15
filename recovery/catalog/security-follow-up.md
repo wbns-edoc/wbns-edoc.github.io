@@ -46,3 +46,12 @@ On commit `61679bd01651fe2e0cf5390cae0612b8bdcfcd56`, the disposable replay test
 
 The latest replay run is [38753606946](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38753606946), which passed, and static snapshot CI is [38753615253](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38753615253), also passed. These are useful regression checks, not full adversarial tests of all 13 SECURITY DEFINER functions or proof of full Supabase Production parity.
 
+## Privilege clarification from live catalog
+
+A further read-only check on 2026-10-15 confirmed:
+- `anon` and `authenticated` have no `CREATE` privilege on `public`; neither has `USAGE` on `private` for `anon` (authenticated does have private-schema USAGE).
+- Of the functions in the `public` schema, only `public.set_updated_at()` is executable by `anon`; it is not SECURITY DEFINER and is used as a trigger helper. No public SECURITY DEFINER function is executable by `anon`.
+- `service_role` has no direct `USAGE` on `private` in the observed privilege check; this is recorded for review, not changed, because service-role calls and function-owner behavior must be evaluated against actual application needs.
+
+These results narrow the anonymous-function concern but do not replace the broader review of table grants, default privileges, and all SECURITY DEFINER function authorization paths.
+
