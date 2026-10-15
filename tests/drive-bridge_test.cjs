@@ -73,7 +73,7 @@ function makeBridge() {
       computeHmacSha256Signature: (value, secret) =>
         Array.from(createHmac("sha256", secret).update(value, "utf8").digest()),
       base64EncodeWebSafe: (bytes) =>
-        Buffer.from(bytes).toString("base64").replace(/\\+/g, "-").replace(/\\//g, "_"),
+        Buffer.from(bytes).toString("base64").replace(/\+/g, "-").replace(/\//g, "_"),
       base64Decode: (value) => Array.from(Buffer.from(value, "base64")),
       newBlob: (bytes, mimeType, name) => ({ bytes, mimeType, name }),
     },
