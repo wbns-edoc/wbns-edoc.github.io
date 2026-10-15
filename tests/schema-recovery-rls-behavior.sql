@@ -90,7 +90,7 @@ DO $$ DECLARE n integer; BEGIN
   IF NOT private.has_department_permission('document.create', '20000000-0000-0000-0000-000000000003') THEN RAISE EXCEPTION 'director should have document.create in every department'; END IF;
   IF NOT private.has_department_permission('document.update', '20000000-0000-0000-0000-000000000003') THEN RAISE EXCEPTION 'director should have document.update in every department'; END IF;
   IF NOT private.has_department_permission('document.approve', '20000000-0000-0000-0000-000000000003') THEN RAISE EXCEPTION 'director should have document.approve in every department'; END IF;
-END $;
+END $$;
 
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000003', true);
 DO $$ DECLARE n integer; BEGIN
