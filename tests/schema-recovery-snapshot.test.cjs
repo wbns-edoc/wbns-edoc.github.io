@@ -13,6 +13,7 @@ const replayAudit = read("recovery/catalog/replay-dependency-audit.md");
 const migrationPlan = read("recovery/catalog/migration-reconstruction-plan.md");
 const migrationMatrix = read("recovery/catalog/migration-coverage-matrix.md");
 const fixtureDrift = read("recovery/catalog/fixture-drift-report.md");
+const sourceSearch = read("recovery/catalog/missing-migration-history-search.md");
 
 const count = (text, regex) => (text.match(regex) || []).length;
 
@@ -46,6 +47,10 @@ assert.match(fixtureDrift, /Full Supabase clean-install parity: NOT PROVEN/i);
 assert.match(fixtureDrift, /Production deployment: NOT APPROVED/i);
 assert.match(fixtureDrift, /public\.user_departments/);
 assert.match(fixtureDrift, /No database write was performed/i);
+assert.match(readme, /missing-migration-history-search\.md/);
+assert.match(sourceSearch, /No commits were returned/i);
+assert.match(sourceSearch, /does \*\*not\*\* prove the SQL never existed/i);
+assert.match(sourceSearch, /Production deployment remains \*\*NOT APPROVED\*\*/i);
 for (const fn of ["audit_row_change", "default_document_department", "guard_document_department_change", "set_updated_at"]) {
   assert.ok(privateFunctions.includes(fn) || publicFunctions.includes(fn), `missing captured trigger function: ${fn}`);
 }
