@@ -1,0 +1,54 @@
+name: Schema Recovery PostgreSQL Replay
+
+on:
+  pull_request:
+    paths:
+      - "recovery/catalog/**"
+      - "tests/schema-recovery-replay.test.cjs"
+      - ".github/workflows/schema-recovery-postgres-replay.yml"
+  push:
+    branches:
+      - "recovery/production-schema-catalog-2026-10-15"
+    paths:
+      - "recovery/catalog/**"
+      - "tests/schema-recovery-replay.test.cjs"
+      - ".github/workflows/schema-recovery-postgres-replay.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  replay-prerequisite-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: replay
+          POSTGRES_PASSWORD: replay-only-password
+          POSTGRES_DB: recovery_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U replay -d recovery_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: replay
+      PGPASSWORD: replay-only-password
+      PGDATABASE: recovery_test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Confirm isolated PostgreSQL 17 and inventory dependency requirements
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -c 'SELECT version();'
+          node tests/schema-recovery-replay.test.cjs
