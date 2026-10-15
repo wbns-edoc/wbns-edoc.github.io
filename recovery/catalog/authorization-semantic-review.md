@@ -12,6 +12,8 @@ The recovered `private.user_has_department(uuid, uuid)` checks that both the pro
 
 Consequently, a caller relying only on `has_department_permission` may still receive a positive result for an inactive department if related rows remain. The current presence of such data has not been established, and this finding is not evidence of a data breach. Review every RLS policy and RPC using this helper to determine whether another guard covers the inactive-department case.
 
+**Affected paths identified in the captured catalog:** the `documents_insert_authorized` and `documents_update_authorized` policies; incoming/outgoing detail insert/update policies; assignment insert/update policies; deadlines management; and the approval, assignment, status-update, and deadline RPCs. Some paths also call `private.can_access_document` or check other conditions, so each call chain must be evaluated rather than assuming all are equally exposed.
+
 **Required before deployment:** add regression cases for inactive profiles, inactive departments, removed membership, and disabled permissions. Prepare a minimal correction on the recovery branch that requires active membership and department while preserving the explicit System Admin/director exception. Test all affected create, update, approval, assignment, and file paths.
 
 ## Finding B — director global permission test
