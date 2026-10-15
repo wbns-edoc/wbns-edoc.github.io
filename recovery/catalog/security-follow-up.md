@@ -23,3 +23,17 @@ Inspect actual anonymous REST behavior in a controlled test environment, verify 
 
 ## Important
 This report is evidence, not a change request and not a production migration. No secrets or row-level school data were exported.
+
+## Additional Supabase Advisor findings — read-only check on 2026-10-15
+
+The live Security Advisor reported the following items. These are triage findings, not automatic instructions to alter Production:
+
+5. **Three RLS-enabled tables have no policies:** `public.department_role_permissions`, `public.user_department_roles`, and `public.user_departments`. Direct table access through PostgREST is therefore expected to be denied by RLS unless another supported access path applies. Several security-definer RPCs are designed to manage or read this data; confirm the UI uses those RPCs and add explicit tests for authorized and unauthorized users before changing table policies. Do not add broad policies just to silence the linter.
+6. **Thirteen public SECURITY DEFINER functions are executable by `authenticated`.** Their explicit ACLs list `authenticated` and `service_role`; the inspected definitions use permission checks, active-profile checks, self-scoping, or document-access checks in the reviewed excerpts. This reduces concern but is not a substitute for per-function negative tests. Before changing EXECUTE grants, test each RPC as an ordinary signed-in user, a user without the relevant permission, an inactive profile, and—where relevant—a user outside the document's department. Revoke only functions proven unnecessary for the client.
+7. **Leaked-password protection is disabled in Supabase Auth.** This is an Auth dashboard configuration item. Evaluate enabling it as part of the security checklist; no setting was changed during this read-only review.
+8. **Performance Advisor reports eight foreign keys without covering indexes.** This is a performance review item, not an immediate correctness or access-control failure. Assess query patterns and table growth, then add only justified indexes in a separately tested migration. Do not remove indexes merely because the current production workload has not used them.
+
+## Current decision
+
+The Advisor findings strengthen the case for a staged security review, but they do not justify a blanket grant/revoke or policy migration. Keep the recovery PR in Draft until function-level negative tests, the intended RPC-only access pattern for the three policy-free tables, and a least-privilege grants/default-privileges review are documented. No Production changes were made by this Advisor check.
+
