@@ -27,7 +27,6 @@ async function signedBridgeDelete(fileId: string) {
   const result = await response.json().catch(()=>null);
   if (!result || result.ok !== true) {
     const code = result && typeof result.code === "string" ? result.code : "INVALID_RESPONSE";
-    if (code === "FILE_NOT_FOUND") return "missing";
     console.error("Apps Script permanent delete failed", code);
     throw new Error("APPS_SCRIPT_BRIDGE_OPERATION_FAILED");
   }
