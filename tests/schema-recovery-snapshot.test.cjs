@@ -12,6 +12,7 @@ const security = read("recovery/catalog/security-follow-up.md");
 const replayAudit = read("recovery/catalog/replay-dependency-audit.md");
 const migrationPlan = read("recovery/catalog/migration-reconstruction-plan.md");
 const migrationMatrix = read("recovery/catalog/migration-coverage-matrix.md");
+const fixtureDrift = read("recovery/catalog/fixture-drift-report.md");
 
 const count = (text, regex) => (text.match(regex) || []).length;
 
@@ -39,6 +40,12 @@ assert.equal(count(migrationMatrix, /^\| 202610[0-9]+ \|/gm), 55, "expected all 
 assert.match(migrationMatrix, /Foundation placeholder/i);
 assert.match(migrationMatrix, /Missing source candidate/i);
 assert.match(migrationMatrix, /No Production migration or schema change was applied/i);
+assert.match(readme, /fixture-drift-report\.md/);
+assert.match(fixtureDrift, /Do not use the October 10 fixture as the clean-install baseline/i);
+assert.match(fixtureDrift, /Full Supabase clean-install parity: NOT PROVEN/i);
+assert.match(fixtureDrift, /Production deployment: NOT APPROVED/i);
+assert.match(fixtureDrift, /public\.user_departments/);
+assert.match(fixtureDrift, /No database write was performed/i);
 for (const fn of ["audit_row_change", "default_document_department", "guard_document_department_change", "set_updated_at"]) {
   assert.ok(privateFunctions.includes(fn) || publicFunctions.includes(fn), `missing captured trigger function: ${fn}`);
 }
