@@ -1,11 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { importPKCS8, SignJWT } from "npm:jose@6";
-
-const DRIVE_API = "https://www.googleapis.com/drive/v3/files";
-const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive";
-type SA = { client_email: string; private_key: string; token_uri?: string };
 
 function out(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: {
@@ -16,20 +10,28 @@ function out(data: unknown, status = 200) {
     "Access-Control-Allow-Methods": "POST, OPTIONS"
   }});
 }
-async function driveToken(sa: SA) {
-  const now = Math.floor(Date.now() / 1000);
-  const key = await importPKCS8(sa.private_key, "RS256");
-  const jwt = await new SignJWT({ iss: sa.client_email, scope: DRIVE_SCOPE, aud: sa.token_uri || TOKEN_URL })
-    .setProtectedHeader({ alg: "RS256", typ: "JWT" }).setIssuedAt(now).setExpirationTime(now + 3600).sign(key);
-  const response = await fetch(sa.token_uri || TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt })
-  });
-  if (!response.ok) throw new Error("GOOGLE_TOKEN_EXCHANGE_FAILED");
-  const payload = await response.json();
-  if (!payload.access_token) throw new Error("GOOGLE_ACCESS_TOKEN_MISSING");
-  return payload.access_token as string;
+function base64Url(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+async function signedBridgeDelete(fileId: string) {
+  const url = Deno.env.get("GOOGLE_APPS_SCRIPT_BRIDGE_URL");
+  const secret = Deno.env.get("GOOGLE_APPS_SCRIPT_BRIDGE_SECRET");
+  if (!url || !secret || !/^https:\/\//i.test(url)) throw new Error("APPS_SCRIPT_BRIDGE_CONFIGURATION_INVALID");
+  const payload = { action:"delete", timestamp:Math.floor(Date.now()/1000), requestId:crypto.randomUUID(), fileId };
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), {name:"HMAC",hash:"SHA-256"}, false, ["sign"]);
+  const signature = base64Url(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(JSON.stringify(payload)))));
+  const response = await fetch(url, {method:"POST",headers:{"Content-Type":"application/json; charset=utf-8"},body:JSON.stringify({...payload,signature}),signal:AbortSignal.timeout(45000)});
+  if (!response.ok) throw new Error("APPS_SCRIPT_BRIDGE_HTTP_FAILED");
+  const result = await response.json().catch(()=>null);
+  if (!result || result.ok !== true) {
+    const code = result && typeof result.code === "string" ? result.code : "INVALID_RESPONSE";
+    if (code === "FILE_NOT_FOUND") return "missing";
+    console.error("Apps Script permanent delete failed", code);
+    throw new Error("APPS_SCRIPT_BRIDGE_OPERATION_FAILED");
+  }
+  return "deleted";
 }
 
 Deno.serve(async (req) => {
@@ -41,8 +43,9 @@ Deno.serve(async (req) => {
   const url = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const saRaw = Deno.env.get("GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON");
-  if (!url || !anonKey || !serviceKey || !saRaw) return out({ ok: false, code: "SERVER_CONFIGURATION_MISSING" }, 500);
+  const bridgeUrl = Deno.env.get("GOOGLE_APPS_SCRIPT_BRIDGE_URL");
+  const bridgeSecret = Deno.env.get("GOOGLE_APPS_SCRIPT_BRIDGE_SECRET");
+  if (!url || !anonKey || !serviceKey || !bridgeUrl || !bridgeSecret) return out({ ok: false, code: "SERVER_CONFIGURATION_MISSING" }, 500);
 
   const userClient = createClient(url, anonKey, {
     global: { headers: { Authorization: authorization } },
@@ -69,13 +72,7 @@ Deno.serve(async (req) => {
     return out({ ok: false, code: "PERMANENT_DELETE_PREPARATION_FAILED" }, 409);
   }
 
-  let sa: SA;
-  try { sa = JSON.parse(saRaw); } catch { return out({ ok: false, code: "GOOGLE_DRIVE_CONFIGURATION_INVALID" }, 500); }
-  let accessToken: string;
-  try { accessToken = await driveToken(sa); } catch (error) {
-    console.error("Google Drive token failed", error);
-    return out({ ok: false, code: "GOOGLE_DRIVE_AUTH_FAILED" }, 502);
-  }
+
 
   const files = Array.isArray((prepared as { files?: unknown }).files)
     ? (prepared as { files: Array<{ metadata_id?: string; drive_file_id?: string; name?: string; delete_drive?: boolean }> }).files
@@ -93,16 +90,9 @@ Deno.serve(async (req) => {
       continue;
     }
     try {
-      const response = await fetch(`${DRIVE_API}/${encodeURIComponent(file.drive_file_id)}`, {
-        method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` }
-      });
-      if (response.ok) deleted.push(file.drive_file_id);
-      else if (response.status === 404) alreadyMissing.push(file.drive_file_id);
-      else {
-        const detail = (await response.text()).slice(0, 250);
-        console.error("Google Drive permanent delete failed", response.status, detail);
-        failed.push({ name: String(file.name || "unknown"), code: `DRIVE_DELETE_HTTP_${response.status}` });
-      }
+      const outcome = await signedBridgeDelete(file.drive_file_id);
+      if (outcome === "deleted") deleted.push(file.drive_file_id);
+      else alreadyMissing.push(file.drive_file_id);
     } catch (error) {
       console.error("Google Drive permanent delete request failed", error);
       failed.push({ name: String(file.name || "unknown"), code: "DRIVE_DELETE_REQUEST_FAILED" });
