@@ -33,10 +33,10 @@ def statements(path: Path):
     if path in (PRIVATE, PUBLIC):
         # The captured pg_get_functiondef text omits statement terminators;
         # restore them before parsing/replay, including the final definition.
-        sql = sql.replace("$function$\\n\\n\\n-- ===== NEXT FUNCTION =====", "$function$;\\n\\n\\n-- ===== NEXT FUNCTION =====")
+        sql = sql.replace("$function$\n\n\n-- ===== NEXT FUNCTION =====", "$function$;\n\n\n-- ===== NEXT FUNCTION =====")
         if sql.rstrip().endswith("$function$"):
-            sql = sql.rstrip() + ";\\n"
-    sql = "\\n".join(
+            sql = sql.rstrip() + ";\n"
+    sql = "\n".join(
         line for line in sql.splitlines()
         if not any(line.strip().startswith(prefix) for prefix in metadata_prefixes)
     )
