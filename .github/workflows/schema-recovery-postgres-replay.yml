@@ -1,10 +1,11 @@
-name: Schema Recovery PostgreSQL Prerequisite Check
+name: Schema Recovery PostgreSQL Replay
 
 on:
   pull_request:
     paths:
       - "recovery/catalog/**"
       - "tests/schema-recovery-*.test.*"
+      - "tests/schema-recovery-replay-bootstrap.sql"
       - ".github/workflows/schema-recovery-postgres-replay.yml"
   push:
     branches:
@@ -12,13 +13,14 @@ on:
     paths:
       - "recovery/catalog/**"
       - "tests/schema-recovery-*.test.*"
+      - "tests/schema-recovery-replay-bootstrap.sql"
       - ".github/workflows/schema-recovery-postgres-replay.yml"
 
 permissions:
   contents: read
 
 jobs:
-  postgres-prerequisite-check:
+  disposable-postgres-replay:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -44,7 +46,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Confirm isolated PostgreSQL 17
-        shell: bash
         run: psql -v ON_ERROR_STOP=1 -c 'SELECT version();'
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -52,8 +53,45 @@ jobs:
           python-version: "3.12"
       - name: Install pinned SQL parser
         run: python -m pip install --disable-pip-version-check pglast==7.10
-      - name: Parse and classify recovery SQL without executing it
-        run: python tests/schema-recovery-replay.test.py
+      - name: Parse and generate dependency-ordered SQL phases
+        run: python tests/schema-recovery-replay.test.py --out-dir "$RUNNER_TEMP/wbns-replay"
+      - name: Bootstrap disposable compatibility objects
+        run: psql -v ON_ERROR_STOP=1 -f tests/schema-recovery-replay-bootstrap.sql
+      - name: Replay phases on disposable PostgreSQL only
+        shell: bash
+        run: |
+          set -euo pipefail
+          for phase in "$RUNNER_TEMP"/wbns-replay/*.sql; do
+            echo "::group::Applying $(basename "$phase") to disposable database"
+            psql -v ON_ERROR_STOP=1 -f "$phase"
+            echo "::endgroup::"
+          done
+      - name: Verify reconstructed object inventory
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          DECLARE
+            table_count integer;
+            type_count integer;
+            policy_count integer;
+            trigger_count integer;
+            function_count integer;
+            view_count integer;
+          BEGIN
+            SELECT count(*) INTO table_count FROM pg_tables WHERE schemaname = 'public';
+            SELECT count(*) INTO type_count FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname='public' AND t.typtype='e';
+            SELECT count(*) INTO policy_count FROM pg_policies WHERE schemaname='public';
+            SELECT count(*) INTO trigger_count FROM pg_trigger tr JOIN pg_class c ON c.oid=tr.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND NOT tr.tgisinternal;
+            SELECT count(*) INTO function_count FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('public','private');
+            SELECT count(*) INTO view_count FROM pg_views WHERE schemaname='public';
+            IF table_count <> 25 THEN RAISE EXCEPTION 'expected 25 public tables, got %', table_count; END IF;
+            IF type_count <> 5 THEN RAISE EXCEPTION 'expected 5 public enums, got %', type_count; END IF;
+            IF policy_count <> 45 THEN RAISE EXCEPTION 'expected 45 public policies, got %', policy_count; END IF;
+            IF trigger_count <> 12 THEN RAISE EXCEPTION 'expected 12 public triggers, got %', trigger_count; END IF;
+            IF function_count <> 54 THEN RAISE EXCEPTION 'expected 54 public/private functions, got %', function_count; END IF;
+            IF view_count <> 2 THEN RAISE EXCEPTION 'expected 2 public views, got %', view_count; END IF;
+          END $$;
+          SQL
       - name: Run static snapshot assertions
         uses: actions/setup-node@v4
         with:
