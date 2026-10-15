@@ -109,18 +109,18 @@ DO $$ DECLARE n integer; BEGIN
 END $$;
 
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000006', true);
-DO $ DECLARE n integer; BEGIN
+DO $$ DECLARE n integer; BEGIN
   SELECT count(*) INTO n FROM public.documents;
   IF n <> 2 THEN RAISE EXCEPTION 'multi-group user should read documents from both assigned groups; got %', n; END IF;
   SELECT count(*) INTO n FROM public.user_department_roles;
   IF n <> 0 THEN RAISE EXCEPTION 'direct user_department_roles read should return no rows without a policy; got %', n; END IF;
   SELECT count(*) INTO n FROM public.department_role_permissions;
   IF n <> 0 THEN RAISE EXCEPTION 'direct department_role_permissions read should return no rows without a policy; got %', n; END IF;
-END $;
+END $$;
 
 -- SECURITY DEFINER RPCs are callable by authenticated, but must reject users without admin permissions.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000006', true);
-DO $ BEGIN
+DO $$ BEGIN
   BEGIN
     PERFORM public.admin_set_global_user_role(
       '10000000-0000-0000-0000-000000000006',
@@ -142,7 +142,7 @@ DO $ BEGIN
   EXCEPTION WHEN SQLSTATE '42501' THEN
     NULL;
   END;
-END $;
+END $$;
 
 RESET ROLE;
 ROLLBACK;
