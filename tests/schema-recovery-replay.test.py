@@ -30,7 +30,7 @@ def statements(path: Path):
         "-- because the view queries read from RLS-protected",
         "-- ===== NEXT FUNCTION =====",
     )
-    sql = "\\n".join(
+    sql = "\n".join(
         line for line in sql.splitlines()
         if not any(line.strip().startswith(prefix) for prefix in metadata_prefixes)
     )
