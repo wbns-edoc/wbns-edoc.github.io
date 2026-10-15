@@ -19,6 +19,7 @@ on:
   push:
     branches:
       - fix/drive-upload-metadata-atomicity-2026-10-09
+      - feat/drive-upload-apps-script-bridge
     paths:
       - "src/main.tsx"
       - "supabase/functions/drive-health/**"
