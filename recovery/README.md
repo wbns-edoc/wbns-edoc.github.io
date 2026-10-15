@@ -17,6 +17,7 @@ Read-only catalog queries were executed against the connected Wat Bueng Nam Sai 
 - `catalog/fixture-drift-report.md`: name-level comparison of the October 10 test fixture with October 15 catalog evidence; documents why the old fixture is not a clean-install baseline.
 - `catalog/missing-migration-history-search.md`: read-only GitHub path-history search for missing migration sources, including the limits of that search.
 - `catalog/branch-candidate-review.md`: blob-pinned inventory of 16 branch-only migration candidates and function-name-level consistency findings.
+- `catalog/authorization-semantic-review.md`: read-only semantic review of active-department authorization and missing regression coverage.
 - `tests/schema-recovery-snapshot.test.cjs`: static consistency checks for the recovery artifacts.
 - `.github/workflows/schema-recovery-snapshot-ci.yml`: CI workflow for the static checks.
 
