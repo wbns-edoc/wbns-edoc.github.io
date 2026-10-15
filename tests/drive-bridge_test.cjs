@@ -224,3 +224,18 @@ test("upload cleanup moves the Drive object to Trash before deleting its metadat
     /if \(metadataRowId\) \{[\s\S]*?\n    \}\n\n    \/\/ The Drive upload can succeed even if inserting its metadata fails\.[\s\S]*?\n    if \(driveFileId\) \{/,
     "Drive cleanup must also run when upload succeeds but metadata insertion fails");
 });
+
+test("Drive health Edge Function signs a read-only health request and requires JWT", () => {
+  const healthSource = fs.readFileSync("supabase/functions/drive-health/index.ts", "utf8");
+  const config = fs.readFileSync("supabase/config.toml", "utf8");
+  assert.match(healthSource, /GOOGLE_APPS_SCRIPT_BRIDGE_URL/);
+  assert.match(healthSource, /GOOGLE_APPS_SCRIPT_BRIDGE_SECRET/);
+  assert.match(healthSource, /crypto\.subtle\.importKey/);
+  assert.match(healthSource, /crypto\.subtle\.sign\("HMAC"/);
+  assert.match(healthSource, /action: "health"/);
+  assert.match(healthSource, /requestId: crypto\.randomUUID\(\)/);
+  assert.match(healthSource, /write_test_performed: false/);
+  assert.match(healthSource, /Cache-Control/);
+  assert.match(config, /\[functions\.drive-health\]\s+verify_jwt = true/);
+  assert.doesNotMatch(healthSource, /GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON/);
+});
