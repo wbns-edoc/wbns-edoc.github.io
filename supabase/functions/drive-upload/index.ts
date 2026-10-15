@@ -112,16 +112,21 @@ Deno.serve(async (req) => {
         driveFileId = null;
         return;
       }
+    }
 
-      if (driveFileId) {
-        try {
-          await signedBridgeRequest("delete", { fileId: driveFileId });
-          driveFileId = null;
-        } catch (error) {
-          console.error("Apps Script cleanup failed; preserving metadata for reconciliation", error);
-          return;
-        }
+    // The Drive upload can succeed even if inserting its metadata fails. In that
+    // case there is no metadataRowId, but the Drive object still must be trashed.
+    if (driveFileId) {
+      try {
+        await signedBridgeRequest("delete", { fileId: driveFileId });
+        driveFileId = null;
+      } catch (error) {
+        console.error("Apps Script cleanup failed; preserving any metadata for reconciliation", error);
+        return;
       }
+    }
+
+    if (metadataRowId) {
       const { error } = await admin.from("google_drive_files").delete().eq("id", metadataRowId);
       if (!mayDeleteDriveObject(Boolean(error))) {
         console.error("Drive metadata cleanup failed; object is in Trash and metadata is retained for reconciliation", error?.message);
