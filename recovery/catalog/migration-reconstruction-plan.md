@@ -23,7 +23,7 @@ The original foundation SQL is absent from version control. Production's current
 - `recovery/catalog/relations-and-security.sql` is assembled from catalog metadata and explicitly excludes a complete guarantee of ownership, grants, default privileges, and platform-managed objects.
 - `recovery/catalog/private-functions.sql` and `public-functions.sql` recover current function definitions, not the sequence of function changes that produced them.
 - `supabase/tests/fixtures/recovered-production-catalog.sql` was generated on 2026-10-10 for isolated tests. It is a useful compatibility fixture, not the October 15 production state and not a historical foundation migration.
-- Production migration history includes entries whose corresponding SQL is absent from main, including multiple department-membership/permission/security corrections recorded on 2026-10-11 through 2026-10-13. These cannot be reconstructed accurately from timestamps or names alone.
+- Production migration history includes entries whose corresponding SQL is absent from main. Read-only inspection found branch-only candidates for many department-membership/permission/security corrections on `feature/department-scoped-permissions-2026-10-11`; see `catalog/migration-coverage-matrix.md`. Their filenames and timestamps differ from Production history and they are not confirmed exact matches. Several early foundation, seed, audit, reporting, and admin-hardening sources remain missing.
 - Existing forward migrations may depend on those missing changes. Applying them over an end-state snapshot could duplicate or contradict the captured definitions.
 
 ## Required reconstruction sequence
@@ -48,4 +48,4 @@ Stop and keep Production unchanged if any of these occur:
 
 ## Current next action
 
-The latest disposable replay and snapshot CI both pass. The next engineering task is to create and validate a separate clean-install candidate from the best available evidence, then compare it with the October 10 fixture and the October 15 Production catalog. This is a recovery/reconciliation task, not permission to deploy the snapshot.
+The October 10 fixture vs October 15 catalog name-level comparison is recorded in `catalog/fixture-drift-report.md`. Branch-only SQL candidates were found and mapped in the migration coverage matrix; a read-only source-history note documents the search limits. Latest static snapshot CI passed at [run 38759366268](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38759366268) and latest disposable PostgreSQL 17 replay passed at [run 38759365960](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38759365960). Next: semantically validate branch-only candidate SQL against current catalog/function definitions and the RLS regression suite, then assemble a separate clean-install candidate only after dependencies and grants are accounted for. This remains a recovery/reconciliation task, not permission to deploy the snapshot.
