@@ -22,6 +22,8 @@ on:
       - feat/drive-upload-apps-script-bridge
     paths:
       - "src/main.tsx"
+      - "tests/drive-bridge_test.cjs"
+      - "google-apps-script-drive-bridge/**"
       - "supabase/functions/drive-health/**"
       - "supabase/functions/drive-upload/**"
       - "supabase/functions/permanent-delete-incoming/**"
