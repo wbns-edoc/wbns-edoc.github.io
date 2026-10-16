@@ -18,6 +18,7 @@ Read-only catalog queries were executed against the connected Wat Bueng Nam Sai 
 - `catalog/missing-migration-history-search.md`: read-only GitHub path-history search for missing migration sources, including the limits of that search.
 - `catalog/branch-candidate-review.md`: blob-pinned inventory of 16 branch-only migration candidates and function-name-level consistency findings.
 - `catalog/authorization-semantic-review.md`: read-only semantic review of active-department authorization and missing regression coverage.
+- `catalog/production-readonly-validation-2026-10-16.md`: live read-only function/privilege confirmation and aggregate stale-assignment check.
 - `catalog/candidate-has-department-permission-active-department.sql`: recovery-only candidate correction, applied only to the disposable replay database and not approved for Production.
 - `tests/schema-recovery-snapshot.test.cjs`: static consistency checks for the recovery artifacts.
 - `.github/workflows/schema-recovery-snapshot-ci.yml`: CI workflow for the static checks.
