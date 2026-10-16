@@ -169,19 +169,19 @@ END $$;
 
 -- The explicit global role exception remains effective for an active director.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', true);
-DO $ BEGIN
+DO $$ BEGIN
   IF NOT private.has_department_permission('document.view', '20000000-0000-0000-0000-000000000004') THEN
     RAISE EXCEPTION 'director global permission exception must remain effective for inactive department';
   END IF;
-END $;
+END $$;
 
 -- An inactive profile must not retain a scoped permission in an active department.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000008', true);
-DO $ BEGIN
+DO $$ BEGIN
   IF private.has_department_permission('document.view', '20000000-0000-0000-0000-000000000001') THEN
     RAISE EXCEPTION 'inactive profile must not retain department-scoped permissions';
   END IF;
-END $;
+END $$;
 
 -- Removing explicit membership must immediately remove the scoped permission.
 DELETE FROM public.user_departments
@@ -192,6 +192,11 @@ DO $ BEGIN
   IF private.has_department_permission('document.view', '20000000-0000-0000-0000-000000000003') THEN
     RAISE EXCEPTION 'removed department membership must remove scoped permission';
   END IF;
+END $;
+
+-- This user retains active membership in Group B, but its update permission is disabled.
+SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000006', true);
+DO $ BEGIN
   IF private.has_department_permission('document.update', '20000000-0000-0000-0000-000000000003') THEN
     RAISE EXCEPTION 'disabled department permission must not authorize update';
   END IF;
