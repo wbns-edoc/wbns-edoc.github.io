@@ -70,6 +70,9 @@ assert.match(authorizationCandidate, /wr\.code IN \(\x27system_admin\x27,\x27dir
 assert.match(replayWorkflow, /Apply isolated authorization correction candidate \(disposable DB only\)/i);
 assert.match(rlsBehavior, /ordinary user must not retain scoped permission in inactive department/i);
 assert.match(rlsBehavior, /director global permission exception must remain effective/i);
+assert.match(rlsBehavior, /inactive profile must not retain department-scoped permissions/i);
+assert.match(rlsBehavior, /removed department membership must remove scoped permission/i);
+assert.match(rlsBehavior, /disabled department permission must not authorize update/i);
 for (const fn of ["audit_row_change", "default_document_department", "guard_document_department_change", "set_updated_at"]) {
   assert.ok(privateFunctions.includes(fn) || publicFunctions.includes(fn), `missing captured trigger function: ${fn}`);
 }
