@@ -190,11 +190,11 @@ DELETE FROM public.user_departments
    AND department_id='20000000-0000-0000-0000-000000000003';
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000005', true);
-DO $ BEGIN
+DO $removed_membership$ BEGIN
   IF private.has_department_permission('document.view', '20000000-0000-0000-0000-000000000003') THEN
     RAISE EXCEPTION 'removed department membership must remove scoped permission';
   END IF;
-END $;
+END $removed_membership$;
 
 -- This user retains active membership in Group B, but its update permission is disabled.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000006', true);
