@@ -317,7 +317,65 @@ function Senders({setError,canManage}:{setError:(v:string)=>void;canManage:boole
  async function remove(s:any){if(!canManage)return;if(!window.confirm('ยืนยันลบหน่วยงานผู้ส่ง “'+s.organization_name+'” ออกจากรายการใช้งาน? ข้อมูลจะถูกปิดใช้งาน ไม่ลบประวัติหนังสือเดิม'))return;setError('');const{error}=await supabase.from('senders').update({is_active:false}).eq('id',s.id);if(error)setError(error.message);else await load()}
  return <div><div className="toolbar"><div><h1>หน่วยงานผู้ส่ง</h1><p>ข้อมูลหน่วยงานสำหรับทะเบียนหนังสือรับ</p></div>{canManage&&<button onClick={startAdd}>+ เพิ่มหน่วยงาน</button>}</div><div className="panel"><div className="table-wrap"><table><thead><tr><th>หน่วยงาน</th><th>ส่วนงาน</th>{canManage&&<th>การจัดการ</th>}</tr></thead><tbody>{rows.map(s=><tr key={s.id}><td>{s.organization_name}</td><td>{s.department_name||'—'}</td>{canManage&&<td><div className="row-actions"><button className="ghost" onClick={()=>startEdit(s)}>แก้ไข</button><button className="ghost" onClick={()=>remove(s)}>ลบ</button></div></td>}</tr>)}</tbody></table>{rows.length===0&&<div className="empty">ยังไม่มีหน่วยงานผู้ส่ง</div>}</div></div>{open&&canManage&&<Modal title={editingId?'แก้ไขหน่วยงานผู้ส่ง':'เพิ่มหน่วยงานผู้ส่ง'}onClose={()=>{setOpen(false);setEditingId(null)}}><form className="form-grid"onSubmit={submit}><label className="wide">ชื่อหน่วยงาน<input required value={form.organization_name}onChange={e=>setForm({...form,organization_name:e.target.value})}/></label><label>ส่วนงาน<input value={form.department_name}onChange={e=>setForm({...form,department_name:e.target.value})}/></label><label>ผู้ติดต่อ<input value={form.contact_name}onChange={e=>setForm({...form,contact_name:e.target.value})}/></label><label>โทรศัพท์<input value={form.contact_phone}onChange={e=>setForm({...form,contact_phone:e.target.value})}/></label><label>อีเมล<input type="email"value={form.contact_email}onChange={e=>setForm({...form,contact_email:e.target.value})}/></label><label className="wide">ที่อยู่<textarea value={form.address}onChange={e=>setForm({...form,address:e.target.value})}/></label><div className="form-actions"><button type="button"className="ghost"disabled={busy}onClick={()=>setOpen(false)}>ยกเลิก</button><button disabled={busy}>{busy?'กำลังบันทึก…':editingId?'บันทึกการแก้ไข':'บันทึก'}</button></div></form></Modal>}</div>
 }
-function Tasks({profile,openDocument}:{profile:Profile|null;openDocument:(id:string)=>void}){const[rows,setRows]=React.useState<any[]>([]);const[filter,setFilter]=React.useState('active');const[loading,setLoading]=React.useState(true);async function load(){if(!profile)return;setLoading(true);let q=supabase.from('document_assignments').select('id,assigned_at,assignment_status,instructions,documents(id,subject,status,urgency)').eq('assignee_id',profile.id).order('assigned_at',{ascending:false});if(filter==='active')q=q.in('assignment_status',['assigned','accepted','in_progress']);if(filter==='done')q=q.eq('assignment_status','completed');const{data,error}=await q;if(error)setRows([]);else setRows(data||[]);setLoading(false)}React.useEffect(()=>{load()},[profile?.id,filter]);return <div><div className="toolbar"><div><h1>งานของฉัน</h1><p>รายการหนังสือที่ได้รับมอบหมายให้ดำเนินการ</p></div><button className="ghost"onClick={load}>รีเฟรช</button></div><div className="panel"><div className="filter-bar"><button className={filter==='active'?'':'ghost'}onClick={()=>setFilter('active')}>งานที่ต้องทำ</button><button className={filter==='done'?'':'ghost'}onClick={()=>setFilter('done')}>เสร็จแล้ว</button></div>{loading?<div className="empty">กำลังโหลด…</div>:<div className="table-wrap"><table><thead><tr><th>เรื่อง</th><th>ความเร่งด่วน</th><th>สถานะหนังสือ</th><th>สถานะงาน</th><th>รายละเอียดจากผู้มอบหมาย</th><th>มอบหมายเมื่อ</th></tr></thead><tbody>{rows.map(x=><tr key={x.id}><td><button className="subject-link"onClick={()=>x.documents?.id&&openDocument(x.documents.id)}>{x.documents?.subject}</button></td><td><span className={'badge urgency '+x.documents?.urgency}>{urgencyLabel[x.documents?.urgency]}</span></td><td>{statusLabel[x.documents?.status]||x.documents?.status}</td><td>{x.assignment_status}</td><td className="assignment-instructions">{x.instructions||'—'}</td><td>{new Date(x.assigned_at).toLocaleString('th-TH')}</td></tr>)}</tbody></table>{rows.length===0&&<div className="empty">ไม่มีรายการในมุมมองนี้</div>}</div>}</div></div>}
+function Tasks({profile,openDocument}:{profile:Profile|null;openDocument:(id:string)=>void}){
+ const[rows,setRows]=React.useState<any[]>([]);
+ const[filter,setFilter]=React.useState('active');
+ const[loading,setLoading]=React.useState(true);
+ const[reportFor,setReportFor]=React.useState<any|null>(null);
+ const[reports,setReports]=React.useState<any[]>([]);
+ const[reportLoading,setReportLoading]=React.useState(false);
+ const[saving,setSaving]=React.useState(false);
+ const[reportForm,setReportForm]=React.useState({report_type:'progress',percent_complete:'0',result_summary:'',work_details:'',issues:'',next_steps:''});
+ const[formError,setFormError]=React.useState('');
+ async function load(){
+  if(!profile){setRows([]);setLoading(false);return}
+  setLoading(true);
+  let q=supabase.from('document_assignments').select('id,assigned_at,assignment_status,instructions,documents(id,subject,status,urgency)').eq('assignee_id',profile.id).order('assigned_at',{ascending:false});
+  if(filter==='active')q=q.in('assignment_status',['assigned','accepted','in_progress']);
+  if(filter==='done')q=q.eq('assignment_status','completed');
+  const{data,error}=await q;
+  if(error)setRows([]);else setRows(data||[]);
+  setLoading(false)
+ }
+ React.useEffect(()=>{load()},[profile?.id,filter]);
+ async function openReport(x:any){
+  setReportFor(x);setReportForm({report_type:'progress',percent_complete:'0',result_summary:'',work_details:'',issues:'',next_steps:''});setFormError('');setReportLoading(true);setReports([]);
+  const{data,error}=await supabase.from('document_assignment_reports').select('id,report_type,percent_complete,result_summary,work_details,issues,next_steps,created_at,updated_at').eq('assignment_id',x.id).order('created_at',{ascending:false});
+  if(error)setFormError(error.message);else setReports(data||[]);
+  setReportLoading(false)
+ }
+ async function submitReport(e:React.FormEvent){
+  e.preventDefault();if(!reportFor||!profile)return;
+  setSaving(true);setFormError('');
+  const payload={assignment_id:reportFor.id,created_by:profile.id,report_type:reportForm.report_type,percent_complete:Number(reportForm.percent_complete),result_summary:reportForm.result_summary.trim(),work_details:reportForm.work_details.trim()||null,issues:reportForm.issues.trim()||null,next_steps:reportForm.next_steps.trim()||null};
+  const{data,error}=await supabase.from('document_assignment_reports').insert(payload).select('id,report_type,percent_complete,result_summary,work_details,issues,next_steps,created_at,updated_at').single();
+  if(error)setFormError(error.message);else{setReports(prev=>[data,...prev]);setReportForm({report_type:'progress',percent_complete:'0',result_summary:'',work_details:'',issues:'',next_steps:''})}
+  setSaving(false)
+ }
+ const statusText:any={assigned:'มอบหมายแล้ว',accepted:'รับทราบงานแล้ว',in_progress:'กำลังดำเนินการ',completed:'เสร็จสิ้น',cancelled:'ยกเลิก'};
+ return <div>
+  <div className="toolbar"><div><h1>งานของฉัน</h1><p>รายการหนังสือที่ได้รับมอบหมายให้ดำเนินการ พร้อมช่องบันทึกความคืบหน้าและผลการปฏิบัติงาน</p></div><button className="ghost"onClick={load}>รีเฟรช</button></div>
+  <div className="panel"><div className="filter-bar"><button className={filter==='active'?'':'ghost'}onClick={()=>setFilter('active')}>งานที่ต้องทำ</button><button className={filter==='done'?'':'ghost'}onClick={()=>setFilter('done')}>เสร็จแล้ว</button></div>
+   {loading?<div className="empty">กำลังโหลด…</div>:<div className="table-wrap"><table><thead><tr><th>เรื่อง</th><th>ความเร่งด่วน</th><th>สถานะหนังสือ</th><th>สถานะงาน</th><th>รายละเอียดจากผู้มอบหมาย</th><th>มอบหมายเมื่อ</th><th>รายงานผล</th></tr></thead><tbody>
+    {rows.map(x=><tr key={x.id}><td><button className="subject-link"onClick={()=>x.documents?.id&&openDocument(x.documents.id)}>{x.documents?.subject||'ไม่ระบุเรื่อง'}</button></td><td><span className={'badge urgency '+x.documents?.urgency}>{urgencyLabel[x.documents?.urgency]}</span></td><td>{statusLabel[x.documents?.status]||x.documents?.status}</td><td><span className="badge">{statusText[x.assignment_status]||x.assignment_status}</span></td><td className="assignment-instructions">{x.instructions||'—'}</td><td>{new Date(x.assigned_at).toLocaleString('th-TH')}</td><td><button className="ghost"onClick={()=>openReport(x)}>บันทึก/ดูผล</button></td></tr>)}
+   </tbody></table>{rows.length===0&&<div className="empty">ไม่มีรายการในมุมมองนี้</div>}</div>}
+  </div>
+  {reportFor&&<Modal title="บันทึกผลการปฏิบัติงาน"onClose={()=>setReportFor(null)}>
+   <div className="detail-card"style={{marginBottom:16}}><h2>{reportFor.documents?.subject||'หนังสือที่ได้รับมอบหมาย'}</h2><p style={{whiteSpace:'pre-wrap'}}>{reportFor.instructions||'ไม่มีรายละเอียดคำสั่งมอบหมาย'}</p></div>
+   <form className="form-grid"onSubmit={submitReport}>
+    <label>ประเภทบันทึก<select value={reportForm.report_type}onChange={e=>setReportForm({...reportForm,report_type:e.target.value})}><option value="progress">รายงานความคืบหน้า</option><option value="completion">รายงานผลเมื่อดำเนินการเสร็จ</option></select></label>
+    <label>ความคืบหน้า (%)<input type="number"min="0"max="100"required value={reportForm.percent_complete}onChange={e=>setReportForm({...reportForm,percent_complete:e.target.value})}/></label>
+    <label className="wide">สรุปผลการปฏิบัติงาน (จำเป็น)<textarea required minLength={3}maxLength={5000}rows={3}value={reportForm.result_summary}onChange={e=>setReportForm({...reportForm,result_summary:e.target.value})}placeholder="ระบุสิ่งที่ดำเนินการหรือผลที่เกิดขึ้น"/></label>
+    <label className="wide">รายละเอียดการดำเนินงานเพิ่มเติม<textarea rows={3}value={reportForm.work_details}onChange={e=>setReportForm({...reportForm,work_details:e.target.value})}placeholder="ขั้นตอน งานที่ทำ เอกสารหรือข้อมูลที่เกี่ยวข้อง"/></label>
+    <label className="wide">ปัญหา/อุปสรรค<textarea rows={2}value={reportForm.issues}onChange={e=>setReportForm({...reportForm,issues:e.target.value})}placeholder="หากไม่มี สามารถเว้นว่างได้"/></label>
+    <label className="wide">ขั้นตอนถัดไป/สิ่งที่ต้องติดตาม<textarea rows={2}value={reportForm.next_steps}onChange={e=>setReportForm({...reportForm,next_steps:e.target.value})}placeholder="สิ่งที่ต้องดำเนินการต่อหรือผู้ที่ต้องประสานงาน"/></label>
+    {formError&&<div className="notice wide"role="alert">{formError}</div>}
+    <div className="row-actions wide"><button type="submit"disabled={saving}>{saving?'กำลังบันทึก…':'บันทึกรายงาน'}</button><button type="button"className="ghost"onClick={()=>setReportFor(null)}>ปิด</button></div>
+   </form>
+   <div className="detail-card"style={{marginTop:20}}><h2>ประวัติรายงานที่บันทึกแล้ว</h2>{reportLoading?<div className="empty">กำลังโหลดรายงาน…</div>:reports.length===0?<div className="empty">ยังไม่มีรายงานผลการปฏิบัติงาน</div>:<div className="detail-list">{reports.map(r=><div key={r.id}style={{display:'block'}}><div style={{display:'flex',justifyContent:'space-between',gap:8,flexWrap:'wrap'}}><b>{r.report_type==='completion'?'รายงานผลเสร็จสิ้น':'รายงานความคืบหน้า'} · {r.percent_complete}%</b><small>{new Date(r.created_at).toLocaleString('th-TH')}</small></div><p style={{whiteSpace:'pre-wrap',margin:'8px 0'}}>{r.result_summary}</p>{r.work_details&&<p style={{whiteSpace:'pre-wrap',margin:'6px 0'}}><b>รายละเอียด: </b>{r.work_details}</p>}{r.issues&&<p style={{whiteSpace:'pre-wrap',margin:'6px 0'}}><b>ปัญหา/อุปสรรค: </b>{r.issues}</p>}{r.next_steps&&<p style={{whiteSpace:'pre-wrap',margin:'6px 0'}}><b>ขั้นตอนถัดไป: </b>{r.next_steps}</p>}</div>)}</div>}</div>
+  </Modal>}
+ </div>
+}
 function AssignedWork({profile,setError,openDocument}:{profile:Profile|null;setError:(v:string)=>void;openDocument:(id:string)=>void}){
  const[rows,setRows]=React.useState<any[]>([]);
  const[names,setNames]=React.useState<Record<string,string>>({});
