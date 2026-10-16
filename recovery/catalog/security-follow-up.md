@@ -63,3 +63,10 @@ These results narrow the anonymous-function concern but do not replace the broad
 - The replay behavior test now explicitly checks System Admin and director create/update/approve global permissions.
 - Required before deployment: regression tests for inactive departments and membership changes, a reviewed corrective candidate, and validation of all dependent RLS/RPC paths in disposable PostgreSQL and a fresh local Supabase stack.
 - No Production writes; deployment remains NOT APPROVED.
+
+
+## Expanded authorization regression results — 2026-10-16
+- The disposable PostgreSQL replay passed on [run 38845302526](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38845302526) after adding tests for inactive profiles, removed explicit department membership, and disabled department-scoped permissions.
+- The test also retains the checks that an inactive department denies ordinary scoped permission while an active director retains the explicitly required global document permission exception; System Admin and director create/update/approve checks remain.
+- Static snapshot assertions passed on [run 38845197331](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/38845197331).
+- Scope remains limited to a disposable PostgreSQL compatibility harness. Full Supabase local-stack replay, downstream RPC/file/storage path validation, and clean-install catalog comparison remain open. No Production writes; deployment is NOT APPROVED.
