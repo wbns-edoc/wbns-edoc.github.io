@@ -262,7 +262,7 @@ function BacklogImport({permissions,setError,onClose,onDone}:{permissions:string
     setRunning(true);setSummary(null);let success=0,partial=0,failed=0;
     for(const row of valid){
       setRows(prev=>prev.map(r=>r.rowNo===row.rowNo?{...r,result:'กำลังนำเข้า…'}:r));
-      const notes=[row.notes,row.legacyNo?'เลขทะเบียนเดิม: '+row.legacyNo:''].filter(Boolean).join(' | ')||null;
+      const notes=[row.notes,row.legacyNo?'เลขทะเบียนเดิม: '+row.legacyNo:''].filter(Boolean).join(' | ')||'โปรดตรวจสอบหนังสือและดำเนินการตามหน้าที่ พร้อมบันทึกผลการดำเนินงานในระบบ';
       const{data:docId,error:registerError}=await supabase.rpc('register_incoming_document',{
         p_subject:row.subject,p_sender_id:row.senderId,p_external_document_no:row.externalNo||null,
         p_external_document_date:row.externalDate||null,p_received_at:row.receivedAt,
