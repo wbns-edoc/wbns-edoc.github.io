@@ -384,7 +384,7 @@ function AssignedWork({profile,setError,openDocument}:{profile:Profile|null;setE
  const[selected,setSelected]=React.useState<any|null>(null);
  const[detailLoading,setDetailLoading]=React.useState(false);
  const[history,setHistory]=React.useState<any[]>([]);
- const[deadline,setDeadline]=React.useState<any|null>(null);
+ const[deadline,setDeadline]=React.useState<any|null>(null);const[reports,setReports]=React.useState<any[]>([]);
  const statusText:any={assigned:'มอบหมายแล้ว',accepted:'รับทราบงานแล้ว',in_progress:'กำลังดำเนินการ',completed:'เสร็จสิ้น',cancelled:'ยกเลิก'};
  async function load(){
   if(!profile){setRows([]);setLoading(false);return}
@@ -406,13 +406,15 @@ function AssignedWork({profile,setError,openDocument}:{profile:Profile|null;setE
  const visible=rows.filter(x=>filter==='all'||(filter==='active'&&['assigned','accepted','in_progress'].includes(x.assignment_status))||(filter==='done'&&x.assignment_status==='completed'));
  const grouped=Object.values(visible.reduce((acc:any,x:any)=>{const id=x.document_id;if(!acc[id])acc[id]={doc:x.documents,rows:[]};acc[id].rows.push(x);return acc},{})) as any[];
  async function showResult(x:any){
-  setSelected(x);setDetailLoading(true);setHistory([]);setDeadline(null);
-  const[h,d]=await Promise.all([
+  setSelected(x);setDetailLoading(true);setHistory([]);setDeadline(null);setReports([]);
+  const[h,d,r]=await Promise.all([
    supabase.from('document_status_history').select('id,from_status,to_status,changed_at,reason,profiles(full_name)').eq('document_id',x.document_id).order('changed_at',{ascending:false}).limit(20),
-   supabase.from('deadlines').select('due_at,status,completed_at').eq('document_id',x.document_id).eq('assigned_to',x.assignee_id).order('due_at',{ascending:false}).limit(1).maybeSingle()
+   supabase.from('deadlines').select('due_at,status,completed_at').eq('document_id',x.document_id).eq('assigned_to',x.assignee_id).order('due_at',{ascending:false}).limit(1).maybeSingle(),
+   supabase.from('document_assignment_reports').select('id,report_type,percent_complete,result_summary,work_details,issues,next_steps,created_at,profiles(full_name)').eq('assignment_id',x.id).order('created_at',{ascending:false})
   ]);
   if(h.error)setError(h.error.message);else setHistory(h.data||[]);
   if(d.error)setError(d.error.message);else setDeadline(d.data);
+  if(r.error)setError(r.error.message);else setReports(r.data||[]);
   setDetailLoading(false);
  }
  return <div>
@@ -429,7 +431,7 @@ function AssignedWork({profile,setError,openDocument}:{profile:Profile|null;setE
     <div className="detail-card"><h2>ผู้ปฏิบัติงาน</h2><div className="detail-list"><div><span>ชื่อ</span><b>{names[selected.assignee_id]||'ผู้ได้รับมอบหมาย'}</b></div><div><span>สถานะงาน</span><b>{statusText[selected.assignment_status]||selected.assignment_status}</b></div><div><span>มอบหมายเมื่อ</span><b>{selected.assigned_at?new Date(selected.assigned_at).toLocaleString('th-TH'):'—'}</b></div><div><span>รับทราบเมื่อ</span><b>{selected.accepted_at?new Date(selected.accepted_at).toLocaleString('th-TH'):'ยังไม่มีข้อมูล'}</b></div><div><span>เสร็จสิ้นเมื่อ</span><b>{selected.completed_at?new Date(selected.completed_at).toLocaleString('th-TH'):'ยังไม่มีข้อมูล'}</b></div></div></div>
     <div className="detail-card wide-card"><h2>รายละเอียดคำสั่งมอบหมาย</h2><p style={{whiteSpace:'pre-wrap',margin:0}}>{selected.instructions||'ไม่มีรายละเอียดคำสั่งมอบหมาย'}</p>{deadline&&<div className="detail-list"style={{marginTop:14}}><div><span>กำหนดส่ง</span><b>{deadline.due_at?new Date(deadline.due_at).toLocaleString('th-TH'):'—'}</b></div><div><span>สถานะกำหนดส่ง</span><b>{deadline.status||'—'}</b></div><div><span>เสร็จตามกำหนดส่งเมื่อ</span><b>{deadline.completed_at?new Date(deadline.completed_at).toLocaleString('th-TH'):'ยังไม่มีข้อมูล'}</b></div></div>}</div>
     <div className="detail-card wide-card"><h2>ประวัติการดำเนินการของหนังสือ</h2>{detailLoading?<div className="empty">กำลังโหลดผลการปฏิบัติงาน…</div>:history.length===0?<div className="empty">ยังไม่มีประวัติการเปลี่ยนสถานะ</div>:<div className="detail-list">{history.map((h:any)=><div key={h.id}style={{display:'block'}}><b>{statusLabel[h.from_status]||h.from_status||'เริ่มต้น'} → {statusLabel[h.to_status]||h.to_status}</b><div style={{color:'#718395',fontSize:12,marginTop:4}}>{new Date(h.changed_at).toLocaleString('th-TH')} · {h.profiles?.full_name||'ผู้ใช้งาน'}</div>{h.reason&&<p style={{margin:'6px 0 0',whiteSpace:'pre-wrap'}}>{h.reason}</p>}</div>)}</div>}</div>
-    <div className="wide-card notice">ข้อมูลผลการปฏิบัติที่แสดงมาจากสถานะและประวัติที่บันทึกไว้ในระบบ ขณะนี้ยังไม่มีช่องรายงานข้อความผลการปฏิบัติแยกตามผู้รับมอบหมาย</div>
+    <div className="detail-card wide-card"><h2>รายงานผลจากผู้ได้รับมอบหมาย ({reports.length})</h2>{detailLoading?<div className="empty">กำลังโหลดรายงาน…</div>:reports.length===0?<div className="empty">ผู้ได้รับมอบหมายยังไม่ได้บันทึกรายงานผล</div>:<div className="detail-list">{reports.map((r:any)=><div key={r.id}style={{display:'block'}}><div style={{display:'flex',justifyContent:'space-between',gap:8,flexWrap:'wrap'}}><b>{r.profiles?.full_name||names[selected.assignee_id]||'ผู้ปฏิบัติงาน'} · {r.report_type==='completion'?'รายงานผลเสร็จสิ้น':'รายงานความคืบหน้า'} · {r.percent_complete}%</b><small>{new Date(r.created_at).toLocaleString('th-TH')}</small></div><p style={{whiteSpace:'pre-wrap',margin:'8px 0'}}>{r.result_summary}</p>{r.work_details&&<p style={{whiteSpace:'pre-wrap',margin:'6px 0'}}><b>รายละเอียด: </b>{r.work_details}</p>}{r.issues&&<p style={{whiteSpace:'pre-wrap',margin:'6px 0'}}><b>ปัญหา/อุปสรรค: </b>{r.issues}</p>}{r.next_steps&&<p style={{whiteSpace:'pre-wrap',margin:'6px 0'}}><b>ขั้นตอนถัดไป: </b>{r.next_steps}</p>}</div>)}</div>}</div>
    </div>
   </Modal>}
  </div>
