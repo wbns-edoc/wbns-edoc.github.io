@@ -24,6 +24,8 @@
 | Public constraints | 98 | 10 CHECK, 50 FOREIGN KEY, 27 PRIMARY KEY, 11 UNIQUE |
 | Columns export | 212 data rows หลังเอา repeated header rows ออก | export เดิมมี 2 header rows ปะปน ต้องยืนยัน object/type coverage ก่อนใช้เป็น authoritative snapshot |
 | Public ENUM types | 5 | ผู้ดูแลส่งผล SQL Editor แล้ว: approval_decision, assignment_status, document_status, document_type, urgency_level; ยังต้องตรวจ types อื่น เช่น domains/composite types และ dependencies |
+| Installed PostgreSQL extensions | 7 | จากผล SQL Editor: pg_stat_statements 1.11, pg_trgm 1.6, pgcrypto 1.3, uuid-ossp 1.1, pg_cron 1.6.4, plpgsql 1.0, supabase_vault 0.3.1; schemas ที่รายงานคือ extensions, pg_catalog และ vault |
+| Sequences ใน public/private | 0 แถวในผล query ที่ส่งมา | ไม่พบ sequences ที่ query นี้แสดงใน schema public/private; ยังต้องตรวจ sequences ใน schema อื่นและ identity/serial dependencies ก่อนสรุปว่าไม่มี sequences ที่ระบบต้องใช้ |
 
 ### ENUM values ที่ยืนยันจากผล SQL Editor
 
@@ -32,6 +34,13 @@
 - `document_status`: `draft, pending_approval, approved, received, registered, assigned, in_progress, completed, archived, sent, cancelled`
 - `document_type`: `incoming, outgoing`
 - `urgency_level`: `normal, urgent, very_urgent, critical`
+
+### Extension review notes
+
+- การติดตั้ง extension ใน Production ไม่ได้พิสูจน์ว่า extension ทุกตัวจำเป็นสำหรับ installer ของโรงเรียนใหม่
+- ต้องตรวจ dependencies ของ functions, jobs และ schema objects ก่อนตัดสินใจว่าต้องเปิดใช้ extension ใด
+- โดยเฉพาะ `pg_cron` และ `supabase_vault` ต้องตรวจว่าระบบเรียกใช้งานจริงหรือไม่ และแผน/สิทธิ์ของ Supabase project ใหม่รองรับหรือไม่
+- ห้ามนำ schema-specific settings หรือ secrets จาก Production ไปใส่ใน template
 
 ## ตารางที่สำรวจพบ
 
