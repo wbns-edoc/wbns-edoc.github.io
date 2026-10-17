@@ -349,7 +349,24 @@ function Tasks({profile,openDocument}:{profile:Profile|null;openDocument:(id:str
   setSaving(true);setFormError('');
   const payload={assignment_id:reportFor.id,created_by:profile.id,report_type:reportForm.report_type,percent_complete:Number(reportForm.percent_complete),result_summary:reportForm.result_summary.trim(),work_details:reportForm.work_details.trim()||null,issues:reportForm.issues.trim()||null,next_steps:reportForm.next_steps.trim()||null};
   const{data,error}=await supabase.from('document_assignment_reports').insert(payload).select('id,report_type,percent_complete,result_summary,work_details,issues,next_steps,created_at,updated_at').single();
-  if(error)setFormError(error.message);else{setReports(prev=>[data,...prev]);setReportForm({report_type:'progress',percent_complete:'0',result_summary:'',work_details:'',issues:'',next_steps:''})}
+  if(error){setFormError(error.message);setSaving(false);return}
+  setReports(prev=>[data,...prev]);
+  const isCompletion=reportForm.report_type==='completion'&&Number(reportForm.percent_complete)===100;
+  if(isCompletion){
+   const{data:updated,error:updateError}=await supabase.from('document_assignments').update({assignment_status:'completed',completed_at:new Date().toISOString()}).eq('id',reportFor.id).eq('assignee_id',profile.id).select('id,assignment_status,completed_at').maybeSingle();
+   if(updateError||!updated){
+    setFormError('บันทึกรายงานแล้ว แต่เปลี่ยนสถานะงานเป็นเสร็จแล้วไม่สำเร็จ กรุณากดรีเฟรชหรือติดต่อผู้ดูแลระบบ'+(updateError?': '+updateError.message:''));
+   }else{
+    await supabase.from('deadlines').update({status:'completed',completed_at:new Date().toISOString()}).eq('document_id',reportFor.documents?.id).eq('assigned_to',profile.id);
+    setReportFor((prev:any)=>prev?{...prev,assignment_status:'completed',completed_at:updated.completed_at}:prev);
+    setReportForm({report_type:'progress',percent_complete:'0',result_summary:'',work_details:'',issues:'',next_steps:''});
+    await load();
+    setFormError('บันทึกผลสำเร็จ และย้ายงานไปที่ “เสร็จแล้ว” เรียบร้อย');
+   }
+  }else{
+   setReportForm({report_type:'progress',percent_complete:'0',result_summary:'',work_details:'',issues:'',next_steps:''});
+   setFormError('บันทึกรายงานเรียบร้อยแล้ว');
+  }
   setSaving(false)
  }
  const statusText:any={assigned:'มอบหมายแล้ว',accepted:'รับทราบงานแล้ว',in_progress:'กำลังดำเนินการ',completed:'เสร็จสิ้น',cancelled:'ยกเลิก'};
