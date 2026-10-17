@@ -23,6 +23,15 @@
 | Public indexes | 86 | รายการ index definitions ถูกส่งมาเป็นข้อความครบตาม count ที่ตรวจไว้ |
 | Public constraints | 98 | 10 CHECK, 50 FOREIGN KEY, 27 PRIMARY KEY, 11 UNIQUE |
 | Columns export | 212 data rows หลังเอา repeated header rows ออก | export เดิมมี 2 header rows ปะปน ต้องยืนยัน object/type coverage ก่อนใช้เป็น authoritative snapshot |
+| Public ENUM types | 5 | ผู้ดูแลส่งผล SQL Editor แล้ว: approval_decision, assignment_status, document_status, document_type, urgency_level; ยังต้องตรวจ types อื่น เช่น domains/composite types และ dependencies |
+
+### ENUM values ที่ยืนยันจากผล SQL Editor
+
+- `approval_decision`: `pending, approved, rejected, returned`
+- `assignment_status`: `assigned, accepted, in_progress, completed, cancelled`
+- `document_status`: `draft, pending_approval, approved, received, registered, assigned, in_progress, completed, archived, sent, cancelled`
+- `document_type`: `incoming, outgoing`
+- `urgency_level`: `normal, urgent, very_urgent, critical`
 
 ## ตารางที่สำรวจพบ
 
@@ -88,4 +97,3 @@ Do not describe the system as ready to distribute or production-install until:
 - backup/restore is tested;
 - an independent pilot installer completes the guide;
 - school owner approves operational, privacy, retention, and cost constraints.
-
