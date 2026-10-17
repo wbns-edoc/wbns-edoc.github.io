@@ -25,7 +25,7 @@
 | Columns export | 212 data rows หลังเอา repeated header rows ออก | export เดิมมี 2 header rows ปะปน ต้องยืนยัน object/type coverage ก่อนใช้เป็น authoritative snapshot |
 | Public ENUM types | 5 | ผู้ดูแลส่งผล SQL Editor แล้ว: approval_decision, assignment_status, document_status, document_type, urgency_level; ยังต้องตรวจ types อื่น เช่น domains/composite types และ dependencies |
 | Installed PostgreSQL extensions | 7 | จากผล SQL Editor: pg_stat_statements 1.11, pg_trgm 1.6, pgcrypto 1.3, uuid-ossp 1.1, pg_cron 1.6.4, plpgsql 1.0, supabase_vault 0.3.1; schemas ที่รายงานคือ extensions, pg_catalog และ vault |
-| Sequences ใน public/private | 0 แถวในผล query ที่ส่งมา | ไม่พบ sequences ที่ query นี้แสดงใน schema public/private; ยังต้องตรวจ sequences ใน schema อื่นและ identity/serial dependencies ก่อนสรุปว่าไม่มี sequences ที่ระบบต้องใช้ |
+| Non-system sequences | 4 | ผล SQL Editor พบใน schema auth (refresh_tokens_id_seq), cron (jobid_seq, runid_seq) และ realtime (subscription_id_seq); ไม่พบใน public/private จาก query นี้ แต่ยังต้องตรวจ identity/serial dependencies |
 
 ### ENUM values ที่ยืนยันจากผล SQL Editor
 
@@ -53,6 +53,10 @@
 - departments
 - document_assignment_reports
 - document_assignments
+- document_files
+- document_registers
+- document_status_history
+- documents
 - document_files
 - document_registers
 - document_status_history
