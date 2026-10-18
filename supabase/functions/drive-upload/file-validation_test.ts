@@ -5,6 +5,12 @@ import {
   isValidFileRole,
 } from "./file-validation.ts";
 
+Deno.test("uses the agreed 20 MiB upload limit", () => {
+  if (MAX_UPLOAD_BYTES !== 20 * 1024 * 1024) {
+    throw new Error("expected MAX_UPLOAD_BYTES to be exactly 20 MiB");
+  }
+});
+
 Deno.test("accepts a normal Thai document filename within size limit", () => {
   if (validateUploadInput({ name: "หนังสือราชการ.pdf", size: 1024 }) !== null) {
     throw new Error("expected valid document filename to be accepted");
@@ -19,13 +25,13 @@ Deno.test("rejects empty or non-finite file sizes", () => {
   }
 });
 
-Deno.test("rejects files above the existing 25 MiB limit", () => {
+Deno.test("rejects files above the 20 MiB limit", () => {
   if (validateUploadInput({ name: "document.pdf", size: MAX_UPLOAD_BYTES + 1 }) !== "FILE_TOO_LARGE") {
     throw new Error("expected oversized file to be rejected");
   }
 });
 
-Deno.test("accepts a file exactly at the existing size limit", () => {
+Deno.test("accepts a file exactly at the 20 MiB limit", () => {
   if (validateUploadInput({ name: "document.pdf", size: MAX_UPLOAD_BYTES }) !== null) {
     throw new Error("expected size limit boundary to be accepted");
   }
