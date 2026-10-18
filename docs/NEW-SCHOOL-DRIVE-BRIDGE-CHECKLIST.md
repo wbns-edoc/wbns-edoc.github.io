@@ -40,6 +40,12 @@ The configured maximum individual file size is exactly **20 MiB = 20 × 1024 × 
 
 The Edge Function bridge request sends the file as base64 JSON, so request size is larger than the raw file. Do not set a request-body cap to 20 MiB and assume it can carry a 20 MiB file.
 
+Google's published Apps Script quotas list a 50 MB POST size for **UrlFetch outbound requests** and a six-minute execution runtime, but those figures do not establish the maximum inbound POST body accepted by a deployed Web App. Do not treat the UrlFetch POST quota as proof that the incoming Web App request will accept a 26.7+ MiB JSON payload. Confirm with a real test against the exact deployed Web App version and inspect Apps Script Executions for failures:
+- [Apps Script quotas](https://developers.google.com/apps-script/guides/services/quotas)
+- [Apps Script Web Apps request event fields](https://developers.google.com/apps-script/guides/web)
+
+For large files, also measure execution duration and memory-related failures. The Edge Function currently creates a Base64 string and JSON body, while the bridge parses JSON, holds the Base64 string, and decodes a byte array; peak memory use can be materially larger than the raw file size.
+
 ## Contract and security checks
 
 - Signed payload uses HMAC-SHA256 over JSON.stringify(payload without signature), encoded base64url without padding.
