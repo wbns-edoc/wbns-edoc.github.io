@@ -27,7 +27,12 @@ These are counts, not a complete schema definition. They do not capture all DDL,
 The repository file `supabase/migrations/20261007200000_foundation_schema_rbac_rls.sql` is a placeholder comment that points to the migration applied to the production project. It is not a reproducible migration. The isolated project `wbns-edoc-test` has no application tables or recorded migrations.
 
 ## Required recovery procedure
-1. Obtain a complete schema-only export from the authoritative database using a trusted PostgreSQL/Supabase export path with appropriate owner access. If no export capability is available, assemble DDL from catalog metadata and review it against the migration history; do not infer missing constraints or function bodies.
+1. Obtain a complete schema-only export from the authoritative database using a trusted PostgreSQL/Supabase export path with appropriate owner access. A project owner can use the Supabase CLI on their own trusted machine after linking the correct Production project, for example:
+   ```powershell
+   supabase link --project-ref <PRODUCTION_PROJECT_REF>
+   supabase db dump --linked --schema public,private --file schema-recovery.sql
+   ```
+   Run this only in an approved local workspace; authenticate locally and do not paste database passwords, access tokens, or connection strings into chat or GitHub. Review CLI help for the installed version and include any app-owned schemas needed by the application. The export must be schema-only; do not use a full data dump. If owner access/CLI is unavailable, assemble DDL from catalog metadata and review it against migration history; do not infer missing constraints or function bodies.
 2. Review the export for secrets, real row data, production-only URLs, and environment-specific IDs; remove them before committing.
 3. Include required extensions, enum types, tables, constraints, indexes, sequences, views, functions, triggers, grants, and RLS policies in dependency order. Review storage policies separately.
 4. Apply the reviewed schema to `wbns-edoc-test` only, then compare its catalog to the source inventory and run schema/security tests.
