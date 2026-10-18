@@ -29,13 +29,23 @@ For the school's own Supabase project, configure:
 
 Also verify the Supabase URL and required public/server keys are supplied by the project's deployment environment. Do not copy keys from another school's project.
 
-## Contract and limits to verify
+## Upload size contract — 20 MiB per file
+
+The configured maximum individual file size is exactly **20 MiB = 20 × 1024 × 1024 = 20,971,520 bytes**. Keep every application-level check aligned to that value:
+
+- Frontend/file validation and the `drive-upload` Edge Function: `20 * 1024 * 1024` bytes.
+- Apps Script `MAX_FILE_BYTES`: `20 * 1024 * 1024` bytes.
+- Apps Script `MAX_REQUEST_BODY_CHARS`: at least `32 * 1024 * 1024` characters, because base64 expands a 20 MiB file to about 26.7 MiB before JSON overhead.
+- Any request-body, proxy, gateway, or deployment limit in the path must accept the encoded request (not merely a 20 MiB raw file). Verify this with an end-to-end 20 MiB test; a lower upstream cap means the requirement is not yet met.
+
+The Edge Function bridge request sends the file as base64 JSON, so request size is larger than the raw file. Do not set a request-body cap to 20 MiB and assume it can carry a 20 MiB file.
+
+## Contract and security checks
 
 - Signed payload uses HMAC-SHA256 over JSON.stringify(payload without signature), encoded base64url without padding.
 - Payload fields and insertion order must match the Apps Script verifier.
 - Requests require a recent integer timestamp and a UUID requestId.
-- Bridge currently supports `health`, `upload`, and `delete`.
-- Upload limit in the provided Apps Script code is 20 MiB, but the request-body limit is 15 MiB and the current Edge Function enforces a 10 MiB bridge limit. Treat 10 MiB as the effective application limit until the limits are intentionally reconciled and tested.
+- Bridge supports `health`, `upload`, and `delete`.
 - `delete` checks that the Drive file has the configured folder as a parent, then calls `setTrashed(true)`. This moves the file to Drive Trash; it is not a hard-delete operation.
 - CacheService replay prevention is best-effort and is not a durable idempotency store.
 
@@ -44,8 +54,11 @@ Also verify the Supabase URL and required public/server keys are supplied by the
 - [ ] Health action returns the expected school Drive folder.
 - [ ] Upload a small test PDF and verify metadata and attachment records.
 - [ ] Upload a supported image and office document; verify the UI can open them.
+- [ ] Upload a file of exactly 20,971,520 bytes successfully.
+- [ ] Reject a file of 20,971,521 bytes and confirm the error reports `max_bytes: 20971520`.
+- [ ] Verify a 20 MiB file succeeds through the complete browser → Edge Function → Apps Script → Drive path, including encoded request-body limits.
 - [ ] Reject an invalid signature, expired timestamp, malformed request ID, and replayed request.
-- [ ] Reject files over the effective size limit and invalid filenames.
+- [ ] Reject invalid filenames.
 - [ ] Reject deletion of a file outside the configured folder.
 - [ ] Verify a file shared by multiple document records is retained when one document is deleted.
 - [ ] Simulate Bridge failure and database finalization failure; confirm reconciliation instructions and retry behavior.
