@@ -7,7 +7,8 @@ export function getUploadErrorMessage(code: unknown): string {
     case "INVALID_FILE_NAME":
       return "ชื่อไฟล์ไม่ถูกต้อง กรุณาตรวจสอบชื่อไฟล์และลองใหม่";
     case "FILE_TOO_LARGE":
-      return "ไฟล์มีขนาดเกิน 25 MiB";
+    case "FILE_TOO_LARGE_FOR_DRIVE_BRIDGE":
+      return "ไฟล์มีขนาดเกิน 20 MiB (20,971,520 ไบต์)";
     case "EMPTY_FILE":
       return "ไฟล์ว่างเปล่า กรุณาเลือกไฟล์ใหม่";
     case "AUTH_REQUIRED":
