@@ -1,9 +1,8 @@
 /**
- * Input validation that does not assume a school-specific document format allowlist.
- * File content type and extension are intentionally not restricted until accepted formats
- * are confirmed with the school; this helper only enforces safe transport-level bounds.
+ * Transport-level upload validation shared by the Drive upload Edge Function.
+ * The configured maximum individual file size is 20 MiB (20 * 1024 * 1024 bytes).
  */
-export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 export const MAX_FILENAME_CODE_POINTS = 255;
 
 export type UploadValidationCode =
@@ -11,26 +10,13 @@ export type UploadValidationCode =
   | "FILE_TOO_LARGE"
   | "INVALID_FILE_NAME";
 
-export function validateUploadInput(
-  file: { name: string; size: number },
-): UploadValidationCode | null {
+export function validateUploadInput(file: { name: string; size: number }): UploadValidationCode | null {
   if (!Number.isFinite(file.size) || file.size <= 0) return "EMPTY_FILE";
   if (file.size > MAX_UPLOAD_BYTES) return "FILE_TOO_LARGE";
-
   const name = file.name;
-  if (
-    typeof name !== "string" ||
-    name.trim().length === 0 ||
-    [...name].length > MAX_FILENAME_CODE_POINTS ||
-    /[\u0000-\u001f\u007f]/u.test(name) ||
-    name.includes("/") ||
-    name.includes("\\")
-  ) {
-    return "INVALID_FILE_NAME";
-  }
+  if (typeof name !== "string" || name.trim().length === 0 || [...name].length > MAX_FILENAME_CODE_POINTS || /[\u0000-\u001f\u007f]/u.test(name) || name.includes("/") || name.includes("\\")) return "INVALID_FILE_NAME";
   return null;
 }
-
 
 /** Allowed attachment roles: a single main file, a cover letter, or a uniquely identified supporting attachment. */
 export function isValidFileRole(role: unknown): role is string {
