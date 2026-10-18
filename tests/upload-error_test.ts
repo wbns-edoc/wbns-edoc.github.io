@@ -9,7 +9,8 @@ Deno.test("maps filename validation errors to Thai guidance", () => {
 });
 
 Deno.test("maps oversized and empty uploads to Thai guidance", () => {
-  assertEquals(getUploadErrorMessage("FILE_TOO_LARGE"), "ไฟล์มีขนาดเกิน 25 MiB");
+  assertEquals(getUploadErrorMessage("FILE_TOO_LARGE"), "ไฟล์มีขนาดเกิน 20 MiB (20,971,520 ไบต์)");
+  assertEquals(getUploadErrorMessage("FILE_TOO_LARGE_FOR_DRIVE_BRIDGE"), "ไฟล์มีขนาดเกิน 20 MiB (20,971,520 ไบต์)");
   assertEquals(getUploadErrorMessage("EMPTY_FILE"), "ไฟล์ว่างเปล่า กรุณาเลือกไฟล์ใหม่");
 });
 
