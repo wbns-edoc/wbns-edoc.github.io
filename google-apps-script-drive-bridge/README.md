@@ -1,6 +1,6 @@
 # Google Apps Script Drive bridge (WBNS e-Document)
 
-This is a server-side bridge prototype for writing files to the school-owned Google Drive as the Apps Script owner. It is **not production-ready** until live end-to-end security tests succeed.
+This is a server-side bridge prototype for writing files to the school-owned Google Drive as the Apps Script owner. It is **not production-ready** until live end-to-end security and size-limit tests succeed.
 
 ## Setup
 
@@ -30,7 +30,9 @@ This is a server-side bridge prototype for writing files to the school-owned Goo
 
 ## Limits and safety
 
-- This prototype caps raw file bytes at 10 MiB because JSON/base64 transport increases payload size and Apps Script web-app request limits vary. It is not compatible with a 25 MiB Edge Function limit until a different transport is designed and tested.
+- The current branch configures a **20 MiB (20,971,520 byte) per-file limit** in both the Edge Function and `Code.gs`. This is a source-level limit only; it does **not** prove that Apps Script or its web-app transport accepts the Base64-encoded request at this size. A 20 MiB file becomes roughly 26.67 MiB before JSON overhead.
+- The Apps Script handler checks `MAX_REQUEST_BODY_CHARS` only after the request reaches `doPost`; it cannot raise a Google platform request-size limit. Do not advertise 20 MiB as supported until a real 20 MiB upload succeeds through the complete browser → Edge Function → Apps Script → Drive path in an isolated test destination.
+- Required boundary test: 20 MiB must upload and verify byte size, Drive object, metadata row, and document attachment; 20 MiB + 1 byte must be rejected with `max_bytes: 20971520` before a Drive object is created.
 - Google Apps Script execution quotas and Drive quotas still apply.
 - HMAC authentication does not replace Supabase user JWT validation and document permission checks. Those must remain in the Edge Function before any bridge call.
 - The `permanent-delete-incoming` Edge Function may permanently remove database records only after all required Drive files are confirmed moved to Trash. Its response must say `drive_files_moved_to_trash`, not claim that the Drive files were permanently erased. Partial failures must preserve database records for reconciliation.
