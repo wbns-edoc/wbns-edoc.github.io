@@ -3,7 +3,7 @@
  * File content type and extension are intentionally not restricted until accepted formats
  * are confirmed with the school; this helper only enforces safe transport-level bounds.
  */
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = 20 * 1024 * 1024;
 export const MAX_FILENAME_CODE_POINTS = 255;
 
 export type UploadValidationCode =
