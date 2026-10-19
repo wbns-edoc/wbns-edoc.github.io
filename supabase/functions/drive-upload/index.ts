@@ -13,7 +13,7 @@ function out(data: unknown, status = 200) {
     "Access-Control-Allow-Methods": "POST, OPTIONS"
   }});
 }
-const BRIDGE_MAX_FILE_BYTES = 10 * 1024 * 1024;
+const BRIDGE_MAX_FILE_BYTES = 20 * 1024 * 1024;
 function base64Url(bytes: Uint8Array): string {
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
