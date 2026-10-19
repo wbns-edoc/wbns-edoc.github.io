@@ -9,7 +9,8 @@ Deno.test("maps filename validation errors to Thai guidance", () => {
 });
 
 Deno.test("maps oversized and empty uploads to Thai guidance", () => {
-  assertEquals(getUploadErrorMessage("FILE_TOO_LARGE"), "ไฟล์มีขนาดเกิน 25 MiB");
+  assertEquals(getUploadErrorMessage("FILE_TOO_LARGE"), "ไฟล์มีขนาดเกิน 20 MiB");
+  assertEquals(getUploadErrorMessage("FILE_TOO_LARGE_FOR_DRIVE_BRIDGE"), "ไฟล์มีขนาดเกิน 20 MiB");
   assertEquals(getUploadErrorMessage("EMPTY_FILE"), "ไฟล์ว่างเปล่า กรุณาเลือกไฟล์ใหม่");
 });
 
@@ -21,6 +22,10 @@ Deno.test("maps expired sessions and permission denials", () => {
 Deno.test("maps missing server configuration to actionable guidance", () => {
   assertEquals(
     getUploadErrorMessage("GOOGLE_DRIVE_CONFIGURATION_MISSING"),
+    "ระบบจัดเก็บไฟล์ยังตั้งค่าไม่ครบ กรุณาติดต่อผู้ดูแลระบบ",
+  );
+  assertEquals(
+    getUploadErrorMessage("APPS_SCRIPT_BRIDGE_CONFIGURATION_MISSING"),
     "ระบบจัดเก็บไฟล์ยังตั้งค่าไม่ครบ กรุณาติดต่อผู้ดูแลระบบ",
   );
 });
@@ -52,4 +57,9 @@ Deno.test("maps server-side Drive and metadata failures to Thai guidance", () =>
     getUploadErrorMessage("FILE_METADATA_SAVE_FAILED"),
     "จัดเก็บไฟล์แล้วแต่เชื่อมโยงกับเอกสารไม่สำเร็จ ระบบอาจต้องตรวจสอบก่อนลองใหม่",
   );
+});
+
+Deno.test("maps Apps Script bridge transport failures to the Drive upload guidance", () => {
+  assertEquals(getUploadErrorMessage("APPS_SCRIPT_BRIDGE_HTTP_FAILED"), "ส่งไฟล์ไปยัง Google Drive ไม่สำเร็จ กรุณาลองใหม่");
+  assertEquals(getUploadErrorMessage("APPS_SCRIPT_BRIDGE_OPERATION_FAILED"), "ส่งไฟล์ไปยัง Google Drive ไม่สำเร็จ กรุณาลองใหม่");
 });
