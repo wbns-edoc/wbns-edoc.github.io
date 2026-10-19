@@ -19,13 +19,26 @@ Deno.test("rejects empty or non-finite file sizes", () => {
   }
 });
 
-Deno.test("rejects files above the existing 25 MiB limit", () => {
+Deno.test("uses an exact 20 MiB upload boundary and rejects one byte over", () => {
+  const twentyMiB = 20 * 1024 * 1024;
+  if (MAX_UPLOAD_BYTES !== twentyMiB) {
+    throw new Error(`expected MAX_UPLOAD_BYTES=${twentyMiB}, got ${MAX_UPLOAD_BYTES}`);
+  }
+  if (validateUploadInput({ name: "boundary.pdf", size: twentyMiB }) !== null) {
+    throw new Error("expected exactly 20 MiB to be accepted");
+  }
+  if (validateUploadInput({ name: "too-large.pdf", size: twentyMiB + 1 }) !== "FILE_TOO_LARGE") {
+    throw new Error("expected 20 MiB + 1 byte to be rejected");
+  }
+});
+
+Deno.test("rejects files above the 20 MiB limit", () => {
   if (validateUploadInput({ name: "document.pdf", size: MAX_UPLOAD_BYTES + 1 }) !== "FILE_TOO_LARGE") {
     throw new Error("expected oversized file to be rejected");
   }
 });
 
-Deno.test("accepts a file exactly at the existing size limit", () => {
+Deno.test("accepts a file exactly at the 20 MiB size limit", () => {
   if (validateUploadInput({ name: "document.pdf", size: MAX_UPLOAD_BYTES }) !== null) {
     throw new Error("expected size limit boundary to be accepted");
   }
