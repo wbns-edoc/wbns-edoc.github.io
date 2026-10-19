@@ -166,6 +166,31 @@ test("uploads a small file into the configured folder", () => {
   assert.equal(bridge.files.size, 1);
 });
 
+test("accepts a file exactly at the 20 MiB boundary", () => {
+  const bridge = makeBridge();
+  const bytes = Buffer.alloc(20 * 1024 * 1024, 0x5a);
+  const result = bridge.call(request("upload", {
+    filename: "boundary-20mib.bin",
+    mimeType: "application/octet-stream",
+    contentBase64: bytes.toString("base64"),
+  }));
+  assert.equal(result.ok, true);
+  assert.equal(result.size_bytes, 20 * 1024 * 1024);
+  assert.equal(bridge.files.size, 1);
+});
+
+test("rejects a file one byte over the 20 MiB boundary without creating a Drive object", () => {
+  const bridge = makeBridge();
+  const bytes = Buffer.alloc(20 * 1024 * 1024 + 1, 0x5a);
+  const result = bridge.call(request("upload", {
+    filename: "boundary-20mib-plus-one.bin",
+    mimeType: "application/octet-stream",
+    contentBase64: bytes.toString("base64"),
+  }));
+  assert.deepEqual(result, { ok: false, code: "FILE_SIZE_LIMIT" });
+  assert.equal(bridge.files.size, 0);
+});
+
 test("rejects malformed filenames", () => {
   const bridge = makeBridge();
   const result = bridge.call(request("upload", {
