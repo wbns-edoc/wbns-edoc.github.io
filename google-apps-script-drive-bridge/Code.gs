@@ -15,8 +15,8 @@
  * encoded as base64url without padding.
  */
 const MAX_CLOCK_SKEW_SECONDS = 300;
-const MAX_FILE_BYTES = 10 * 1024 * 1024;
-const MAX_REQUEST_BODY_CHARS = 15 * 1024 * 1024;
+const MAX_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_REQUEST_BODY_CHARS = 32 * 1024 * 1024;
 const REPLAY_TTL_SECONDS = 600;
 
 function doPost(e) {
