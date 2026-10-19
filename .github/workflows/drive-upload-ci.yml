@@ -1,4 +1,5 @@
 name: Drive Upload CI
+# Apps Script bridge security tests run against the pull-request merge ref.
 on:
   pull_request:
     paths:
@@ -6,6 +7,9 @@ on:
       - "src/upload-error.ts"
       - "src/upload-refresh.ts"
       - "tests/upload-error_test.ts"
+      - "tests/drive-bridge_test.cjs"
+      - "google-apps-script-drive-bridge/**"
+      - "supabase/functions/drive-health/**"
       - "supabase/functions/drive-upload/**"
       - "supabase/functions/permanent-delete-incoming/**"
       - "supabase/functions/user-import/**"
@@ -15,8 +19,12 @@ on:
   push:
     branches:
       - fix/drive-upload-metadata-atomicity-2026-10-09
+      - feat/drive-upload-apps-script-bridge
     paths:
       - "src/main.tsx"
+      - "tests/drive-bridge_test.cjs"
+      - "google-apps-script-drive-bridge/**"
+      - "supabase/functions/drive-health/**"
       - "supabase/functions/drive-upload/**"
       - "supabase/functions/permanent-delete-incoming/**"
       - "supabase/functions/user-import/**"
@@ -36,12 +44,15 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Require JWT verification for Drive upload and permanent delete
+      - name: Test Apps Script Drive bridge protocol and folder safety
+        run: node --test tests/drive-bridge_test.cjs
+      - name: Require JWT verification for Drive health, upload, and permanent delete
         run: |
+          grep -F -A1 '[functions.drive-health]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
           grep -F -A1 '[functions.drive-upload]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
           grep -F -A1 '[functions.permanent-delete-incoming]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
       - name: Prevent server secrets in frontend source
-        run: "! grep -R -n -E 'SUPABASE_SERVICE_ROLE_KEY|GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON' src"
+        run: "! grep -R -n -E 'SUPABASE_SERVICE_ROLE_KEY|GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON|GOOGLE_APPS_SCRIPT_BRIDGE_SECRET' src"
       - name: Install frontend dependencies
         run: npm install
       - name: Build frontend with isolated non-production configuration
@@ -58,6 +69,8 @@ jobs:
         run: deno test supabase/functions/drive-upload/cleanup-policy_test.ts
       - name: Run upload input validation unit tests
         run: deno test supabase/functions/drive-upload/file-validation_test.ts
+      - name: Type-check Drive health Edge Function
+        run: deno check --node-modules-dir=auto supabase/functions/drive-health/index.ts
       - name: Type-check Drive upload Edge Function
         run: deno check --node-modules-dir=auto supabase/functions/drive-upload/index.ts
       - name: Type-check permanent delete Edge Function
