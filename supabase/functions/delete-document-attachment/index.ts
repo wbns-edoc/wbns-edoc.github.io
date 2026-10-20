@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
 
   // Read through the caller's RLS policies first: inaccessible attachments cannot be targeted.
   const { data: attachment, error: attachmentError } = await user.from("document_files")
-    .select("id,document_id,google_drive_file_id,documents(id),google_drive_files(id,drive_file_id,name)")
+    .select("*,documents(id),google_drive_files(id,drive_file_id,name)")
     .eq("id", attachmentId).maybeSingle();
   if (attachmentError || !attachment) return out({ ok: false, code: "ATTACHMENT_NOT_FOUND_OR_NOT_ACCESSIBLE" }, 404);
   const meta = Array.isArray(attachment.google_drive_files) ? attachment.google_drive_files[0] : attachment.google_drive_files;
@@ -75,17 +75,27 @@ Deno.serve(async (req) => {
     return out({ ok: false, code: "SHARED_FILE_DELETE_BLOCKED", message: "ไฟล์นี้ถูกอ้างอิงโดยรายการอื่น จึงไม่ลบไฟล์ต้นฉบับเพื่อป้องกันข้อมูลสูญหาย" }, 409);
   }
 
-  try { await trashDriveFile(meta.drive_file_id); }
-  catch (e) {
-    console.error("Attachment Drive trash failed", e);
-    return out({ ok: false, code: "DRIVE_TRASH_FAILED", message: "ย้ายไฟล์ไปถังขยะ Google Drive ไม่สำเร็จ จึงยังไม่ลบข้อมูลแนบ" }, 502);
+  // Detach the database reference first. If Drive trashing fails, restore the
+  // exact attachment row so the UI does not lose a still-existing Drive file.
+  const { data: detachedRows, error: detachError } = await admin.from("document_files")
+    .delete().eq("id", attachmentId).select("*");
+  if (detachError || !detachedRows || detachedRows.length !== 1) {
+    console.error("Attachment record detach failed", detachError?.message || "row count mismatch");
+    return out({ ok: false, code: "ATTACHMENT_RECORD_DELETE_FAILED", message: "ลบข้อมูลไฟล์แนบไม่สำเร็จ จึงยังไม่ย้ายไฟล์ใน Google Drive" }, 500);
   }
 
-  const { error: detachError } = await admin.from("document_files").delete().eq("id", attachmentId);
-  if (detachError) {
-    console.error("Attachment metadata detach failed after Drive trash", detachError.message);
-    return out({ ok: false, code: "ATTACHMENT_RECORD_DELETE_FAILED", message: "ไฟล์ถูกย้ายไปถังขยะแล้ว แต่ลบข้อมูลแนบไม่สำเร็จ กรุณาแจ้งผู้ดูแลระบบ" }, 500);
+  try {
+    await trashDriveFile(meta.drive_file_id);
+  } catch (e) {
+    console.error("Attachment Drive trash failed; attempting to restore DB reference", e);
+    const { error: restoreError } = await admin.from("document_files").insert(detachedRows[0]);
+    if (restoreError) {
+      console.error("CRITICAL: attachment row restoration failed", restoreError.message);
+      return out({ ok: false, code: "RESTORE_FAILED", message: "ย้ายไฟล์ไปถังขยะไม่สำเร็จ และกู้คืนข้อมูลแนบอัตโนมัติไม่สำเร็จ กรุณาให้ผู้ดูแลระบบตรวจสอบทันที" }, 500);
+    }
+    return out({ ok: false, code: "DRIVE_TRASH_FAILED", message: "ย้ายไฟล์ไปถังขยะ Google Drive ไม่สำเร็จ ระบบคืนข้อมูลไฟล์แนบแล้ว" }, 502);
   }
+
   const { error: metadataDeleteError } = await admin.from("google_drive_files").delete().eq("id", meta.id);
   if (metadataDeleteError) console.error("Orphaned Drive metadata cleanup required", metadataDeleteError.message);
   return out({ ok: true, attachment_id: attachmentId, drive_file_trashed: true, metadata_cleanup_pending: Boolean(metadataDeleteError) });
