@@ -75,25 +75,23 @@ Deno.serve(async (req) => {
     return out({ ok: false, code: "SHARED_FILE_DELETE_BLOCKED", message: "ไฟล์นี้ถูกอ้างอิงโดยรายการอื่น จึงไม่ลบไฟล์ต้นฉบับเพื่อป้องกันข้อมูลสูญหาย" }, 409);
   }
 
-  // Detach the database reference first. If Drive trashing fails, restore the
-  // exact attachment row so the UI does not lose a still-existing Drive file.
-  const { data: detachedRows, error: detachError } = await admin.from("document_files")
-    .delete().eq("id", attachmentId).select("*");
-  if (detachError || !detachedRows || detachedRows.length !== 1) {
-    console.error("Attachment record detach failed", detachError?.message || "row count mismatch");
-    return out({ ok: false, code: "ATTACHMENT_RECORD_DELETE_FAILED", message: "ลบข้อมูลไฟล์แนบไม่สำเร็จ จึงยังไม่ย้ายไฟล์ใน Google Drive" }, 500);
-  }
-
+  // Trash Drive first. A timeout can leave the outcome uncertain; in that case,
+  // keep the DB attachment row intact so the record remains visible for admin repair.
+  // This avoids silently detaching a file when Drive did not confirm the operation.
   try {
     await trashDriveFile(meta.drive_file_id);
   } catch (e) {
-    console.error("Attachment Drive trash failed; attempting to restore DB reference", e);
-    const { error: restoreError } = await admin.from("document_files").insert(detachedRows[0]);
-    if (restoreError) {
-      console.error("CRITICAL: attachment row restoration failed", restoreError.message);
-      return out({ ok: false, code: "RESTORE_FAILED", message: "ย้ายไฟล์ไปถังขยะไม่สำเร็จ และกู้คืนข้อมูลแนบอัตโนมัติไม่สำเร็จ กรุณาให้ผู้ดูแลระบบตรวจสอบทันที" }, 500);
-    }
-    return out({ ok: false, code: "DRIVE_TRASH_FAILED", message: "ย้ายไฟล์ไปถังขยะ Google Drive ไม่สำเร็จ ระบบคืนข้อมูลไฟล์แนบแล้ว" }, 502);
+    console.error("Attachment Drive trash failed or outcome uncertain; DB reference preserved", e);
+    return out({ ok: false, code: "DRIVE_TRASH_FAILED_OR_UNCERTAIN", message: "Google Drive ยังไม่ยืนยันการย้ายไฟล์ไปถังขยะ ระบบคงข้อมูลไฟล์แนบไว้เพื่อให้ตรวจสอบได้ กรุณาตรวจสอบ Drive ก่อนลองใหม่" }, 502);
+  }
+
+  // Only detach after Drive confirms the exact file was trashed. If this DB step
+  // fails, the row remains visible and can be reconciled by an administrator.
+  const { data: detachedRows, error: detachError } = await admin.from("document_files")
+    .delete().eq("id", attachmentId).select("*");
+  if (detachError || !detachedRows || detachedRows.length !== 1) {
+    console.error("CRITICAL: Drive file was trashed but attachment row cleanup failed", detachError?.message || "row count mismatch");
+    return out({ ok: false, code: "DRIVE_TRASHED_DB_CLEANUP_FAILED", message: "ย้ายไฟล์ไปถังขยะแล้ว แต่ลบข้อมูลอ้างอิงในระบบไม่สำเร็จ กรุณาให้ผู้ดูแลระบบตรวจสอบรายการนี้" }, 500);
   }
 
   const { error: metadataDeleteError } = await admin.from("google_drive_files").delete().eq("id", meta.id);
