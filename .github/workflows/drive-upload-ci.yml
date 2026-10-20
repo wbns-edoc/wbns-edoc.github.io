@@ -9,6 +9,7 @@ on:
       - "supabase/functions/drive-upload/**"
       - "supabase/functions/permanent-delete-incoming/**"
       - "supabase/functions/user-import/**"
+      - "supabase/functions/delete-document-attachment/**"
       - "supabase/config.toml"
       - ".github/workflows/drive-upload-ci.yml"
       - "package.json"
@@ -40,6 +41,7 @@ jobs:
         run: |
           grep -F -A1 '[functions.drive-upload]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
           grep -F -A1 '[functions.permanent-delete-incoming]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
+          grep -F -A1 '[functions.delete-document-attachment]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
       - name: Prevent server secrets in frontend source
         run: "! grep -R -n -E 'SUPABASE_SERVICE_ROLE_KEY|GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON' src"
       - name: Install frontend dependencies
@@ -70,3 +72,5 @@ jobs:
         run: deno test supabase/functions/user-import/import-row-normalization_test.ts
       - name: Type-check user-import Edge Function
         run: deno check --node-modules-dir=auto supabase/functions/user-import/index.ts
+      - name: Type-check attachment deletion Edge Function
+        run: deno check --node-modules-dir=auto supabase/functions/delete-document-attachment/index.ts
