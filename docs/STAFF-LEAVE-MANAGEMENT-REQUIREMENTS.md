@@ -13,7 +13,22 @@ Support all school personnel categories, including:
 Rules and entitlements must be separated by personnel category. The same leave type must not imply identical entitlement across categories unless HR explicitly confirms that policy.
 
 ## Source document and evidence boundary
-The supplied 33-page PDF is titled **คู่มือการปฏิบัติงาน เกี่ยวกับการลาประเภทต่าง ๆ ของข้าราชการ**, published by ศูนย์เทคโนโลยีสารสนเทศและการสื่อสาร สำนักงานปลัดกระทรวงศึกษาธิการ (cover text). It is a scanned/image PDF and its text was not machine-readable in the initial extraction. Therefore:
+The supplied 33-page PDF is titled **คู่มือการปฏิบัติงาน เกี่ยวกับการลาประเภทต่าง ๆ ของข้าราชการ**, published by ศูนย์เทคโนโลยีสารสนเทศและการสื่อสาร สำนักงานปลัดกระทรวงศึกษาธิการ (cover text). The table of contents on printed page 1 (PDF page 3) lists these topics:
+1. การลาป่วย
+2. การลาคลอดบุตร
+3. การลาไปช่วยเหลือภริยาที่คลอดบุตร
+4. การลากิจส่วนตัว
+5. การลาพักผ่อน
+6. การลาอุปสมบทหรือลาไปประกอบพิธีฮัจย์
+7. การลาเข้ารับการตรวจเลือกหรือเข้ารับการเตรียมพล
+8. การลาไปศึกษา ฝึกอบรม ปฏิบัติการวิจัย หรือดูงาน
+9. การลาไปปฏิบัติงานในองค์การระหว่างประเทศ
+10. การลาติดตามคู่สมรส
+11. การลาไปฟื้นฟูสมรรถภาพด้านอาชีพ
+
+The table of contents also lists corresponding forms in the appendix, including leave forms and a cancellation-of-leave form. These titles are transcribed from the visible table of contents; they are not yet a complete transcription of eligibility rules or day limits.
+
+The PDF is a scanned/image document and its text was not machine-readable in the initial extraction. Therefore:
 - Treat it as a reference for civil-servant leave only after page-by-page review.
 - Do not silently apply civil-servant rules to contract teachers or government employees.
 - Do not encode day limits, eligibility, documents, approval routes, or legal citations until verified from the source and/or an explicitly approved school HR policy.
