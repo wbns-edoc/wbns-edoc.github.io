@@ -102,3 +102,32 @@ The civil-servant guide alone is not sufficient evidence for the entitlements of
 - Leave attachments and reasons are private by default.
 - Test results cover all categories and key workflow transitions before release.
 - Production rollout has a tested rollback/recovery plan.
+
+
+## 6. Required event notifications (confirmed by school owner)
+The system must generate notifications for:
+- A new leave application being submitted.
+- Approval/rejection and each workflow handoff (including when the deputy director's review reaches the director for final decision).
+- A leave cancellation request and its accepted/rejected outcome.
+- A leave period that has ended without a recorded return or approved extension; label this as an overdue-return review alert, not an automatic misconduct finding.
+
+Notify the applicant and the authorized people responsible for the next action. Use in-app notifications as the baseline, with email/web push as optional channels. Notification delivery must be retryable and idempotent; record delivery status and failures. Keep medical, family, and other sensitive details out of push/email previews. Opening a notification must re-check authorization on the server.
+
+Ordinary cancellation must meet the previously confirmed cutoff of at least one calendar day before the leave start date in Asia/Bangkok. Late cancellation must be routed through an authorized exception process with a recorded reason and audit trail; do not silently bypass the cutoff.
+
+## 7. Director and deputy-director dashboards (confirmed by school owner)
+Provide role-authorized dashboards for the school director and deputy director with:
+- Counts by workflow status, including awaiting deputy review, awaiting director decision, approved, rejected, cancelled, and late-cancellation exceptions.
+- Leave usage trends by month/term/year, leave type, personnel category, and organizational group.
+- Staff currently on leave, expected returns, overdue-return alerts, and approved extensions.
+- Review/approval turnaround times and data-quality alerts for missing or unverified policy mappings.
+- Filters for period, status, leave type, personnel category, and organizational group.
+
+Every chart must define whether it counts requests, calendar days, working days, or person-days. Aggregates and drill-downs must enforce the same authorization and privacy rules as the underlying requests. A dashboard role does not grant unrestricted access to sensitive reasons or attachments. An overdue-return alert is a prompt for authorized review, not a disciplinary conclusion.
+
+## 8. Policy-based day counting (mandatory)
+Calculate leave days only from the verified, effective policy version for the applicant's personnel category, leave type, and relevant dates. The policy catalogue must explicitly state the counting basis and treatment of weekends, official holidays, partial days, date boundaries, and policy-version transitions. Store the calculated result with the policy version and calculation details used at decision time.
+
+Use a single server-side calculation path and Asia/Bangkok date semantics. Do not infer entitlement days from a chart, an old request, or a different personnel category. If the governing policy is missing, ambiguous, or not verified, stop automatic calculation and route the request for authorized HR review. Keep approved leave-day totals distinct from elapsed absence/overdue-return days.
+
+The supplied BICT/MOE manual concerns civil-servant leave; do not automatically apply its rules to contract teachers or government employees. For civil-servant teachers, verify applicable authority against current official circulars, including OTEPC ว 14/2568 dated 3 April 2025, and retain source/page/version references for every configured rule.
