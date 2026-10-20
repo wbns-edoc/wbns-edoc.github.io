@@ -10,7 +10,7 @@ Support all school personnel categories, including:
 - Government employees (พนักงานราชการ)
 - Additional categories configurable by the school, rather than hard-coded.
 
-Rules and entitlements must be separated by personnel category. The same leave type must not imply identical entitlement across categories unless HR explicitly confirms that policy.
+**School-wide policy decision (confirmed by school owner):** all personnel at Wat Bueng Nam Sai School use the same leave rules. Do not vary entitlements or day-counting by personnel category in the application. Maintain one shared policy catalogue/version for all staff. Personnel category may be retained as reporting metadata only. The actual rules and day limits still need to be verified against the approved source; this decision does not invent or override legal requirements.
 
 ## Source document and evidence boundary
 The supplied 33-page PDF is titled **คู่มือการปฏิบัติงาน เกี่ยวกับการลาประเภทต่าง ๆ ของข้าราชการ**, published by ศูนย์เทคโนโลยีสารสนเทศและการสื่อสาร สำนักงานปลัดกระทรวงศึกษาธิการ (cover text). The table of contents on printed page 1 (PDF page 3) lists these topics:
@@ -30,8 +30,8 @@ The table of contents also lists corresponding forms in the appendix, including 
 
 The PDF is a scanned/image document and its text was not machine-readable in the initial extraction. Therefore:
 - Treat it as a reference for civil-servant leave only after page-by-page review.
-- Do not silently apply civil-servant rules to contract teachers or government employees.
-- Do not encode day limits, eligibility, documents, approval routes, or legal citations until verified from the source and/or an explicitly approved school HR policy.
+- The school owner has directed that the same school-wide leave rules apply to every staff member. Configure one common rule set; do not fork entitlements or calculations by employment category.
+- Verify that the cited source and the school's authority to apply it uniformly support the common policy. Do not encode day limits, eligibility, documents, approval routes, or legal citations until verified from the source and/or an explicitly approved school HR policy.
 - Capture page number and source/policy version for each rule in the eventual rule catalogue.
 - If a rule cannot be verified, mark it as pending HR confirmation; do not guess.
 
@@ -82,7 +82,7 @@ For each personnel category and leave type, HR must confirm:
 7. Effective date and transition treatment for existing/pending requests.
 8. Source document title, version/date, and page/article reference.
 
-The civil-servant guide alone is not sufficient evidence for the entitlements of contract teachers and government employees. Obtain the applicable rules/contract/official HR policy for each category or have school HR explicitly approve the configured policy.
+The school owner has decided that all school personnel follow one common policy. Record that decision in the configuration and apply the same calculation rules to all personnel. Separately verify the legal source and school authority for the common policy before activating specific day limits or entitlements; do not invent unsupported numbers. Personnel category can be used for reporting but must not change the policy result.
 
 ## Suggested implementation sequence
 1. Read and transcribe the scanned guide page by page; validate extracted rules and page references with HR.
@@ -131,3 +131,7 @@ Calculate leave days only from the verified, effective policy version for the ap
 Use a single server-side calculation path and Asia/Bangkok date semantics. Do not infer entitlement days from a chart, an old request, or a different personnel category. If the governing policy is missing, ambiguous, or not verified, stop automatic calculation and route the request for authorized HR review. Keep approved leave-day totals distinct from elapsed absence/overdue-return days.
 
 The supplied BICT/MOE manual concerns civil-servant leave; do not automatically apply its rules to contract teachers or government employees. For civil-servant teachers, verify applicable authority against current official circulars, including OTEPC ว 14/2568 dated 3 April 2025, and retain source/page/version references for every configured rule.
+
+
+## 9. School-wide uniform policy decision (confirmed)
+All personnel at Wat Bueng Nam Sai School use the same leave policy. The system must maintain one common policy catalogue and effective version, and use it for every staff member regardless of personnel category. Personnel category may be a reporting filter only, not a rule selector. Verify the actual policy source, effective date, and specific day-counting rules before production activation; the uniform-policy decision does not itself establish unverified entitlement values.
