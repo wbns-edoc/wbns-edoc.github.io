@@ -75,6 +75,17 @@ Deno.serve(async (req) => {
     return out({ ok: false, code: "SHARED_FILE_DELETE_BLOCKED", message: "ไฟล์นี้ถูกอ้างอิงโดยรายการอื่น จึงไม่ลบไฟล์ต้นฉบับเพื่อป้องกันข้อมูลสูญหาย" }, 409);
   }
 
+  // Recheck immediately before the external side effect. This narrows the race
+  // window if another attachment was added after the initial reference check.
+  const { data: latestRefs, error: latestRefsError } = await admin.from("document_files")
+    .select("id").eq("google_drive_file_id", attachment.google_drive_file_id);
+  if (latestRefsError || !latestRefs) {
+    return out({ ok: false, code: "FINAL_REFERENCE_CHECK_FAILED", message: "ตรวจสอบการใช้งานไฟล์ซ้ำครั้งสุดท้ายไม่สำเร็จ จึงยกเลิกการลบเพื่อความปลอดภัย" }, 500);
+  }
+  if (latestRefs.length !== 1 || latestRefs[0].id !== attachmentId) {
+    return out({ ok: false, code: "SHARED_FILE_DELETE_BLOCKED", message: "พบรายการอื่นอ้างอิงไฟล์นี้อยู่ จึงยกเลิกการลบเพื่อป้องกันข้อมูลสูญหาย" }, 409);
+  }
+
   // Trash Drive first. A timeout can leave the outcome uncertain; in that case,
   // keep the DB attachment row intact so the record remains visible for admin repair.
   // This avoids silently detaching a file when Drive did not confirm the operation.
