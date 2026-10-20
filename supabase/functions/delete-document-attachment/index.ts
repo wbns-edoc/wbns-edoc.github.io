@@ -39,11 +39,21 @@ Deno.serve(async (req) => {
   const user = createClient(url, anon, { global: { headers: { Authorization: authorization } }, auth: { persistSession: false, autoRefreshToken: false } });
   const { data: authData, error: authError } = await user.auth.getUser();
   if (authError || !authData.user) return out({ ok: false, code: "AUTH_INVALID" }, 401);
-  const { data: perms, error: permError } = await user.rpc("get_my_permissions");
-  if (permError) return out({ ok: false, code: "PERMISSION_CHECK_FAILED" }, 403);
-  if (!Array.isArray(perms) || !perms.some((p: { permission_code?: string }) => p.permission_code === "document.update")) {
-    return out({ ok: false, code: "INSUFFICIENT_PERMISSION" }, 403);
-  }
+  // Deletion is restricted to the three explicitly authorized school roles.
+  // Do not rely on a broad document.update permission for this destructive action.
+  const { data: userRoles, error: roleError } = await user.from("user_roles")
+    .select("roles(name,code)").eq("user_id", authData.user.id);
+  if (roleError) return out({ ok: false, code: "ROLE_CHECK_FAILED" }, 403);
+  const allowedRoleNames = new Set([
+    "System Admin", "system_admin",
+    "ผู้อำนวยการโรงเรียน", "Director", "director",
+    "เจ้าหน้าที่สารบรรณ", "Registry Officer", "registry_officer"
+  ]);
+  const hasDeleteRole = (userRoles || []).some((row: any) => {
+    const role = Array.isArray(row.roles) ? row.roles[0] : row.roles;
+    return role && (allowedRoleNames.has(role.name) || allowedRoleNames.has(role.code));
+  });
+  if (!hasDeleteRole) return out({ ok: false, code: "INSUFFICIENT_ROLE" }, 403);
   let body: { document_file_id?: unknown };
   try { body = await req.json(); } catch { return out({ ok: false, code: "INVALID_JSON" }, 400); }
   const attachmentId = typeof body.document_file_id === "string" ? body.document_file_id : "";
