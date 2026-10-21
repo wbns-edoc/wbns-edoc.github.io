@@ -7,8 +7,10 @@ insert into public.profiles (id, is_active) values
 on conflict (id) do update set is_active = excluded.is_active;
 
 insert into public.staff_leave_types (id, code, name, is_active)
-values ('00000000-0000-0000-0000-000000000201', 'test_leave', 'Test leave', true)
-on conflict (id) do update set is_active = true;
+values
+  ('00000000-0000-0000-0000-000000000201', 'test_leave', 'Test leave', true),
+  ('00000000-0000-0000-0000-000000000202', 'inactive_leave', 'Inactive leave', false)
+on conflict (id) do update set is_active = (excluded.id = '00000000-0000-0000-0000-000000000201');
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '', true);
@@ -72,7 +74,16 @@ begin
   exception when sqlstate '22023' then
     if sqlerrm <> 'invalid_leave_reason' then raise; end if;
   end;
-end $$;
+  begin
+    perform public.staff_leave_create_draft(
+      '00000000-0000-0000-0000-000000000202',
+      date '2026-11-12', date '2026-11-12', 'inactive leave type'
+    );
+    raise exception 'expected_inactive_leave_type_denial';
+  exception when sqlstate '22023' then
+    if sqlerrm <> 'active_leave_type_required' then raise; end if;
+  end;
+end $;
 
 reset role;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000102', true);
