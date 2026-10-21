@@ -192,7 +192,7 @@ end $$;
 
 -- Anonymous role must not inherit any table privileges from PUBLIC.
 set role anon;
-do $
+do $anon_privileges$
 declare
   tbl text;
   priv text;
@@ -211,7 +211,7 @@ begin
       end if;
     end loop;
   end loop;
-end $;
+end $anon_privileges$;
 reset role;
 
 select 'staff leave RLS and append-only history draft tests passed' as result;
