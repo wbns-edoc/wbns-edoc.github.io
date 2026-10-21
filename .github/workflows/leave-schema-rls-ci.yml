@@ -15,6 +15,9 @@ on:
       - 'tests/leave-cancel-rpc.test.sql'
       - 'tests/leave-submit-rpc.test.sql'
       - 'tests/leave-decide-rpc.test.sql'
+      - 'supabase/functions/staff-leave-notification-worker/index.ts'
+      - 'supabase/config.toml'
+      - 'docs/STAFF-LEAVE-NOTIFICATION-WORKER-DRAFT.md'
       - '.github/workflows/leave-schema-rls-ci.yml'
   push:
     branches:
@@ -30,6 +33,9 @@ on:
       - 'tests/leave-cancel-rpc.test.sql'
       - 'tests/leave-submit-rpc.test.sql'
       - 'tests/leave-decide-rpc.test.sql'
+      - 'supabase/functions/staff-leave-notification-worker/index.ts'
+      - 'supabase/config.toml'
+      - 'docs/STAFF-LEAVE-NOTIFICATION-WORKER-DRAFT.md'
       - '.github/workflows/leave-schema-rls-ci.yml'
   workflow_dispatch:
 
@@ -61,6 +67,11 @@ jobs:
       PGDATABASE: leave_test
     steps:
       - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check draft notification worker
+        run: deno check supabase/functions/staff-leave-notification-worker/index.ts
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
