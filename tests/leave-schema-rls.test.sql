@@ -133,4 +133,33 @@ begin
   end;
 end $$;
 reset role;
-select 'staff leave RLS draft tests passed' as result;
+
+-- Append-only history must also be protected against privileged accidental edits.
+do $
+begin
+  begin
+    update public.staff_leave_approval_actions
+       set reason = 'tampered'
+     where id = '50000000-0000-0000-0000-000000000001';
+    raise exception 'approval history UPDATE unexpectedly succeeded';
+  exception when sqlstate '55000' then
+    null;
+  end;
+
+  begin
+    delete from public.staff_leave_approval_actions
+     where id = '50000000-0000-0000-0000-000000000001';
+    raise exception 'approval history DELETE unexpectedly succeeded';
+  exception when sqlstate '55000' then
+    null;
+  end;
+
+  begin
+    truncate table public.staff_leave_approval_actions;
+    raise exception 'approval history TRUNCATE unexpectedly succeeded';
+  exception when sqlstate '55000' then
+    null;
+  end;
+end $;
+
+select 'staff leave RLS and append-only history draft tests passed' as result;
