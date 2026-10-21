@@ -51,9 +51,9 @@ begin
   ) then
     raise exception 'draft_create_must_use_actor_and_leave_policy_fields_must_not_be_client_assigned';
   end if;
-end $$;
+end $;
 
-do $$
+do $
 begin
   begin
     perform public.staff_leave_create_draft(
@@ -117,7 +117,7 @@ end $;
 reset role;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000102', true);
 set local role authenticated;
-do $$
+do $
 begin
   begin
     perform public.staff_leave_create_draft(
@@ -128,10 +128,10 @@ begin
   exception when sqlstate '42501' then
     if sqlerrm <> 'active_profile_required' then raise; end if;
   end;
-end $$;
+end $;
 
 reset role;
-do $$
+do $
 begin
   if has_function_privilege('anon', 'public.staff_leave_create_draft(uuid,date,date,text)', 'EXECUTE') then
     raise exception 'anon_must_not_execute_staff_leave_create_draft';
@@ -139,6 +139,6 @@ begin
   if not has_function_privilege('authenticated', 'public.staff_leave_create_draft(uuid,date,date,text)', 'EXECUTE') then
     raise exception 'authenticated_must_execute_staff_leave_create_draft';
   end if;
-end $$;
+end $;
 
 rollback;
