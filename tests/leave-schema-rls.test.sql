@@ -56,12 +56,13 @@ insert into public.staff_leave_notification_outbox(
  '10000000-0000-0000-0000-000000000002', 'submitted'
 );
 
--- The local fixture grants table privileges so these assertions exercise RLS policies.
+-- Mirror intended client grants: SELECT only on RLS-protected read tables.
+-- No direct write grants; workflow mutations must be exposed through reviewed RPCs.
 grant usage on schema public to authenticated;
-grant select, insert, update, delete on public.staff_leave_types,
+grant select on public.staff_leave_types,
  public.staff_leave_policy_versions, public.staff_leave_requests,
- public.staff_leave_approval_actions, public.staff_leave_attachments,
- public.staff_leave_notification_outbox to authenticated;
+ public.staff_leave_approval_actions, public.staff_leave_attachments
+ to authenticated;
 
 set role authenticated;
 select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', false);
