@@ -22,10 +22,12 @@ on:
       - 'supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql'
       - 'supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql'
       - 'supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql'
+      - 'supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
       - 'tests/leave-submit-rpc.test.sql'
+      - 'tests/leave-decide-rpc.test.sql'
       - '.github/workflows/leave-schema-rls-ci.yml'
   workflow_dispatch:
 
