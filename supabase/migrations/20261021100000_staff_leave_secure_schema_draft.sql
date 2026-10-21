@@ -224,15 +224,16 @@ create policy staff_leave_attachments_select_request_parties
     )
   );
 
--- Explicitly deny browser-side mutations; workflow writes must use reviewed RPCs.
-revoke insert, update, delete, truncate, references, trigger on
+-- Reset table ACLs for these new tables, including inherited grants to PUBLIC.
+-- Only authenticated read access is granted below; workflow writes must use reviewed RPCs.
+revoke all privileges on table
   public.staff_leave_types,
   public.staff_leave_policy_versions,
   public.staff_leave_requests,
   public.staff_leave_approval_actions,
   public.staff_leave_attachments,
   public.staff_leave_notification_outbox
-  from anon, authenticated;
+  from public, anon, authenticated;
 grant select on public.staff_leave_types,
   public.staff_leave_policy_versions,
   public.staff_leave_requests,
