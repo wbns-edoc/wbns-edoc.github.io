@@ -37,7 +37,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres -d leave_test"
           --health-interval 5s
-          --timeout 5s
+          --health-timeout 5s
           --health-retries 12
     env:
       PGHOST: localhost
