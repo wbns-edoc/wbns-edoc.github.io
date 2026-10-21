@@ -65,15 +65,19 @@ begin
         and action = 'cancelled') <> 1 then
     raise exception 'cancellation_retry_must_not_duplicate_action';
   end if;
-  -- Inspect the private outbox as the migration/test owner, not as authenticated.
-  -- The production role intentionally has no SELECT privilege on this table.
-  reset role;
+end $block$;
+
+-- Inspect the private outbox as the migration/test owner, not as authenticated.
+-- The production role intentionally has no SELECT privilege on this table.
+reset role;
+do $block$
+begin
   if (select count(*) from public.staff_leave_notification_outbox
       where event_key = 'leave-cancel:00000000-0000-0000-0000-000000000501:cancel-key-0001') <> 1 then
     raise exception 'cancellation_retry_must_not_duplicate_outbox';
   end if;
-  set local role authenticated;
 end $block$;
+set local role authenticated;
 
 -- Another active user cannot cancel the applicant's request.
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000302', true);
