@@ -82,6 +82,21 @@ begin
     )
   );
 
+  -- Confirm the state change to the applicant without guessing an approver.
+  -- This is not an approver notification; routing remains blocked until authority is verified.
+  insert into public.staff_leave_notification_outbox (
+    event_key, request_id, recipient_id, event_type, channel, safe_payload, status
+  ) values (
+    'leave-submit-blocked:' || v_request.id::text || ':' || v_key,
+    v_request.id, v_request.applicant_id, 'blocked', 'in_app',
+    jsonb_build_object(
+      'event', 'leave_blocked',
+      'request_id', v_request.id::text,
+      'status', 'blocked_approver_resolution'
+    ),
+    'pending'
+  ) on conflict (event_key) do nothing;
+
   return v_request.id;
 end;
 $$;
