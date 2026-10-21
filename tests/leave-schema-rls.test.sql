@@ -101,7 +101,7 @@ begin
 end $$;
 
 select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000004', false);
-do $
+do $$
 declare n integer;
 begin
   select count(*) into n from public.staff_leave_requests;
@@ -112,7 +112,7 @@ begin
   if n <> 0 then raise exception 'inactive profiles must not see attachment metadata, got %', n; end if;
   select count(*) into n from public.staff_leave_types;
   if n <> 0 then raise exception 'inactive profiles must not see leave types, got %', n; end if;
-end $;
+end $$;
 
 select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', false);
 
