@@ -15,8 +15,11 @@ export interface LeaveRouteInput {
  * This is a domain guard, not a replacement for server-side authorization.
  */
 export function resolveLeaveApprovalRoute(input: LeaveRouteInput): LeaveApprovalRoute {
-  if (input.deputyAssigneeUserId?.trim()) {
-    return { status: "ready", step: "deputy", approverUserId: input.deputyAssigneeUserId };
+  const deputyAssigneeUserId = input.deputyAssigneeUserId?.trim() || null;
+  const directorAssigneeUserId = input.directorAssigneeUserId?.trim() || null;
+
+  if (deputyAssigneeUserId) {
+    return { status: "ready", step: "deputy", approverUserId: deputyAssigneeUserId };
   }
 
   if (!input.directToDirectorAuthorityVerified) {
@@ -26,11 +29,11 @@ export function resolveLeaveApprovalRoute(input: LeaveRouteInput): LeaveApproval
     };
   }
 
-  if (!input.directorAssigneeUserId?.trim()) {
+  if (!directorAssigneeUserId) {
     return { status: "blocked_approver_resolution", reason: "approver_missing" };
   }
 
-  return { status: "ready", step: "director", approverUserId: input.directorAssigneeUserId };
+  return { status: "ready", step: "director", approverUserId: directorAssigneeUserId };
 }
 
 export function canActorApproveRequest(actorUserId: string, requesterUserId: string): boolean {
