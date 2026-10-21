@@ -130,19 +130,37 @@ alter table public.staff_leave_notification_outbox enable row level security;
 drop policy if exists staff_leave_types_select_active on public.staff_leave_types;
 create policy staff_leave_types_select_active
   on public.staff_leave_types for select to authenticated
-  using (is_active = true);
+  using (
+    is_active = true
+    and exists (
+      select 1 from public.profiles p
+      where p.id = (select auth.uid()) and p.is_active = true
+    )
+  );
 
 drop policy if exists staff_leave_policy_select_approved on public.staff_leave_policy_versions;
 create policy staff_leave_policy_select_approved
   on public.staff_leave_policy_versions for select to authenticated
-  using (status = 'approved');
+  using (
+    status = 'approved'
+    and exists (
+      select 1 from public.profiles p
+      where p.id = (select auth.uid()) and p.is_active = true
+    )
+  );
 
 drop policy if exists staff_leave_requests_select_applicant_or_assignee on public.staff_leave_requests;
 create policy staff_leave_requests_select_applicant_or_assignee
   on public.staff_leave_requests for select to authenticated
   using (
-    applicant_id = (select auth.uid())
-    or current_approver_user_id = (select auth.uid())
+    exists (
+      select 1 from public.profiles actor
+      where actor.id = (select auth.uid()) and actor.is_active = true
+    )
+    and (
+      applicant_id = (select auth.uid())
+      or current_approver_user_id = (select auth.uid())
+    )
   );
 
 drop policy if exists staff_leave_actions_select_request_parties on public.staff_leave_approval_actions;
@@ -152,6 +170,10 @@ create policy staff_leave_actions_select_request_parties
     exists (
       select 1 from public.staff_leave_requests lr
       where lr.id = request_id
+        and exists (
+          select 1 from public.profiles actor
+          where actor.id = (select auth.uid()) and actor.is_active = true
+        )
         and (
           lr.applicant_id = (select auth.uid())
           or lr.current_approver_user_id = (select auth.uid())
