@@ -90,12 +90,12 @@ create or replace function public.staff_leave_approval_actions_reject_mutation()
 returns trigger
 language plpgsql
 set search_path = pg_catalog, public
-as $
+as $$
 begin
   raise exception 'staff_leave_approval_actions is append-only'
     using errcode = '55000';
 end;
-$;
+$$;
 
 drop trigger if exists staff_leave_approval_actions_reject_row_mutation
   on public.staff_leave_approval_actions;
