@@ -190,4 +190,28 @@ begin
   end;
 end $$;
 
+-- Anonymous role must not inherit any table privileges from PUBLIC.
+set role anon;
+do $
+declare
+  tbl text;
+  priv text;
+begin
+  foreach tbl in array array[
+    'public.staff_leave_types',
+    'public.staff_leave_policy_versions',
+    'public.staff_leave_requests',
+    'public.staff_leave_approval_actions',
+    'public.staff_leave_attachments',
+    'public.staff_leave_notification_outbox'
+  ] loop
+    foreach priv in array array['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] loop
+      if has_table_privilege(current_user, tbl, priv) then
+        raise exception 'anonymous role unexpectedly has % privilege on %', priv, tbl;
+      end if;
+    end loop;
+  end loop;
+end $;
+reset role;
+
 select 'staff leave RLS and append-only history draft tests passed' as result;
