@@ -6,6 +6,13 @@ on:
       - 'supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
       - '.github/workflows/leave-schema-rls-ci.yml'
+  push:
+    branches:
+      - 'feat/leave-secure-schema-draft'
+    paths:
+      - 'supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql'
+      - 'tests/leave-schema-rls.test.sql'
+      - '.github/workflows/leave-schema-rls-ci.yml'
   workflow_dispatch:
 
 permissions:
