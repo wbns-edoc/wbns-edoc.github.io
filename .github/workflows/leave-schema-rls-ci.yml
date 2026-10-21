@@ -8,6 +8,8 @@ on:
       - 'supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql'
       - 'supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql'
       - 'supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql'
+      - 'supabase/migrations/20261021200000_staff_leave_notification_delivery_draft.sql'
+      - 'tests/leave-notification-outbox.test.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
@@ -68,6 +70,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 <<'SQL'
           create role authenticated;
           create role anon;
+          create role service_role;
           create schema auth;
           grant usage on schema auth to authenticated, anon;
           create function auth.uid() returns uuid
@@ -98,3 +101,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql
       - name: Run decision RPC authorization and idempotency tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-decide-rpc.test.sql
+      - name: Apply notification outbox delivery draft
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021200000_staff_leave_notification_delivery_draft.sql
+      - name: Run notification outbox delivery tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-notification-outbox.test.sql
