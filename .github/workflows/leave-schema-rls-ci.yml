@@ -57,6 +57,7 @@ jobs:
           create role authenticated;
           create role anon;
           create schema auth;
+          grant usage on schema auth to authenticated, anon;
           create function auth.uid() returns uuid
           language sql stable
           as $$
