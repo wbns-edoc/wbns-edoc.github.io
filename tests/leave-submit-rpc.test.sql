@@ -81,6 +81,20 @@ begin
         and metadata->>'reason_code' = 'approver_authority_unverified') <> 1 then
     raise exception 'submit_retry_must_append_exactly_one_blocked_action';
   end if;
+  if (select count(*) from public.staff_leave_notification_outbox
+      where request_id = '00000000-0000-0000-0000-000000000605'
+        and recipient_id = '00000000-0000-0000-0000-000000000601'
+        and event_type = 'blocked'
+        and event_key = 'leave-submit-blocked:00000000-0000-0000-0000-000000000605:submit-key-0001') <> 1 then
+    raise exception 'blocked submission must enqueue exactly one applicant notification';
+  end if;
+  if exists (
+    select 1 from public.staff_leave_notification_outbox
+    where request_id = '00000000-0000-0000-0000-000000000605'
+      and recipient_id <> '00000000-0000-0000-0000-000000000601'
+  ) then
+    raise exception 'blocked submission must not notify an unverified approver';
+  end if;
 end $block$;
 
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000602', true);
