@@ -6,9 +6,11 @@ on:
       - 'supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql'
       - 'supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql'
       - 'supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql'
+      - 'supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
+      - 'tests/leave-submit-rpc.test.sql'
       - '.github/workflows/leave-schema-rls-ci.yml'
   push:
     branches:
@@ -17,9 +19,11 @@ on:
       - 'supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql'
       - 'supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql'
       - 'supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql'
+      - 'supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
+      - 'tests/leave-submit-rpc.test.sql'
       - '.github/workflows/leave-schema-rls-ci.yml'
   workflow_dispatch:
 
@@ -82,3 +86,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql
       - name: Run cancellation RPC authorization and cutoff tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-cancel-rpc.test.sql
+      - name: Apply submission RPC migration (fail closed until authority is verified)
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql
+      - name: Run submission RPC authorization and idempotency tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-submit-rpc.test.sql
