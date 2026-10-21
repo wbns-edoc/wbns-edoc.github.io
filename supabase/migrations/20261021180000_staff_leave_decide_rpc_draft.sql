@@ -21,6 +21,7 @@ declare
   v_target_status text;
   v_key text;
   v_event_key text;
+  v_prior_reason text;
 begin
   v_actor := auth.uid();
   if v_actor is null then
@@ -64,15 +65,20 @@ begin
   end if;
 
   -- Idempotent retry only for the exact prior decision and key.
-  if v_request.status = v_target_status
-     and exists (
-       select 1 from public.staff_leave_approval_actions a
-       where a.request_id = v_request.id
-         and a.actor_id = v_actor
-         and a.action = v_action
-         and a.metadata->>'idempotency_key' = v_key
-     ) then
-    return v_request.id;
+  if v_request.status = v_target_status then
+    select a.reason into v_prior_reason
+    from public.staff_leave_approval_actions a
+    where a.request_id = v_request.id
+      and a.actor_id = v_actor
+      and a.action = v_action
+      and a.metadata->>'idempotency_key' = v_key
+    limit 1;
+    if found then
+      if v_prior_reason is distinct from nullif(btrim(coalesce(p_reason, '')), '') then
+        raise exception 'idempotency_key_reused_with_different_payload' using errcode = '22023';
+      end if;
+      return v_request.id;
+    end if;
   end if;
 
   if v_request.applicant_id = v_actor then
