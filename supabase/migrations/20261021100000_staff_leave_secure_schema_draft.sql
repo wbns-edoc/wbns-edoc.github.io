@@ -188,6 +188,10 @@ create policy staff_leave_attachments_select_request_parties
     exists (
       select 1 from public.staff_leave_requests lr
       where lr.id = request_id
+        and exists (
+          select 1 from public.profiles actor
+          where actor.id = (select auth.uid()) and actor.is_active = true
+        )
         and (
           lr.applicant_id = (select auth.uid())
           or lr.current_approver_user_id = (select auth.uid())
