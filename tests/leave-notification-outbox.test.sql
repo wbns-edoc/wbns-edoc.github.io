@@ -117,4 +117,48 @@ begin
 end;
 $$;
 
+-- Lease-expiry recovery: a crashed worker's expired claim can be reclaimed with a new token.
+insert into public.staff_leave_notification_outbox
+  (event_key, request_id, recipient_id, event_type, channel, safe_payload)
+values
+ ('test-event-key-003',
+  '30000000-0000-0000-0000-000000000001',
+  '10000000-0000-0000-0000-000000000002',
+  'cancelled', 'in_app', '{"title":"Leave request cancelled"}'::jsonb);
+
+do $$
+declare
+  first_claim record;
+  recovered_claim record;
+begin
+  select * into first_claim from public.staff_leave_outbox_claim(10, 90)
+  where event_key = 'test-event-key-003';
+  if first_claim.lease_token is null then raise exception 'third event was not initially claimed'; end if;
+
+  update public.staff_leave_notification_outbox
+  set lease_expires_at = now() - interval '1 second'
+  where id = first_claim.outbox_id;
+
+  select * into recovered_claim from public.staff_leave_outbox_claim(10, 90)
+  where event_key = 'test-event-key-003';
+  if recovered_claim.lease_token is null then raise exception 'expired lease was not reclaimed'; end if;
+  if recovered_claim.lease_token = first_claim.lease_token then
+    raise exception 'recovery must issue a fresh lease token';
+  end if;
+  if recovered_claim.attempts <> first_claim.attempts + 1 then
+    raise exception 'reclaim must increment attempt counter';
+  end if;
+
+  begin
+    perform public.staff_leave_outbox_deliver_in_app(first_claim.outbox_id, first_claim.lease_token);
+    raise exception 'old lease must not deliver after recovery';
+  exception when sqlstate '55000' then null;
+  end;
+
+  if not public.staff_leave_outbox_deliver_in_app(recovered_claim.outbox_id, recovered_claim.lease_token) then
+    raise exception 'recovered lease should deliver';
+  end if;
+end;
+$$;
+
 rollback;
