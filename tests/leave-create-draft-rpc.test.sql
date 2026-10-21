@@ -35,7 +35,7 @@ select public.staff_leave_create_draft(
   date '2026-11-10', date '2026-11-11', 'test draft'
 );
 
-do $$
+do $block$
 declare
   v_id uuid;
 begin
