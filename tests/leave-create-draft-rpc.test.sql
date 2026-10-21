@@ -153,10 +153,10 @@ begin
   join pg_catalog.pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
     and p.proname = 'staff_leave_create_draft'
-    and pg_catalog.oidvectortypes(p.proargtypes) = 'uuid, date, date, text';
+    and p.pronargs = 4;
 
-  if not found then
-    raise exception 'staff_leave_create_draft_function_missing';
+  if not found or v_proc.prosecdef is null then
+    raise exception 'staff_leave_create_draft_function_missing_or_ambiguous';
   end if;
   if v_proc.prosecdef is not true then
     raise exception 'staff_leave_create_draft_must_be_security_definer';
