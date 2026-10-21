@@ -31,7 +31,13 @@ insert into public.staff_leave_requests (
    '00000000-0000-0000-0000-000000000401',
    (now() at time zone 'Asia/Bangkok')::date - 10,
    (now() at time zone 'Asia/Bangkok')::date - 10,
-   'fixture draft', 'draft')
+   'fixture draft', 'draft'),
+  ('00000000-0000-0000-0000-000000000504',
+   '00000000-0000-0000-0000-000000000301',
+   '00000000-0000-0000-0000-000000000401',
+   (now() at time zone 'Asia/Bangkok')::date + 1,
+   (now() at time zone 'Asia/Bangkok')::date + 1,
+   'fixture exact cutoff boundary', 'pending_approval')
 on conflict (id) do nothing;
 
 set local role authenticated;
@@ -112,7 +118,22 @@ select public.staff_leave_cancel(
   '00000000-0000-0000-0000-000000000503', 'ทดสอบยกเลิกร่าง', 'cancel-key-0004'
 );
 
+-- Exact boundary: cancellation on the calendar day immediately before leave starts is allowed.
+select public.staff_leave_cancel(
+  '00000000-0000-0000-0000-000000000504', 'ยกเลิกก่อนวันลา 1 วัน', 'cancel-key-0005'
+);
+
 reset role;
+do $block$
+begin
+  if not exists (
+    select 1 from public.staff_leave_requests
+    where id = '00000000-0000-0000-0000-000000000504'
+      and status = 'cancelled'
+  ) then
+    raise exception 'cancellation_on_previous_calendar_day_must_be_allowed';
+  end if;
+end $block$;
 do $block$
 begin
   if has_function_privilege('anon', 'public.staff_leave_cancel(uuid,text,text)', 'EXECUTE') then
