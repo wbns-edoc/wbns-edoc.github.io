@@ -34,9 +34,9 @@ export function resolveLeaveApprovalRoute(input: LeaveRouteInput): LeaveApproval
 }
 
 export function canActorApproveRequest(actorUserId: string, requesterUserId: string): boolean {
-  return actorUserId.trim().length > 0 &&
-    requesterUserId.trim().length > 0 &&
-    actorUserId !== requesterUserId;
+  const actor = actorUserId.trim();
+  const requester = requesterUserId.trim();
+  return actor.length > 0 && requester.length > 0 && actor !== requester;
 }
 
 function bangkokDateParts(date: Date): { year: number; month: number; day: number } {
