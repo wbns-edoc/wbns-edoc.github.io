@@ -153,7 +153,7 @@ begin
   join pg_catalog.pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public'
     and p.proname = 'staff_leave_create_draft'
-    and pg_catalog.pg_get_function_identity_arguments(p.oid) = 'p_leave_type_id uuid, p_starts_on date, p_ends_on date, p_reason text';
+    and pg_catalog.pg_get_function_identity_arguments(p.oid) = 'uuid, date, date, text';
 
   if not found then
     raise exception 'staff_leave_create_draft_function_missing';
