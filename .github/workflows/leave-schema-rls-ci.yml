@@ -71,7 +71,7 @@ jobs:
         with:
           deno-version: v2.x
       - name: Type-check draft notification worker
-        run: deno check supabase/functions/staff-leave-notification-worker/index.ts
+        run: deno check --node-modules-dir=auto supabase/functions/staff-leave-notification-worker/index.ts
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
