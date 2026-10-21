@@ -163,8 +163,8 @@ begin
   end if;
 
   select setting into v_search_path
-  from pg_catalog.unnest(v_proc.proconfig) as setting
-  where setting like 'search_path=%';
+  from pg_catalog.unnest(v_proc.proconfig) as cfg(setting)
+  where cfg.setting like 'search_path=%';
 
   if v_search_path is distinct from 'search_path=pg_catalog, public' then
     raise exception 'staff_leave_create_draft_search_path_must_be_fixed_and_safe';
