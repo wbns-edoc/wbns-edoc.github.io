@@ -5,7 +5,9 @@
 insert into public.profiles(id) values
  ('10000000-0000-0000-0000-000000000001'),
  ('10000000-0000-0000-0000-000000000002'),
- ('10000000-0000-0000-0000-000000000003');
+ ('10000000-0000-0000-0000-000000000003'),
+ ('10000000-0000-0000-0000-000000000004');
+update public.profiles set is_active = false where id = '10000000-0000-0000-0000-000000000004';
 
 insert into public.staff_leave_types(id, code, name)
 values ('20000000-0000-0000-0000-000000000001', 'annual', 'Annual leave');
@@ -97,6 +99,22 @@ begin
   select count(*) into n from public.staff_leave_attachments;
   if n <> 0 then raise exception 'unrelated staff must not see attachment metadata, got %', n; end if;
 end $$;
+
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000004', false);
+do $
+declare n integer;
+begin
+  select count(*) into n from public.staff_leave_requests;
+  if n <> 0 then raise exception 'inactive profiles must not see leave requests, got %', n; end if;
+  select count(*) into n from public.staff_leave_approval_actions;
+  if n <> 0 then raise exception 'inactive profiles must not see action history, got %', n; end if;
+  select count(*) into n from public.staff_leave_attachments;
+  if n <> 0 then raise exception 'inactive profiles must not see attachment metadata, got %', n; end if;
+  select count(*) into n from public.staff_leave_types;
+  if n <> 0 then raise exception 'inactive profiles must not see leave types, got %', n; end if;
+end $;
+
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', false);
 
 -- RLS without a write policy must reject direct client mutations.
 do $$
