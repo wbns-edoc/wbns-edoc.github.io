@@ -53,6 +53,17 @@ All functions are proposals. Names/signatures may change after review against th
 - Late cancellation requires a separately verified authority check, a nonblank reason, and an audit event. A caller-supplied string is not evidence of authority.
 - Lock and re-check request state before changing it; append action and enqueue notifications transactionally.
 
+### Draft implementation: staff_leave_decide(p_request_id uuid, p_decision text, p_reason text, p_idempotency_key text)
+
+A draft-only SQL prototype now exists at `supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql`.
+
+- Accepts only `approve` or `reject`; rejection requires a nonblank reason.
+- Requires an active actor from `auth.uid()`, locks the request row, and verifies the actor is the explicitly assigned current approver.
+- Rejects self-approval, unassigned actors, and stale/non-pending requests.
+- Updates the request, appends an immutable action, and enqueues one minimal in-app notification in the same transaction.
+- Retries with the same key and same decision return the existing result without duplicating the action/outbox event.
+- This function does not establish that the assignment itself is legally authorized. Routing and the vacant Deputy Director / Director delegation must be verified before real use.
+
 ### staff_leave_get_my_summary(p_from date, p_to date)
 
 - Read-only server-side aggregate limited to the active actor's own requests by default.
@@ -97,4 +108,4 @@ Do not merge this design into a production release or apply the draft migration 
 4. Application UI integration, attachment access, and notification flows are tested end-to-end.
 5. A rollback plan and a separately approved Production change window exist.
 
-Current status: contract plus draft-only RPC prototypes in the separate leave-schema branch; this document itself adds no functions. Submission currently fails closed when approver authority is unverified, and administrator alert delivery is intentionally deferred until a verified recipient mapping exists. No Production migration applied, and no Production data or permissions changed.
+Current status: contract plus draft-only create, cancel, submit, and decision RPC prototypes in the separate leave-schema branch. Submission currently fails closed when approver authority is unverified; decision requires an explicitly assigned approver, and administrator alert delivery is intentionally deferred until a verified recipient mapping exists. These prototypes are not yet integrated into the application UI or notification worker. No Production migration applied, and no Production data or permissions changed.
