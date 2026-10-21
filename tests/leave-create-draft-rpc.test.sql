@@ -83,6 +83,35 @@ begin
   exception when sqlstate '22023' then
     if sqlerrm <> 'active_leave_type_required' then raise; end if;
   end;
+
+  begin
+    perform public.staff_leave_create_draft(
+      null, date '2026-11-12', date '2026-11-12', 'missing leave type'
+    );
+    raise exception 'expected_missing_leave_type_denial';
+  exception when sqlstate '22023' then
+    if sqlerrm <> 'active_leave_type_required' then raise; end if;
+  end;
+
+  begin
+    perform public.staff_leave_create_draft(
+      '00000000-0000-0000-0000-000000000201',
+      date '2026-11-12', date '2026-11-12', repeat('x', 4001)
+    );
+    raise exception 'expected_oversized_reason_denial';
+  exception when sqlstate '22023' then
+    if sqlerrm <> 'invalid_leave_reason' then raise; end if;
+  end;
+
+  begin
+    perform public.staff_leave_create_draft(
+      '00000000-0000-0000-0000-000000000201',
+      null, date '2026-11-12', 'missing start date'
+    );
+    raise exception 'expected_null_date_denial';
+  exception when sqlstate '22023' then
+    if sqlerrm <> 'invalid_leave_date_range' then raise; end if;
+  end;
 end $;
 
 reset role;
