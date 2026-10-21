@@ -21,7 +21,11 @@ insert into public.staff_leave_requests (
   ('00000000-0000-0000-0000-000000000606',
    '00000000-0000-0000-0000-000000000601',
    '00000000-0000-0000-0000-000000000604',
-   date '2026-11-20', date '2026-11-20', 'synthetic other draft', 'draft')
+   date '2026-11-20', date '2026-11-20', 'synthetic other draft', 'draft'),
+  ('00000000-0000-0000-0000-000000000607',
+   '00000000-0000-0000-0000-000000000603',
+   '00000000-0000-0000-0000-000000000604',
+   date '2026-11-20', date '2026-11-20', 'inactive applicant draft', 'draft')
 on conflict (id) do nothing;
 
 set local role authenticated;
@@ -35,6 +39,19 @@ begin
     raise exception 'expected_authentication_required';
   exception when sqlstate '28000' then
     if sqlerrm <> 'authentication_required' then raise; end if;
+  end;
+end $block$;
+
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000603', true);
+do $block$
+begin
+  begin
+    perform public.staff_leave_submit(
+      '00000000-0000-0000-0000-000000000607', 'submit-key-inactive'
+    );
+    raise exception 'expected_inactive_profile_denial';
+  exception when sqlstate '42501' then
+    if sqlerrm <> 'active_profile_required' then raise; end if;
   end;
 end $block$;
 
