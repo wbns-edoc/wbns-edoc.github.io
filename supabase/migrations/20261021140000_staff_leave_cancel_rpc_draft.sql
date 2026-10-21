@@ -19,6 +19,7 @@ declare
   v_request public.staff_leave_requests%rowtype;
   v_event_key text;
   v_today_bangkok date;
+  v_prior_reason text;
 begin
   v_actor := auth.uid();
   if v_actor is null then
@@ -54,13 +55,17 @@ begin
 
   -- A retry with the same key is a no-op only if this exact cancellation was recorded.
   if v_request.status = 'cancelled' then
-    if exists (
-      select 1 from public.staff_leave_approval_actions a
-      where a.request_id = v_request.id
-        and a.actor_id = v_actor
-        and a.action = 'cancelled'
-        and a.metadata->>'idempotency_key' = btrim(p_idempotency_key)
-    ) then
+    select a.reason into v_prior_reason
+    from public.staff_leave_approval_actions a
+    where a.request_id = v_request.id
+      and a.actor_id = v_actor
+      and a.action = 'cancelled'
+      and a.metadata->>'idempotency_key' = btrim(p_idempotency_key)
+    limit 1;
+    if found then
+      if v_prior_reason is distinct from btrim(p_reason) then
+        raise exception 'idempotency_key_reused_with_different_payload' using errcode = '22023';
+      end if;
       return v_request.id;
     end if;
     raise exception 'leave_request_already_cancelled' using errcode = '55000';
