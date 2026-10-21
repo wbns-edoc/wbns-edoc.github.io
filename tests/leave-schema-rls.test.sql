@@ -75,9 +75,36 @@ begin
   if n <> 1 then raise exception 'applicant should see own action history, got %', n; end if;
   select count(*) into n from public.staff_leave_attachments;
   if n <> 1 then raise exception 'applicant should see own attachment metadata, got %', n; end if;
-  select count(*) into n from public.staff_leave_notification_outbox;
-  if n <> 0 then raise exception 'browser client must not read outbox, got %', n; end if;
+  if has_table_privilege(current_user, 'public.staff_leave_notification_outbox', 'SELECT') then
+    raise exception 'browser client unexpectedly has SELECT privilege on notification outbox';
+  end if;
 end $$;
+
+-- Check effective privileges, including grants inherited through PUBLIC.
+-- This catches accidental default/public grants that a REVOKE from authenticated alone misses.
+do $
+declare
+  tbl text;
+  priv text;
+begin
+  foreach tbl in array array[
+    'public.staff_leave_types',
+    'public.staff_leave_policy_versions',
+    'public.staff_leave_requests',
+    'public.staff_leave_approval_actions',
+    'public.staff_leave_attachments',
+    'public.staff_leave_notification_outbox'
+  ] loop
+    foreach priv in array array['INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER'] loop
+      if has_table_privilege(current_user, tbl, priv) then
+        raise exception 'browser role unexpectedly has % privilege on %', priv, tbl;
+      end if;
+    end loop;
+  end loop;
+  if has_table_privilege(current_user, 'public.staff_leave_notification_outbox', 'SELECT') then
+    raise exception 'browser role unexpectedly has SELECT privilege on notification outbox';
+  end if;
+end $;
 
 select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', false);
 do $$
