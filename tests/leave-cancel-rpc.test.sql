@@ -66,6 +66,18 @@ select public.staff_leave_cancel(
 
 do $block$
 begin
+  begin
+    perform public.staff_leave_cancel(
+      '00000000-0000-0000-0000-000000000501', 'ข้อความเปลี่ยนไป', 'cancel-key-0001'
+    );
+    raise exception 'expected_idempotency_payload_mismatch';
+  exception when sqlstate '22023' then
+    if sqlerrm <> 'idempotency_key_reused_with_different_payload' then raise; end if;
+  end;
+end $block$;
+
+do $block$
+begin
   if (select count(*) from public.staff_leave_approval_actions
       where request_id = '00000000-0000-0000-0000-000000000501'
         and action = 'cancelled') <> 1 then
