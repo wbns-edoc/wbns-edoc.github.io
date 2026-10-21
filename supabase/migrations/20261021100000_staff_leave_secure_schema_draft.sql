@@ -224,6 +224,22 @@ create policy staff_leave_attachments_select_request_parties
     )
   );
 
+-- Explicitly deny browser-side mutations; workflow writes must use reviewed RPCs.
+revoke insert, update, delete, truncate, references, trigger on
+  public.staff_leave_types,
+  public.staff_leave_policy_versions,
+  public.staff_leave_requests,
+  public.staff_leave_approval_actions,
+  public.staff_leave_attachments,
+  public.staff_leave_notification_outbox
+  from anon, authenticated;
+grant select on public.staff_leave_types,
+  public.staff_leave_policy_versions,
+  public.staff_leave_requests,
+  public.staff_leave_approval_actions,
+  public.staff_leave_attachments
+  to authenticated;
+
 -- Outbox intentionally has no authenticated SELECT policy: delivery state/payloads
 -- are backend internals and must not be exposed to browser clients.
 commit;
