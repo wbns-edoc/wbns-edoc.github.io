@@ -64,6 +64,8 @@ select public.staff_leave_submit(
   '00000000-0000-0000-0000-000000000605', 'submit-key-0001'
 );
 
+reset role;
+
 do $block$
 begin
   if not exists (
@@ -97,6 +99,7 @@ begin
   end if;
 end $block$;
 
+set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000602', true);
 do $block$
 begin
