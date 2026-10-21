@@ -33,7 +33,7 @@ All functions are proposals. Names/signatures may change after review against th
 - Lock the request row with FOR UPDATE and validate current state before transition.
 - Resolve approver using a server-controlled authority/delegation configuration.
 - The Deputy Director position may exist as a role but must not be assumed occupied. Never assign an inactive, vacant, or unverified approver.
-- If no lawful approver can be resolved, transition to blocked_approver_resolution, append a blocked action, and enqueue a safe alert to an explicitly authorized administrator. Do not silently route to Director without verified authority.
+- If no lawful approver can be resolved, transition to blocked_approver_resolution and append a blocked action. Enqueue an alert only after an explicitly authorized administrator recipient mapping is verified; until then, do not guess a recipient or claim that an alert was delivered. Do not silently route to Director without verified authority.
 - On successful route, set submitted_at, state, and current approver; append submitted and routed actions as applicable; enqueue idempotent submitted and approver_assigned notifications.
 - Enforce a unique event key based on request, transition, recipient, and channel or equivalent deterministic deduplication scheme.
 
@@ -97,4 +97,4 @@ Do not merge this design into a production release or apply the draft migration 
 4. Application UI integration, attachment access, and notification flows are tested end-to-end.
 5. A rollback plan and a separately approved Production change window exist.
 
-Current status: contract only; no functions added by this document, no Production migration applied, and no Production data or permissions changed.
+Current status: contract plus draft-only RPC prototypes in the separate leave-schema branch; this document itself adds no functions. Submission currently fails closed when approver authority is unverified, and administrator alert delivery is intentionally deferred until a verified recipient mapping exists. No Production migration applied, and no Production data or permissions changed.
