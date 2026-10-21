@@ -135,7 +135,7 @@ end $$;
 reset role;
 
 -- Append-only history must also be protected against privileged accidental edits.
-do $
+do $$
 begin
   begin
     update public.staff_leave_approval_actions
@@ -160,6 +160,6 @@ begin
   exception when sqlstate '55000' then
     null;
   end;
-end $;
+end $$;
 
 select 'staff leave RLS and append-only history draft tests passed' as result;
