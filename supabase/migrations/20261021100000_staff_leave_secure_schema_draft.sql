@@ -84,6 +84,31 @@ create table if not exists public.staff_leave_approval_actions (
 create index if not exists staff_leave_actions_request_time_idx
   on public.staff_leave_approval_actions(request_id, created_at);
 
+-- Approval history is append-only even for privileged database roles. Workflow RPCs
+-- may INSERT events, but no actor may UPDATE, DELETE, or TRUNCATE recorded history.
+create or replace function public.staff_leave_approval_actions_reject_mutation()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, public
+as $
+begin
+  raise exception 'staff_leave_approval_actions is append-only'
+    using errcode = '55000';
+end;
+$;
+
+drop trigger if exists staff_leave_approval_actions_reject_row_mutation
+  on public.staff_leave_approval_actions;
+create trigger staff_leave_approval_actions_reject_row_mutation
+  before update or delete on public.staff_leave_approval_actions
+  for each row execute function public.staff_leave_approval_actions_reject_mutation();
+
+drop trigger if exists staff_leave_approval_actions_reject_truncate
+  on public.staff_leave_approval_actions;
+create trigger staff_leave_approval_actions_reject_truncate
+  before truncate on public.staff_leave_approval_actions
+  for each statement execute function public.staff_leave_approval_actions_reject_mutation();
+
 create table if not exists public.staff_leave_attachments (
   id uuid primary key default gen_random_uuid(),
   request_id uuid not null references public.staff_leave_requests(id) on delete restrict,
