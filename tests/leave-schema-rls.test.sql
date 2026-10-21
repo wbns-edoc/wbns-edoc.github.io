@@ -82,7 +82,7 @@ end $$;
 
 -- Check effective privileges, including grants inherited through PUBLIC.
 -- This catches accidental default/public grants that a REVOKE from authenticated alone misses.
-do $
+do $$
 declare
   tbl text;
   priv text;
@@ -104,7 +104,7 @@ begin
   if has_table_privilege(current_user, 'public.staff_leave_notification_outbox', 'SELECT') then
     raise exception 'browser role unexpectedly has SELECT privilege on notification outbox';
   end if;
-end $;
+end $$;
 
 select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', false);
 do $$
