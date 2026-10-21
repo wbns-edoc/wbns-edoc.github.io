@@ -12,7 +12,7 @@ The proposed additive schema must be reviewed and tested in an isolated database
 - Authenticated reads must be limited to active leave types, approved policy versions, the applicant or explicitly assigned current approver, and authorized parties to request history/attachment metadata.
 - Browser clients must not directly insert, update, or delete workflow records.
 - Notification outbox delivery state and internal payloads must not be readable by browser clients.
-- Approval history must be append-only and written atomically with each state transition.
+- Approval history must be append-only and written atomically with each state transition. The draft schema now blocks `UPDATE`, `DELETE`, and `TRUNCATE` of action history with database triggers; RPC integration must still insert actions atomically with state changes.
 
 ## Required before considering merge/release
 
