@@ -14,3 +14,8 @@ verify_jwt = true
 
 [functions.delete-document-attachment]
 verify_jwt = true
+
+[functions.staff-leave-notification-worker]
+# The worker uses its own server-side secret header; platform JWT verification is disabled.
+# Never expose STAFF_LEAVE_WORKER_SECRET or SUPABASE_SERVICE_ROLE_KEY to browser code.
+verify_jwt = false
