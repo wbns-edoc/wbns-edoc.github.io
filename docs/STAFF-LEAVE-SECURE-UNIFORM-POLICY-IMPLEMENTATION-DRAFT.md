@@ -6,6 +6,7 @@
 - All school personnel use one school-wide leave policy. Personnel category is reporting metadata only and never selects entitlements or day-count rules.
 - The existing leave migration draft is unsafe to apply as-is: it has category-specific policy structure and overly broad approver read access.
 - Production RBAC role codes must be inspected and explicitly mapped; never guess director/deputy role codes.
+- The Deputy Director role remains defined in the system, but the school currently has no person holding that position. A role definition is not proof of an active approver.
 - Default-deny direct client writes. Workflow transitions must use narrow, server-side authorization-checked functions.
 - Do not activate automatic day calculations until the school-approved authoritative policy and day-counting details are verified.
 
@@ -19,8 +20,10 @@
 
 ## Workflow contracts
 - Staff submits their own request.
-- Deputy reviews first; director makes the final decision.
-- If director is absent, deputy may approve directly only through a separately authorized path recording the absence reason, decision reason, actor and timestamp.
+- Do not route a request to the vacant Deputy Director role or leave it waiting indefinitely for that role.
+- Proposed current-school route: staff submits -> Director reviews/decides directly, **only after verifying the applicable official authority and any required school delegation**. Until then, do not enable this route in Production.
+- Never grant Deputy Director permissions to the Director or another employee as a shortcut. If an acting approver is formally appointed, record explicit authority, scope, effective dates, reason, actor and audit trail.
+- If no authorized approver can be resolved, preserve the request and history in a visible blocked state and alert an authorized administrator; the alert itself must not grant approval rights.
 - Prevent self-approval.
 - Cancellation must enforce the approved cutoff in Asia/Bangkok. Late cancellation cannot use the ordinary path; route it to a reasoned, authorized exception.
 - Every decision and exception is auditable; no unguarded client-side status updates.
@@ -34,12 +37,15 @@
 ## Required tests before release
 - Default-deny direct writes and RLS isolation.
 - Role mapping and unauthorized approver rejection.
-- Self-approval blocked; deputy-first workflow enforced except authorized director-absence route.
+- Vacant Deputy Director role does not create a dangling task, trigger a silent role grant, or silently substitute another person.
+- Direct-to-Director workflow is enabled only after documented authority verification.
+- No authorized approver yields a visible blocked state and safe alert, not a dropped request or an unbounded pending task.
+- Self-approval blocked.
 - Cancellation cutoff tested immediately before/at/after boundary in Asia/Bangkok.
 - Identical policy version and dates yield identical calculation regardless of personnel category.
 - Policy changes do not rewrite historical requests.
 - Unverified day rules block automatic calculation.
-- Notification retries are idempotent.
+- Notification retries are idempotent and recipients match the resolved authorized route.
 - Dashboard aggregates reconcile with authorized records.
 - Append-only audit; reproducible migration replay in a disposable database.
 - Synthetic-account pilot, backup/rollback plan and explicit release approval.
