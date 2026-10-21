@@ -108,6 +108,17 @@ select public.staff_leave_decide(
 select public.staff_leave_decide(
   '00000000-0000-0000-0000-000000000811', 'approve', null, 'decide-key-approve-1'
 );
+do $block$
+begin
+  begin
+    perform public.staff_leave_decide(
+      '00000000-0000-0000-0000-000000000811', 'approve', 'different payload', 'decide-key-approve-1'
+    );
+    raise exception 'expected_idempotency_payload_mismatch';
+  exception when sqlstate '22023' then
+    if sqlerrm <> 'idempotency_key_reused_with_different_payload' then raise; end if;
+  end;
+end $block$;
 select public.staff_leave_decide(
   '00000000-0000-0000-0000-000000000812', 'reject', 'Policy requires correction', 'decide-key-reject-1'
 );
