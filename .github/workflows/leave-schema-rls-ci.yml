@@ -5,8 +5,10 @@ on:
     paths:
       - 'supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql'
       - 'supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql'
+      - 'supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
+      - 'tests/leave-cancel-rpc.test.sql'
       - '.github/workflows/leave-schema-rls-ci.yml'
   push:
     branches:
@@ -74,3 +76,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-schema-rls.test.sql
       - name: Run create-draft RPC authorization tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-create-draft-rpc.test.sql
+      - name: Apply cancellation RPC migration to disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql
+      - name: Run cancellation RPC authorization and cutoff tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-cancel-rpc.test.sql
