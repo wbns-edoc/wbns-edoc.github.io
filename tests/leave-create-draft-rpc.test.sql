@@ -141,4 +141,45 @@ begin
   end if;
 end $block$;
 
+
+do $block$
+declare
+  v_proc record;
+  v_search_path text;
+begin
+  select p.prosecdef, p.proconfig, p.proacl, p.proowner
+    into v_proc
+  from pg_catalog.pg_proc p
+  join pg_catalog.pg_namespace n on n.oid = p.pronamespace
+  where n.nspname = 'public'
+    and p.proname = 'staff_leave_create_draft'
+    and pg_catalog.pg_get_function_identity_arguments(p.oid) = 'p_leave_type_id uuid, p_starts_on date, p_ends_on date, p_reason text';
+
+  if not found then
+    raise exception 'staff_leave_create_draft_function_missing';
+  end if;
+  if v_proc.prosecdef is not true then
+    raise exception 'staff_leave_create_draft_must_be_security_definer';
+  end if;
+
+  select setting into v_search_path
+  from pg_catalog.unnest(v_proc.proconfig) as setting
+  where setting like 'search_path=%';
+
+  if v_search_path is distinct from 'search_path=pg_catalog, public' then
+    raise exception 'staff_leave_create_draft_search_path_must_be_fixed_and_safe';
+  end if;
+
+  if exists (
+    select 1
+    from pg_catalog.aclexplode(
+      coalesce(v_proc.proacl, pg_catalog.acldefault('f', v_proc.proowner))
+    ) acl
+    where acl.grantee = 0
+      and acl.privilege_type = 'EXECUTE'
+  ) then
+    raise exception 'public_must_not_execute_staff_leave_create_draft';
+  end if;
+end $block$;
+
 rollback;
