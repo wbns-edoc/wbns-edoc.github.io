@@ -4,14 +4,18 @@ on:
   pull_request:
     paths:
       - 'supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql'
+      - 'supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
+      - 'tests/leave-create-draft-rpc.test.sql'
       - '.github/workflows/leave-schema-rls-ci.yml'
   push:
     branches:
       - 'feat/leave-secure-schema-draft'
     paths:
       - 'supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql'
+      - 'supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
+      - 'tests/leave-create-draft-rpc.test.sql'
       - '.github/workflows/leave-schema-rls-ci.yml'
   workflow_dispatch:
 
@@ -33,7 +37,7 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U postgres -d leave_test"
           --health-interval 5s
-          --health-timeout 5s
+          --timeout 5s
           --health-retries 12
     env:
       PGHOST: localhost
@@ -61,7 +65,11 @@ jobs:
           create table public.profiles (id uuid primary key, is_active boolean not null default true);
           grant select on public.profiles to authenticated;
           SQL
-      - name: Apply draft migration to disposable PostgreSQL
+      - name: Apply schema draft to disposable PostgreSQL
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql
+      - name: Apply draft RPC migration to disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql
       - name: Run RLS isolation and direct-write regression tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-schema-rls.test.sql
+      - name: Run create-draft RPC authorization tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-create-draft-rpc.test.sql
