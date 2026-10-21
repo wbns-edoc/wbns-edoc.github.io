@@ -35,7 +35,7 @@ begin
   if p_request_id is null then
     raise exception 'request_id_required' using errcode = '22023';
   end if;
-  if p_decision not in ('approve', 'reject') then
+  if p_decision is null or p_decision not in ('approve', 'reject') then
     raise exception 'invalid_leave_decision' using errcode = '22023';
   end if;
   if p_decision = 'reject'
