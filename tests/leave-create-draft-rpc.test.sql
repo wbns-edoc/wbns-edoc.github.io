@@ -11,6 +11,19 @@ values ('00000000-0000-0000-0000-000000000201', 'test_leave', 'Test leave', true
 on conflict (id) do update set is_active = true;
 
 set local role authenticated;
+select set_config('request.jwt.claim.sub', '', true);
+do $
+begin
+  begin
+    perform public.staff_leave_create_draft(
+      '00000000-0000-0000-0000-000000000201',
+      date '2026-11-10', date '2026-11-10', 'missing identity'
+    );
+    raise exception 'expected_authentication_required';
+  exception when sqlstate '28000' then
+    if sqlerrm <> 'authentication_required' then raise; end if;
+  end;
+end $;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000101', true);
 
 create temporary table created_leave_request (id uuid);
