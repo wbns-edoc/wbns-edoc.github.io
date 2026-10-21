@@ -161,4 +161,33 @@ begin
 end;
 $$;
 
+
+-- Recipient isolation: authenticated users can read only their own notification feed.
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
+do $
+begin
+  if exists (
+    select 1 from public.staff_leave_notifications
+    where event_key = 'test-event-key-001'
+  ) then
+    raise exception 'a different recipient must not see this notification';
+  end if;
+end;
+$;
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', true);
+do $
+begin
+  if not exists (
+    select 1 from public.staff_leave_notifications
+    where event_key = 'test-event-key-001'
+  ) then
+    raise exception 'recipient should see their own notification';
+  end if;
+end;
+$;
+reset role;
+
 rollback;
