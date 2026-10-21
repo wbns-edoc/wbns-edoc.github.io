@@ -51,7 +51,7 @@ jobs:
           as $$
             select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
           $$;
-          create table public.profiles (id uuid primary key);
+          create table public.profiles (id uuid primary key, is_active boolean not null default true);
           SQL
       - name: Apply draft migration to disposable PostgreSQL
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql
