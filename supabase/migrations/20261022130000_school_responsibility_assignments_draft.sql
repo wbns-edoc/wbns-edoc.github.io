@@ -27,7 +27,9 @@ create table if not exists public.school_responsibility_audit (
   new_user_id uuid null,
   actor_user_id uuid not null,
   changed_at timestamptz not null default now(),
-  change_kind text not null check (change_kind in ('assignment_changed','vice_director_setting_changed'))
+  change_kind text not null check (change_kind in ('assignment_changed','vice_director_setting_changed')),
+  previous_has_vice_director boolean null,
+  new_has_vice_director boolean null
 );
 
 alter table public.school_responsibility_assignments enable row level security;
@@ -82,6 +84,7 @@ declare
   k text;
   target_id uuid;
   old_id uuid;
+  old_has_vice_director boolean;
   allowed_keys text[] := array['director','vice_director','personnel_head','budget_head','academic_head','general_head'];
   keys_seen text[];
 begin
@@ -123,12 +126,13 @@ begin
     end if;
   end loop;
 
-  if not exists(select 1 from public.school_responsibility_settings where singleton and has_vice_director=p_has_vice_director) then
+  select s.has_vice_director into old_has_vice_director from public.school_responsibility_settings s where s.singleton for update;
+  if old_has_vice_director is distinct from p_has_vice_director then
     insert into public.school_responsibility_settings(singleton,has_vice_director,updated_at,updated_by)
     values(true,p_has_vice_director,now(),actor)
     on conflict(singleton) do update set has_vice_director=excluded.has_vice_director,updated_at=excluded.updated_at,updated_by=excluded.updated_by;
-    insert into public.school_responsibility_audit(responsibility_key,previous_user_id,new_user_id,actor_user_id,change_kind)
-    values('vice_director',null,null,actor,'vice_director_setting_changed');
+    insert into public.school_responsibility_audit(responsibility_key,previous_user_id,new_user_id,actor_user_id,change_kind,previous_has_vice_director,new_has_vice_director)
+    values('vice_director',null,null,actor,'vice_director_setting_changed',old_has_vice_director,p_has_vice_director);
   end if;
   return public.admin_get_school_responsibilities();
 end;
