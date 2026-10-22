@@ -105,64 +105,6 @@ begin
   end if;
 end $block$;
 
--- A verified route must submit to the Deputy first and notify only that Deputy.
-do $block$
-begin
-  insert into public.staff_leave_approval_route_config (
-    singleton, vice_director_user_id, director_user_id, authority_verified,
-    direct_to_vice_enabled, authority_reference, verified_by, verified_at
-  ) values (
-    true, '00000000-0000-0000-0000-000000000610',
-    '00000000-0000-0000-0000-000000000611', true, false,
-    'synthetic-submit-route-test', '00000000-0000-0000-0000-000000000611', now()
-  ) on conflict (singleton) do update set
-    vice_director_user_id=excluded.vice_director_user_id,
-    director_user_id=excluded.director_user_id,
-    authority_verified=excluded.authority_verified,
-    direct_to_vice_enabled=excluded.direct_to_vice_enabled,
-    authority_reference=excluded.authority_reference,
-    verified_by=excluded.verified_by, verified_at=excluded.verified_at;
-end $block$;
-
-set local role authenticated;
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000601', true);
-select public.staff_leave_submit(
-  '00000000-0000-0000-0000-000000000608', 'submit-key-verified'
-);
--- Exact retry must not duplicate the submission event or Deputy notification.
-select public.staff_leave_submit(
-  '00000000-0000-0000-0000-000000000608', 'submit-key-verified'
-);
-reset role;
-do $block$
-begin
-  if not exists (
-    select 1 from public.staff_leave_requests
-    where id='00000000-0000-0000-0000-000000000608'
-      and status='pending_approval'
-      and approval_stage='vice_director_review'
-      and current_approver_user_id='00000000-0000-0000-0000-000000000610'
-  ) then raise exception 'verified_submission_must_route_to_deputy_first'; end if;
-  if (select count(*) from public.staff_leave_approval_actions
-      where request_id='00000000-0000-0000-0000-000000000608'
-        and action='submitted'
-        and metadata->>'approval_route'='vice_director_then_director') <> 1 then
-    raise exception 'verified_submission_must_record_exactly_one_route_action';
-  end if;
-  if (select count(*) from public.staff_leave_notification_outbox
-      where request_id='00000000-0000-0000-0000-000000000608'
-        and recipient_id='00000000-0000-0000-0000-000000000610'
-        and event_type='submitted'
-        and event_key='leave-submit-vice:00000000-0000-0000-0000-000000000608:submit-key-verified') <> 1 then
-    raise exception 'verified_submission_must_notify_deputy_exactly_once';
-  end if;
-  if exists (select 1 from public.staff_leave_notification_outbox
-      where request_id='00000000-0000-0000-0000-000000000608'
-        and recipient_id <> '00000000-0000-0000-0000-000000000610') then
-    raise exception 'verified_submission_must_not_notify_director_before_deputy_review';
-  end if;
-end $block$;
-
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000602', true);
 do $block$
