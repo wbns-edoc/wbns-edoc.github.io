@@ -101,7 +101,8 @@ begin
     where a.request_id = v_request.id and a.actor_id = v_actor and a.action = v_action
       and a.metadata->>'idempotency_key' = v_key limit 1;
     if found then
-      if v_request.status <> case when p_decision = 'approve' then 'approved' else 'rejected' end
+      if (p_decision = 'approve' and v_request.status <> 'approved')
+         or (p_decision = 'reject' and v_request.status <> 'rejected')
          or v_prior_reason is distinct from nullif(btrim(coalesce(p_reason,'')), '') then
         raise exception 'idempotency_key_reused_with_different_payload' using errcode = '22023';
       end if;
