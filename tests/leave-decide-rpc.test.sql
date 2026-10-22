@@ -130,6 +130,8 @@ select public.staff_leave_decide(
 select public.staff_leave_decide(
   '00000000-0000-0000-0000-000000000814', 'approve', null, 'decide-key-stage-one'
 );
+select id, status, approval_stage, current_approver_user_id, decided_at
+from public.staff_leave_requests where id='00000000-0000-0000-0000-000000000814';
 do $block$
 begin
   if not exists (
