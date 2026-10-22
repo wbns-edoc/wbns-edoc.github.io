@@ -8,28 +8,48 @@ insert into public.profiles (id, is_active) values
   ('00000000-0000-0000-0000-000000000804', false)
 on conflict (id) do update set is_active = excluded.is_active;
 
+insert into public.staff_leave_approval_route_config (
+  singleton, vice_director_user_id, director_user_id, authority_verified,
+  direct_to_vice_enabled, authority_reference, verified_by, verified_at
+) values (
+  true, '00000000-0000-0000-0000-000000000803',
+  '00000000-0000-0000-0000-000000000802', true, false,
+  'synthetic-test-authority-reference', '00000000-0000-0000-0000-000000000802', now()
+) on conflict (singleton) do update set
+  vice_director_user_id=excluded.vice_director_user_id,
+  director_user_id=excluded.director_user_id,
+  authority_verified=excluded.authority_verified,
+  direct_to_vice_enabled=excluded.direct_to_vice_enabled,
+  authority_reference=excluded.authority_reference,
+  verified_by=excluded.verified_by, verified_at=excluded.verified_at;
+
 insert into public.staff_leave_types (id, code, name, is_active)
 values ('00000000-0000-0000-0000-000000000821', 'decide_test', 'Decision test', true)
 on conflict (id) do update set is_active = true;
 
 insert into public.staff_leave_requests (
-  id, applicant_id, leave_type_id, starts_on, ends_on, reason, status, current_approver_user_id
+  id, applicant_id, leave_type_id, starts_on, ends_on, reason, status, current_approver_user_id, approval_stage
 ) values
   ('00000000-0000-0000-0000-000000000811',
    '00000000-0000-0000-0000-000000000801',
    '00000000-0000-0000-0000-000000000821',
    date '2026-12-01', date '2026-12-01', 'synthetic approval fixture', 'pending_approval',
-   '00000000-0000-0000-0000-000000000802'),
+   '00000000-0000-0000-0000-000000000802', 'director_final_review'),
   ('00000000-0000-0000-0000-000000000812',
    '00000000-0000-0000-0000-000000000803',
    '00000000-0000-0000-0000-000000000821',
    date '2026-12-02', date '2026-12-02', 'synthetic rejection fixture', 'pending_approval',
-   '00000000-0000-0000-0000-000000000802'),
+   '00000000-0000-0000-0000-000000000802', 'director_final_review'),
   ('00000000-0000-0000-0000-000000000813',
    '00000000-0000-0000-0000-000000000802',
    '00000000-0000-0000-0000-000000000821',
    date '2026-12-03', date '2026-12-03', 'synthetic self-approval fixture', 'pending_approval',
-   '00000000-0000-0000-0000-000000000802')
+   '00000000-0000-0000-0000-000000000802', 'director_final_review'),
+  ('00000000-0000-0000-0000-000000000814',
+   '00000000-0000-0000-0000-000000000801',
+   '00000000-0000-0000-0000-000000000821',
+   date '2026-12-04', date '2026-12-04', 'synthetic two-stage fixture', 'pending_approval',
+   '00000000-0000-0000-0000-000000000803', 'vice_director_review')
 on conflict (id) do nothing;
 
 set local role authenticated;
@@ -101,6 +121,33 @@ begin
   end;
 end $block$;
 
+-- Deputy approval must advance to the Director stage, not final-approve.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000803', true);
+select public.staff_leave_decide(
+  '00000000-0000-0000-0000-000000000814', 'approve', null, 'decide-key-stage-one'
+);
+do $block$
+begin
+  if not exists (
+    select 1 from public.staff_leave_requests
+    where id='00000000-0000-0000-0000-000000000814'
+      and status='pending_approval'
+      and approval_stage='director_final_review'
+      and current_approver_user_id='00000000-0000-0000-0000-000000000802'
+      and decided_at is null
+  ) then raise exception 'vice_director_must_route_to_director_without_final_approval'; end if;
+  if exists (select 1 from public.staff_leave_approval_actions
+    where request_id='00000000-0000-0000-0000-000000000814' and action='approved') then
+    raise exception 'vice_director_must_not_final_approve';
+  end if;
+end $block$;
+
+-- Only the configured Director can complete the final stage.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000802', true);
+select public.staff_leave_decide(
+  '00000000-0000-0000-0000-000000000814', 'approve', null, 'decide-key-stage-two'
+);
+
 select public.staff_leave_decide(
   '00000000-0000-0000-0000-000000000811', 'approve', null, 'decide-key-approve-1'
 );
@@ -136,9 +183,12 @@ begin
   if not exists (
     select 1 from public.staff_leave_requests
     where id = '00000000-0000-0000-0000-000000000812'
-      and status = 'rejected' and decided_at is not null
+      and status = 'rejected' and approval_stage = 'completed' and decided_at is not null
   ) then
     raise exception 'assigned_approver_must_reject_request';
+  end if;
+  if not exists (select 1 from public.staff_leave_requests where id='00000000-0000-0000-0000-000000000814' and status='approved' and approval_stage='completed') then
+    raise exception 'director_must_complete_final_approval_stage';
   end if;
   if (select count(*) from public.staff_leave_approval_actions
       where request_id = '00000000-0000-0000-0000-000000000811'
