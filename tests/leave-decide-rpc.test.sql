@@ -293,4 +293,73 @@ begin
 end $block$;
 reset role;
 
+
+-- Verified submission route test runs after the two-stage migration creates route config.
+insert into public.profiles (id, is_active) values
+  ('00000000-0000-0000-0000-000000000610', true),
+  ('00000000-0000-0000-0000-000000000611', true)
+on conflict (id) do update set is_active=excluded.is_active;
+
+insert into public.staff_leave_requests (
+  id, applicant_id, leave_type_id, starts_on, ends_on, reason, status
+) values (
+  '00000000-0000-0000-0000-000000000818',
+  '00000000-0000-0000-0000-000000000801',
+  '00000000-0000-0000-0000-000000000821',
+  date '2026-12-08', date '2026-12-08', 'synthetic verified submit route', 'draft'
+) on conflict (id) do nothing;
+
+insert into public.staff_leave_approval_route_config (
+  singleton, vice_director_user_id, director_user_id, authority_verified,
+  direct_to_vice_enabled, authority_reference, verified_by, verified_at
+) values (
+  true, '00000000-0000-0000-0000-000000000610',
+  '00000000-0000-0000-0000-000000000611', true, false,
+  'synthetic-submit-route-test', '00000000-0000-0000-0000-000000000611', now()
+) on conflict (singleton) do update set
+  vice_director_user_id=excluded.vice_director_user_id,
+  director_user_id=excluded.director_user_id,
+  authority_verified=excluded.authority_verified,
+  direct_to_vice_enabled=excluded.direct_to_vice_enabled,
+  authority_reference=excluded.authority_reference,
+  verified_by=excluded.verified_by, verified_at=excluded.verified_at;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000801', true);
+select public.staff_leave_submit(
+  '00000000-0000-0000-0000-000000000818', 'submit-key-verified'
+);
+select public.staff_leave_submit(
+  '00000000-0000-0000-0000-000000000818', 'submit-key-verified'
+);
+reset role;
+do $block$
+begin
+  if not exists (
+    select 1 from public.staff_leave_requests
+    where id='00000000-0000-0000-0000-000000000818'
+      and status='pending_approval'
+      and approval_stage='vice_director_review'
+      and current_approver_user_id='00000000-0000-0000-0000-000000000610'
+  ) then raise exception 'verified_submission_must_route_to_deputy_first'; end if;
+  if (select count(*) from public.staff_leave_approval_actions
+      where request_id='00000000-0000-0000-0000-000000000818'
+        and action='submitted'
+        and metadata->>'approval_route'='vice_director_then_director') <> 1 then
+    raise exception 'verified_submission_must_record_exactly_one_route_action';
+  end if;
+  if (select count(*) from public.staff_leave_notification_outbox
+      where request_id='00000000-0000-0000-0000-000000000818'
+        and recipient_id='00000000-0000-0000-0000-000000000610'
+        and event_type='submitted'
+        and event_key='leave-submit-vice:00000000-0000-0000-0000-000000000818:submit-key-verified') <> 1 then
+    raise exception 'verified_submission_must_notify_deputy_exactly_once';
+  end if;
+  if exists (select 1 from public.staff_leave_notification_outbox
+      where request_id='00000000-0000-0000-0000-000000000818'
+        and recipient_id <> '00000000-0000-0000-0000-000000000610') then
+    raise exception 'verified_submission_must_not_notify_director_before_deputy_review';
+  end if;
+end $block$;
+
 rollback;
