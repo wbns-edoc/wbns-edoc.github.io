@@ -32,6 +32,12 @@ create table if not exists public.school_responsibility_audit (
   new_has_vice_director boolean null
 );
 
+-- Keep this draft migration safe to re-run in an isolated test database where the
+-- audit table may have been created by an earlier draft revision.
+alter table public.school_responsibility_audit
+  add column if not exists previous_has_vice_director boolean null,
+  add column if not exists new_has_vice_director boolean null;
+
 alter table public.school_responsibility_assignments enable row level security;
 alter table public.school_responsibility_settings enable row level security;
 alter table public.school_responsibility_audit enable row level security;
