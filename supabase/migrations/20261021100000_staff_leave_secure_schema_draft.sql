@@ -4,7 +4,7 @@
 -- Leave policy versions are school-wide: personnel category is NOT an entitlement key.
 -- Fail early with an actionable diagnostic if the recovered core schema is incomplete.
 -- This does not alter or repair profiles; it prevents a partial leave migration from proceeding.
-do $
+do $$
 begin
   if to_regclass('public.profiles') is null then
     raise exception 'staff leave migration preflight failed: public.profiles is missing; restore the verified core schema before applying leave migrations';
@@ -21,7 +21,7 @@ begin
     raise exception 'staff leave migration preflight failed: public.profiles.is_active boolean is missing; compare the local recovered schema with the verified Production catalog. No leave objects were created.';
   end if;
 end;
-$;
+$$;
 
 begin;
 
