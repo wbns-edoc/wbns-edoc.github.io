@@ -145,6 +145,21 @@ begin
   end;
 end $block$;
 
+-- Deputy Director may not reject/finalize a leave request; only forward to Director.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000803', true);
+do $block$
+begin
+  begin
+    perform public.staff_leave_decide(
+      '00000000-0000-0000-0000-000000000815', 'reject',
+      'Deputy cannot make final decision', 'decide-key-deputy-reject'
+    );
+    raise exception 'expected_deputy_final_rejection_denial';
+  exception when sqlstate '42501' then
+    if sqlerrm <> 'leave_request_not_found_or_not_assigned' then raise; end if;
+  end;
+end $block$;
+
 -- Deputy approval must advance to the Director stage, not final-approve.
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000803', true);
 select public.staff_leave_decide(
