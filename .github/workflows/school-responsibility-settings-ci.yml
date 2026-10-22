@@ -1,0 +1,84 @@
+name: School Responsibility Settings CI
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql'
+      - 'supabase/tests/admin-staff-responsibility-settings-draft-checklist.sql'
+      - '.github/workflows/school-responsibility-settings-ci.yml'
+  push:
+    branches:
+      - 'feat/admin-staff-responsibility-settings-draft'
+    paths:
+      - 'supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql'
+      - 'supabase/tests/admin-staff-responsibility-settings-draft-checklist.sql'
+      - '.github/workflows/school-responsibility-settings-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  responsibility-settings:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: responsibility_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d responsibility_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: responsibility_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Prepare isolated auth and profile fixtures
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role authenticated;
+          create role anon;
+          create schema auth;
+          grant usage on schema auth to authenticated, anon;
+          create function auth.uid() returns uuid
+          language sql stable
+          as $$
+            select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+          $$;
+          create table public.profiles (
+            id uuid primary key,
+            full_name text,
+            email text,
+            employee_code text,
+            is_active boolean not null default true
+          );
+          create table public.roles (
+            id uuid primary key,
+            code text not null unique,
+            name text
+          );
+          create table public.user_roles (
+            user_id uuid not null references public.profiles(id),
+            role_id uuid not null references public.roles(id),
+            primary key(user_id, role_id)
+          );
+          grant select on public.profiles, public.roles, public.user_roles to authenticated;
+          SQL
+      - name: Apply responsibility settings draft migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql
+      - name: Run structural and privilege regression tests
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/admin-staff-responsibility-settings-draft-checklist.sql
