@@ -120,7 +120,10 @@ begin
     raise exception 'approver_authority_unverified' using errcode = '42501';
   end if;
   if not exists (select 1 from public.profiles p where p.id = v_route.director_user_id and p.is_active = true)
-     or not exists (select 1 from public.profiles p where p.id = v_route.vice_director_user_id and p.is_active = true) then
+     or (v_route.no_vice_director_confirmed and v_route.vice_director_user_id is not null)
+     or (not v_route.no_vice_director_confirmed and
+       (v_route.vice_director_user_id is null
+        or not exists (select 1 from public.profiles p where p.id = v_route.vice_director_user_id and p.is_active = true))) then
     raise exception 'configured_approver_inactive_or_missing' using errcode = '42501';
   end if;
 
