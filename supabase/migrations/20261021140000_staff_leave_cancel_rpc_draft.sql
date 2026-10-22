@@ -105,6 +105,20 @@ begin
     'pending'
   ) on conflict (event_key) do nothing;
 
+  -- If the request had a trusted current assignee, notify that approver too.
+  -- Do not guess a recipient for blocked/unrouted requests.
+  if v_request.current_approver_user_id is not null
+     and v_request.current_approver_user_id <> v_actor then
+    insert into public.staff_leave_notification_outbox (
+      event_key, request_id, recipient_id, event_type, channel, safe_payload, status
+    ) values (
+      'leave-cancel-approver:' || v_request.id::text || ':' || btrim(p_idempotency_key),
+      v_request.id, v_request.current_approver_user_id, 'cancelled', 'in_app',
+      jsonb_build_object('event', 'leave_cancelled', 'request_id', v_request.id::text),
+      'pending'
+    ) on conflict (event_key) do nothing;
+  end if;
+
   return v_request.id;
 end;
 $$;
