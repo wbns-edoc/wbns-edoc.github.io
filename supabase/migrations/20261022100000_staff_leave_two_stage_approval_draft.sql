@@ -81,6 +81,20 @@ begin
   if not found then raise exception 'leave_request_not_found_or_not_assigned' using errcode = '42501'; end if;
 
   -- Idempotent retry is accepted only for the exact actor/action/key/reason and final state.
+  -- A retry of the exact Deputy→Director transition is idempotent too.
+  if p_decision = 'approve' and v_request.status = 'pending_approval'
+     and v_request.approval_stage = 'director_final_review' then
+    select a.reason into v_prior_reason from public.staff_leave_approval_actions a
+    where a.request_id = v_request.id and a.actor_id = v_actor and a.action = 'routed'
+      and a.metadata->>'idempotency_key' = v_key limit 1;
+    if found then
+      if v_prior_reason is distinct from nullif(btrim(coalesce(p_reason,'')), '') then
+        raise exception 'idempotency_key_reused_with_different_payload' using errcode = '22023';
+      end if;
+      return v_request.id;
+    end if;
+  end if;
+
   if v_request.status in ('approved','rejected') then
     v_action := case when p_decision = 'approve' then 'approved' else 'rejected' end;
     select a.reason into v_prior_reason from public.staff_leave_approval_actions a
