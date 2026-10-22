@@ -126,6 +126,10 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000803
 select public.staff_leave_decide(
   '00000000-0000-0000-0000-000000000814', 'approve', null, 'decide-key-stage-one'
 );
+-- Exact retry of stage one must be harmless and must not append another route action.
+select public.staff_leave_decide(
+  '00000000-0000-0000-0000-000000000814', 'approve', null, 'decide-key-stage-one'
+);
 do $block$
 begin
   if not exists (
@@ -139,6 +143,11 @@ begin
   if exists (select 1 from public.staff_leave_approval_actions
     where request_id='00000000-0000-0000-0000-000000000814' and action='approved') then
     raise exception 'vice_director_must_not_final_approve';
+  end if;
+  if (select count(*) from public.staff_leave_approval_actions
+      where request_id='00000000-0000-0000-0000-000000000814'
+        and action='routed' and metadata->>'idempotency_key'='decide-key-stage-one') <> 1 then
+    raise exception 'stage_one_retry_must_append_one_route_action';
   end if;
 end $block$;
 
