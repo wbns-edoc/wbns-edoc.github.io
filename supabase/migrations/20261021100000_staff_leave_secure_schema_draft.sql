@@ -2,6 +2,27 @@
 -- Do not apply to Production. RPCs, grants, isolated migration replay, and RLS tests
 -- must be implemented and reviewed before this migration can be considered release-ready.
 -- Leave policy versions are school-wide: personnel category is NOT an entitlement key.
+-- Fail early with an actionable diagnostic if the recovered core schema is incomplete.
+-- This does not alter or repair profiles; it prevents a partial leave migration from proceeding.
+do $$
+begin
+  if to_regclass('public.profiles') is null then
+    raise exception 'staff leave migration preflight failed: public.profiles is missing; restore the verified core schema before applying leave migrations';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'profiles'
+      and column_name = 'is_active'
+      and data_type = 'boolean'
+  ) then
+    raise exception 'staff leave migration preflight failed: public.profiles.is_active boolean is missing; compare the local recovered schema with the verified Production catalog. No leave objects were created.';
+  end if;
+end;
+$$;
+
 begin;
 
 create table if not exists public.staff_leave_types (
