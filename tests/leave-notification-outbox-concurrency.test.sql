@@ -36,8 +36,8 @@ values
   'approved', 'in_app', '{"title":"Concurrency fixture 2"}'::jsonb, 'pending', now() - interval '1 second')
 on conflict (event_key) do nothing;
 
-select dblink_connect('claim_a', 'dbname=' || current_database());
-select dblink_connect('claim_b', 'dbname=' || current_database());
+select dblink_connect('claim_a', 'host=localhost port=5432 user=postgres password=postgres dbname=' || current_database());
+select dblink_connect('claim_b', 'host=localhost port=5432 user=postgres password=postgres dbname=' || current_database());
 
 -- Session A claims the oldest row and keeps its transaction/row lock open.
 select dblink_exec('claim_a', 'begin');
