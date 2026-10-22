@@ -8,6 +8,7 @@ on:
       - 'supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql'
       - 'supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql'
       - 'supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql'
+      - 'supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
@@ -96,5 +97,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-submit-rpc.test.sql
       - name: Apply decision RPC migration (assigned approver only)
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql
-      - name: Run decision RPC authorization and idempotency tests
+      - name: Apply two-stage approval enforcement draft migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql
+      - name: Run decision RPC authorization, idempotency, and two-stage tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-decide-rpc.test.sql
