@@ -1,0 +1,20 @@
+-- Draft-only test plan for admin-managed school responsibility assignments.
+-- This is a checklist for implementation; it is not an executable SQL test and does not
+-- represent passing verification. Replace with real pgTAP/SQL tests before release.
+
+-- Required test cases:
+-- 1. System Admin can read and update responsibility assignments.
+-- 2. A non-admin cannot update assignments, even by invoking the RPC directly.
+-- 3. Assignment rejects user IDs that do not exist or whose profile is inactive.
+-- 4. Director is required and must be active.
+-- 5. has_vice_director=false permits a null Vice Director and routes new requests to Director.
+-- 6. has_vice_director=true requires an active assigned Vice Director; missing/inactive Vice blocks routing.
+-- 7. Assignment changes append audit rows with role key, previous ID, new ID, actor ID, timestamp.
+-- 8. Assignment changes do not rewrite existing requests' route snapshots/current approver.
+-- 9. Group-head roles map to existing departments ACADEMIC, BUDGET, PERSONNEL, GENERAL;
+--    no duplicate department records are created.
+-- 10. Notification recipients follow the snapshotted route.
+-- 11. Same person cannot simultaneously be Director and Vice Director.
+-- 12. UI account selectors show only existing active profiles and cannot create accounts.
+--
+-- Do not run against Production. Implement executable tests in an isolated local/test DB.
