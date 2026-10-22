@@ -15,6 +15,29 @@ Status: design contract only. This document does not implement functions and doe
 9. Do not use personnel category as an entitlement or approval-routing rule. It is historical/reporting metadata only.
 10. Store minimal safe notification payloads. Never place the leave reason, attachments, or other sensitive details in push/email preview payloads.
 
+## Required approval state machine — implementation blocker
+
+The school's stated normal workflow is Vice Director review first, then Director final approval. The current prototype is not sufficient: `staff_leave_decide` currently changes `pending_approval` directly to `approved` when any explicitly assigned current approver approves. Do not treat that as a valid implementation of the two-stage workflow.
+
+The future server-side state machine must represent the approval stage explicitly (for example, a stage field or a constrained route state), not infer it from UI labels:
+
+1. Submission resolves to an active, verified Vice Director approver and enters the first review stage. If the position is vacant or authority cannot be verified, fail closed and keep the request blocked.
+2. A valid Vice Director approval records an immutable action, advances the request to the Director final-review stage, assigns the verified active Director, and enqueues an idempotent notification to the next approver and applicant as appropriate. It must not mark the request finally approved.
+3. A valid Director approval at the final stage marks the request `approved` and records the final decision. A Director action at the wrong stage must be denied.
+4. Rejection follows the verified policy, records the required reason, and ends the request. If returning a request is supported, it must be a distinct explicitly tested transition.
+5. The “Director absent; Vice Director may approve directly” exception is disabled until the applicable authority/delegation is verified. The exception must be recorded in a trusted server-side configuration or authorized audit event; a client-supplied flag or free-text reason is not proof of authority.
+6. Every transition locks the request row, checks actor identity/active status/current assignment/stage and request status in the same transaction, appends exactly one immutable action, and creates deterministic idempotent outbox events.
+7. The school currently has no Vice Director in post. Do not assign to a vacant role, auto-route to Director, or enable direct approval merely to make the workflow usable.
+
+Minimum regression tests before enabling routing:
+- Vice Director approval advances to Director review and does not set final status to `approved`.
+- Director approval completes only a request currently in the Director stage.
+- An attempt by the Director to skip the first stage is denied absent the separately verified exception.
+- Direct-to-Vice final approval is denied unless the Director-absent authority is configured and audited.
+- Vacant, inactive, unrelated, self, stale-stage, and unassigned actors are denied.
+- Replaying the same idempotency key and same payload adds no duplicate action/outbox event; reusing the key with a different payload is rejected.
+- Applicant, first approver, final approver, and unrelated staff see only the records allowed by the reviewed RLS contract.
+
 ## Proposed RPC surface
 
 All functions are proposals. Names/signatures may change after review against the actual application and Supabase migration conventions.
@@ -46,13 +69,6 @@ All functions are proposals. Names/signatures may change after review against th
 - Update status and timestamps; append immutable action; enqueue applicant notification in the same transaction.
 - Do not permit a browser-supplied role, authority flag, approver ID, or arbitrary next state.
 
-### staff_leave_cancel(p_request_id uuid, p_reason text, p_exception_authority text, p_idempotency_key text)
-
-- Applicant may cancel only their own request and only within the verified cancellation rules.
-- Default cutoff: at least one calendar day before leave starts, evaluated in Asia/Bangkok; the precise comparison must be unit-tested at midnight boundaries.
-- Late cancellation requires a separately verified authority check, a nonblank reason, and an audit event. A caller-supplied string is not evidence of authority.
-- Lock and re-check request state before changing it; append action and enqueue notifications transactionally.
-
 ### Draft implementation: staff_leave_decide(p_request_id uuid, p_decision text, p_reason text, p_idempotency_key text)
 
 A draft-only SQL prototype now exists at `supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql`.
@@ -62,7 +78,15 @@ A draft-only SQL prototype now exists at `supabase/migrations/20261021180000_sta
 - Rejects self-approval, unassigned actors, and stale/non-pending requests.
 - Updates the request, appends an immutable action, and enqueues one minimal in-app notification in the same transaction.
 - Retries with the same key and same decision return the existing result without duplicating the action/outbox event.
+- Important: the current prototype immediately marks an approved decision as final. It does not implement the required Vice Director → Director stages and must not be used as the production workflow until replaced and tested against the state machine above.
 - This function does not establish that the assignment itself is legally authorized. Routing and the vacant Deputy Director / Director delegation must be verified before real use.
+
+### staff_leave_cancel(p_request_id uuid, p_reason text, p_exception_authority text, p_idempotency_key text)
+
+- Applicant may cancel only their own request and only within the verified cancellation rules.
+- Default cutoff: at least one calendar day before leave starts, evaluated in Asia/Bangkok; the precise comparison must be unit-tested at midnight boundaries.
+- Late cancellation requires a separately verified authority check, a nonblank reason, and an audit event. A caller-supplied string is not evidence of authority.
+- Lock and re-check request state before changing it; append action and enqueue notifications transactionally.
 
 ### staff_leave_get_my_summary(p_from date, p_to date)
 
@@ -108,4 +132,4 @@ Do not merge this design into a production release or apply the draft migration 
 4. Application UI integration, attachment access, and notification flows are tested end-to-end.
 5. A rollback plan and a separately approved Production change window exist.
 
-Current status: contract plus draft-only create, cancel, submit, and decision RPC prototypes in the separate leave-schema branch. Submission currently fails closed when approver authority is unverified; decision requires an explicitly assigned approver, and administrator alert delivery is intentionally deferred until a verified recipient mapping exists. These prototypes are not yet integrated into the application UI or notification worker. No Production migration applied, and no Production data or permissions changed.
+Current status: contract plus draft-only create, cancel, submit, and decision RPC prototypes in the separate leave-schema branch. Submission currently fails closed when approver authority is unverified; decision requires an explicitly assigned approver but currently skips the required two-stage approval transition. Administrator alert delivery is intentionally deferred until a verified recipient mapping exists. These prototypes are not yet integrated into the application UI or notification worker. No Production migration applied, and no Production data or permissions changed.
