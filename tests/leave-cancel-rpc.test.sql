@@ -40,6 +40,12 @@ insert into public.staff_leave_requests (
    'fixture exact cutoff boundary', 'pending_approval')
 on conflict (id) do nothing;
 
+-- Simulate a request assigned to another active user so cancellation must notify
+-- both the applicant and the known current approver.
+update public.staff_leave_requests
+set current_approver_user_id = '00000000-0000-0000-0000-000000000302'
+where id = '00000000-0000-0000-0000-000000000501';
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '', true);
 do $block$
@@ -91,8 +97,16 @@ reset role;
 do $block$
 begin
   if (select count(*) from public.staff_leave_notification_outbox
-      where event_key = 'leave-cancel:00000000-0000-0000-0000-000000000501:cancel-key-0001') <> 1 then
-    raise exception 'cancellation_retry_must_not_duplicate_outbox';
+      where event_key = 'leave-cancel:00000000-0000-0000-0000-000000000501:cancel-key-0001'
+        and recipient_id = '00000000-0000-0000-0000-000000000301'
+        and event_type = 'cancelled') <> 1 then
+    raise exception 'cancellation_retry_must_not_duplicate_applicant_outbox';
+  end if;
+  if (select count(*) from public.staff_leave_notification_outbox
+      where event_key = 'leave-cancel-approver:00000000-0000-0000-0000-000000000501:cancel-key-0001'
+        and recipient_id = '00000000-0000-0000-0000-000000000302'
+        and event_type = 'cancelled') <> 1 then
+    raise exception 'cancellation_retry_must_notify_known_current_approver_exactly_once';
   end if;
 end $block$;
 set local role authenticated;
