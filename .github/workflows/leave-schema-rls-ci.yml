@@ -8,11 +8,17 @@ on:
       - 'supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql'
       - 'supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql'
       - 'supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql'
+      - 'supabase/migrations/20261021200000_staff_leave_notification_delivery_draft.sql'
+      - 'tests/leave-notification-outbox.test.sql'
+      - 'tests/leave-notification-outbox-concurrency.test.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
       - 'tests/leave-submit-rpc.test.sql'
       - 'tests/leave-decide-rpc.test.sql'
+      - 'supabase/functions/staff-leave-notification-worker/index.ts'
+      - 'supabase/config.toml'
+      - 'docs/STAFF-LEAVE-NOTIFICATION-WORKER-DRAFT.md'
       - '.github/workflows/leave-schema-rls-ci.yml'
   push:
     branches:
@@ -28,6 +34,9 @@ on:
       - 'tests/leave-cancel-rpc.test.sql'
       - 'tests/leave-submit-rpc.test.sql'
       - 'tests/leave-decide-rpc.test.sql'
+      - 'supabase/functions/staff-leave-notification-worker/index.ts'
+      - 'supabase/config.toml'
+      - 'docs/STAFF-LEAVE-NOTIFICATION-WORKER-DRAFT.md'
       - '.github/workflows/leave-schema-rls-ci.yml'
   workflow_dispatch:
 
@@ -59,6 +68,11 @@ jobs:
       PGDATABASE: leave_test
     steps:
       - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Type-check draft notification worker
+        run: deno check --node-modules-dir=auto supabase/functions/staff-leave-notification-worker/index.ts
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
@@ -68,6 +82,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 <<'SQL'
           create role authenticated;
           create role anon;
+          create role service_role;
           create schema auth;
           grant usage on schema auth to authenticated, anon;
           create function auth.uid() returns uuid
@@ -98,3 +113,9 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql
       - name: Run decision RPC authorization and idempotency tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-decide-rpc.test.sql
+      - name: Apply notification outbox delivery draft
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021200000_staff_leave_notification_delivery_draft.sql
+      - name: Run notification outbox delivery tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-notification-outbox.test.sql
+      - name: Run multi-session concurrent outbox claim test
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-notification-outbox-concurrency.test.sql
