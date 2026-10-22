@@ -1,0 +1,104 @@
+name: Staff Leave Schema RLS CI
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql'
+      - 'supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql'
+      - 'supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql'
+      - 'supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql'
+      - 'supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql'
+      - 'supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql'
+      - 'tests/leave-schema-rls.test.sql'
+      - 'tests/leave-create-draft-rpc.test.sql'
+      - 'tests/leave-cancel-rpc.test.sql'
+      - 'tests/leave-submit-rpc.test.sql'
+      - 'tests/leave-decide-rpc.test.sql'
+      - '.github/workflows/leave-schema-rls-ci.yml'
+  push:
+    branches:
+      - 'feat/leave-secure-schema-draft'
+    paths:
+      - 'supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql'
+      - 'supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql'
+      - 'supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql'
+      - 'supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql'
+      - 'supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql'
+      - 'supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql'
+      - 'tests/leave-schema-rls.test.sql'
+      - 'tests/leave-create-draft-rpc.test.sql'
+      - 'tests/leave-cancel-rpc.test.sql'
+      - 'tests/leave-submit-rpc.test.sql'
+      - 'tests/leave-decide-rpc.test.sql'
+      - '.github/workflows/leave-schema-rls-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  leave-schema-rls:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: leave_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d leave_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: leave_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+      - name: Prepare minimal Supabase auth/profile fixtures
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          create role authenticated;
+          create role anon;
+          create schema auth;
+          grant usage on schema auth to authenticated, anon;
+          create function auth.uid() returns uuid
+          language sql stable
+          as $$
+            select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
+          $$;
+          create table public.profiles (id uuid primary key, is_active boolean not null default true);
+          grant select on public.profiles to authenticated;
+          SQL
+      - name: Apply schema draft to disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql
+      - name: Apply draft RPC migration to disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql
+      - name: Run RLS isolation and direct-write regression tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-schema-rls.test.sql
+      - name: Run create-draft RPC authorization tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-create-draft-rpc.test.sql
+      - name: Apply cancellation RPC migration to disposable PostgreSQL
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql
+      - name: Run cancellation RPC authorization and cutoff tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-cancel-rpc.test.sql
+      - name: Apply submission RPC migration (fail closed until authority is verified)
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql
+      - name: Run submission RPC authorization and idempotency tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-submit-rpc.test.sql
+      - name: Apply decision RPC migration (assigned approver only)
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql
+      - name: Apply two-stage approval enforcement draft migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql
+      - name: Run decision RPC authorization, idempotency, and two-stage tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-decide-rpc.test.sql
