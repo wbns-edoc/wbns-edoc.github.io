@@ -362,4 +362,86 @@ begin
   end if;
 end $block$;
 
+
+
+-- Explicit no-Vice configuration routes directly to the Director and permits
+-- only the Director to make the final decision.
+insert into public.staff_leave_requests (
+  id, applicant_id, leave_type_id, starts_on, ends_on, reason, status
+) values (
+  '00000000-0000-0000-0000-000000000819',
+  '00000000-0000-0000-0000-000000000801',
+  '00000000-0000-0000-0000-000000000821',
+  date '2026-12-09', date '2026-12-09', 'synthetic no-vice submit route', 'draft'
+) on conflict (id) do nothing;
+
+insert into public.staff_leave_approval_route_config (
+  singleton, vice_director_user_id, director_user_id, authority_verified,
+  direct_to_vice_enabled, authority_reference, verified_by, verified_at,
+  no_vice_director_confirmed
+) values (
+  true, null, '00000000-0000-0000-0000-000000000611', true, false,
+  'synthetic-no-vice-route-test', '00000000-0000-0000-0000-000000000611', now(), true
+) on conflict (singleton) do update set
+  vice_director_user_id=null,
+  director_user_id=excluded.director_user_id,
+  authority_verified=true,
+  direct_to_vice_enabled=false,
+  authority_reference=excluded.authority_reference,
+  verified_by=excluded.verified_by,
+  verified_at=excluded.verified_at,
+  no_vice_director_confirmed=true;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000801', true);
+select public.staff_leave_submit(
+  '00000000-0000-0000-0000-000000000819', 'submit-key-no-vice'
+);
+select public.staff_leave_submit(
+  '00000000-0000-0000-0000-000000000819', 'submit-key-no-vice'
+);
+reset role;
+
+do $block$
+begin
+  if not exists (
+    select 1 from public.staff_leave_requests
+    where id='00000000-0000-0000-0000-000000000819'
+      and status='pending_approval'
+      and approval_stage='director_final_review'
+      and current_approver_user_id='00000000-0000-0000-0000-000000000611'
+  ) then raise exception 'confirmed_no_vice_submission_must_route_directly_to_director'; end if;
+  if (select count(*) from public.staff_leave_approval_actions
+      where request_id='00000000-0000-0000-0000-000000000819'
+        and action='submitted'
+        and metadata->>'approval_route'='director_only_confirmed_no_vice') <> 1 then
+    raise exception 'no_vice_submission_retry_must_record_one_route_action'; end if;
+  if (select count(*) from public.staff_leave_notification_outbox
+      where request_id='00000000-0000-0000-0000-000000000819'
+        and recipient_id='00000000-0000-0000-0000-000000000611'
+        and event_type='submitted'
+        and event_key='leave-submit-director:00000000-0000-0000-0000-000000000819:submit-key-no-vice') <> 1 then
+    raise exception 'no_vice_submission_must_notify_director_once'; end if;
+end $block$;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000611', true);
+select public.staff_leave_decide(
+  '00000000-0000-0000-0000-000000000819', 'approve', null, 'decide-key-no-vice'
+);
+reset role;
+
+do $block$
+begin
+  if not exists (select 1 from public.staff_leave_requests
+      where id='00000000-0000-0000-0000-000000000819'
+        and status='approved' and approval_stage='completed' and decided_at is not null) then
+    raise exception 'director_must_final_approve_confirmed_no_vice_request'; end if;
+  if (select count(*) from public.staff_leave_notification_outbox
+      where request_id='00000000-0000-0000-0000-000000000819'
+        and recipient_id='00000000-0000-0000-0000-000000000801'
+        and event_type='approved') <> 1 then
+    raise exception 'no_vice_final_approval_must_notify_applicant_once'; end if;
+end $block$;
+
 rollback;
