@@ -1,6 +1,27 @@
--- Draft-only correction: leave requests go to the Deputy Director for review,
--- then the Director for the final decision. Never apply to Production without review.
+-- Draft-only routing correction. Never apply to Production without review.
+-- When the school explicitly confirms there is no Deputy Director, the Director
+-- is the sole approver. Missing/unverified configuration still fails closed.
 begin;
+
+alter table public.staff_leave_approval_route_config
+  add column if not exists no_vice_director_confirmed boolean not null default false;
+
+alter table public.staff_leave_approval_route_config
+  drop constraint if exists staff_leave_route_verified_fields_chk;
+alter table public.staff_leave_approval_route_config
+  add constraint staff_leave_route_verified_fields_chk check (
+    not authority_verified or (
+      director_user_id is not null
+      and nullif(btrim(authority_reference), '') is not null
+      and verified_by is not null and verified_at is not null
+      and (
+        (no_vice_director_confirmed and vice_director_user_id is null)
+        or
+        (not no_vice_director_confirmed and vice_director_user_id is not null
+          and vice_director_user_id <> director_user_id)
+      )
+    )
+  );
 
 create or replace function public.staff_leave_submit(
   p_request_id uuid,
@@ -54,9 +75,12 @@ begin
 
   select * into v_route from public.staff_leave_approval_route_config where singleton=true;
   if not found or not v_route.authority_verified
-     or v_route.vice_director_user_id is null or v_route.director_user_id is null
-     or v_route.vice_director_user_id=v_route.director_user_id
-     or not exists (select 1 from public.profiles p where p.id=v_route.vice_director_user_id and p.is_active=true)
+     or v_route.director_user_id is null
+     or (v_route.no_vice_director_confirmed and v_route.vice_director_user_id is not null)
+     or (not v_route.no_vice_director_confirmed and
+       (v_route.vice_director_user_id is null
+        or v_route.vice_director_user_id=v_route.director_user_id
+        or not exists (select 1 from public.profiles p where p.id=v_route.vice_director_user_id and p.is_active=true)))
      or not exists (select 1 from public.profiles p where p.id=v_route.director_user_id and p.is_active=true) then
     update public.staff_leave_requests set status='blocked_approver_resolution',
       submitted_at=statement_timestamp(), current_approver_user_id=null,
@@ -72,22 +96,41 @@ begin
     return v_request.id;
   end if;
 
-  update public.staff_leave_requests set status='pending_approval',
-    approval_stage='vice_director_review',
-    current_approver_user_id=v_route.vice_director_user_id,
-    submitted_at=statement_timestamp(),updated_at=statement_timestamp()
-  where id=v_request.id;
+  if v_route.no_vice_director_confirmed then
+    update public.staff_leave_requests set status='pending_approval',
+      approval_stage='director_final_review',
+      current_approver_user_id=v_route.director_user_id,
+      submitted_at=statement_timestamp(),updated_at=statement_timestamp()
+    where id=v_request.id;
 
-  insert into public.staff_leave_approval_actions(request_id,actor_id,action,reason,metadata)
-  values(v_request.id,v_actor,'submitted',null,
-    jsonb_build_object('idempotency_key',v_key,'approver_id',v_route.vice_director_user_id,
-      'approval_route','vice_director_then_director'));
-  insert into public.staff_leave_notification_outbox(event_key,request_id,recipient_id,event_type,channel,safe_payload,status)
-  values('leave-submit-vice:'||v_request.id::text||':'||v_key,v_request.id,
-    v_route.vice_director_user_id,'submitted','in_app',
-    jsonb_build_object('event','leave_submitted','request_id',v_request.id::text,
-      'stage','vice_director_review'),'pending')
-  on conflict(event_key) do nothing;
+    insert into public.staff_leave_approval_actions(request_id,actor_id,action,reason,metadata)
+    values(v_request.id,v_actor,'submitted',null,
+      jsonb_build_object('idempotency_key',v_key,'approver_id',v_route.director_user_id,
+        'approval_route','director_only_confirmed_no_vice'));
+    insert into public.staff_leave_notification_outbox(event_key,request_id,recipient_id,event_type,channel,safe_payload,status)
+    values('leave-submit-director:'||v_request.id::text||':'||v_key,v_request.id,
+      v_route.director_user_id,'submitted','in_app',
+      jsonb_build_object('event','leave_submitted','request_id',v_request.id::text,
+        'stage','director_final_review'),'pending')
+    on conflict(event_key) do nothing;
+  else
+    update public.staff_leave_requests set status='pending_approval',
+      approval_stage='vice_director_review',
+      current_approver_user_id=v_route.vice_director_user_id,
+      submitted_at=statement_timestamp(),updated_at=statement_timestamp()
+    where id=v_request.id;
+
+    insert into public.staff_leave_approval_actions(request_id,actor_id,action,reason,metadata)
+    values(v_request.id,v_actor,'submitted',null,
+      jsonb_build_object('idempotency_key',v_key,'approver_id',v_route.vice_director_user_id,
+        'approval_route','vice_director_then_director'));
+    insert into public.staff_leave_notification_outbox(event_key,request_id,recipient_id,event_type,channel,safe_payload,status)
+    values('leave-submit-vice:'||v_request.id::text||':'||v_key,v_request.id,
+      v_route.vice_director_user_id,'submitted','in_app',
+      jsonb_build_object('event','leave_submitted','request_id',v_request.id::text,
+        'stage','vice_director_review'),'pending')
+    on conflict(event_key) do nothing;
+  end if;
   return v_request.id;
 end;
 $$;
