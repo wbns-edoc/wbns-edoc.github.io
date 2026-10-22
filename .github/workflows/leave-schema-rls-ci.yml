@@ -93,6 +93,17 @@ jobs:
           create table public.profiles (id uuid primary key, is_active boolean not null default true);
           grant select on public.profiles to authenticated;
           SQL
+      - name: Verify migration fails clearly when required profile column is missing
+        run: |
+          psql -v ON_ERROR_STOP=1 -c 'alter table public.profiles rename column is_active to is_active_fixture_missing;'
+          if psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql > /tmp/leave-preflight.log 2>&1; then
+            cat /tmp/leave-preflight.log
+            echo 'Expected schema preflight to fail, but migration succeeded.'
+            exit 1
+          fi
+          cat /tmp/leave-preflight.log
+          grep -F 'staff leave migration preflight failed: public.profiles.is_active boolean is missing' /tmp/leave-preflight.log
+          psql -v ON_ERROR_STOP=1 -c 'alter table public.profiles rename column is_active_fixture_missing to is_active;'
       - name: Apply schema draft to disposable PostgreSQL
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql
       - name: Apply draft RPC migration to disposable PostgreSQL
