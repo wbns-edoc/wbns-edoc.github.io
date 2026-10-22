@@ -51,8 +51,16 @@ begin
   end if;
   if has_function_privilege('anon','public.admin_get_school_responsibilities()','EXECUTE')
      or has_function_privilege('anon','public.admin_save_school_responsibilities(jsonb,boolean)','EXECUTE')
-     or has_function_privilege('public','public.admin_get_school_responsibilities()','EXECUTE')
-     or has_function_privilege('public','public.admin_save_school_responsibilities(jsonb,boolean)','EXECUTE') then
+     or exists (
+       select 1
+       from pg_proc p
+       cross join lateral aclexplode(coalesce(p.proacl,acldefault('f',p.proowner))) acl
+       where p.oid in (
+         'public.admin_get_school_responsibilities()'::regprocedure,
+         'public.admin_save_school_responsibilities(jsonb,boolean)'::regprocedure
+       )
+       and acl.grantee=0 and acl.privilege_type='EXECUTE'
+     ) then
     raise exception 'rpc_execute_grant_too_broad';
   end if;
 
