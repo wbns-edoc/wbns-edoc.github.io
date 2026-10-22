@@ -49,6 +49,16 @@ insert into public.staff_leave_requests (
    '00000000-0000-0000-0000-000000000801',
    '00000000-0000-0000-0000-000000000821',
    date '2026-12-04', date '2026-12-04', 'synthetic two-stage fixture', 'pending_approval',
+   '00000000-0000-0000-0000-000000000803', 'vice_director_review'),
+  ('00000000-0000-0000-0000-000000000815',
+   '00000000-0000-0000-0000-000000000801',
+   '00000000-0000-0000-0000-000000000821',
+   date '2026-12-05', date '2026-12-05', 'synthetic stage-skip fixture', 'pending_approval',
+   '00000000-0000-0000-0000-000000000803', 'vice_director_review'),
+  ('00000000-0000-0000-0000-000000000816',
+   '00000000-0000-0000-0000-000000000801',
+   '00000000-0000-0000-0000-000000000821',
+   date '2026-12-06', date '2026-12-06', 'synthetic inactive-approver fixture', 'pending_approval',
    '00000000-0000-0000-0000-000000000803', 'vice_director_review')
 on conflict (id) do nothing;
 
@@ -118,6 +128,20 @@ begin
     raise exception 'expected_rejection_reason_required';
   exception when sqlstate '22023' then
     if sqlerrm <> 'rejection_reason_required' then raise; end if;
+  end;
+end $block$;
+
+-- The Director must not skip the required Vice Director stage.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000802', true);
+do $block$
+begin
+  begin
+    perform public.staff_leave_decide(
+      '00000000-0000-0000-0000-000000000815', 'approve', null, 'decide-key-skip-stage'
+    );
+    raise exception 'expected_director_stage_skip_denial';
+  exception when sqlstate '42501' then
+    if sqlerrm <> 'leave_request_not_found_or_not_assigned' then raise; end if;
   end;
 end $block$;
 
@@ -228,5 +252,23 @@ begin
     raise exception 'authenticated_must_execute_staff_leave_decide';
   end if;
 end $block$;
+
+-- A configured approver becoming inactive must fail closed.
+update public.profiles set is_active = false
+where id = '00000000-0000-0000-0000-000000000803';
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000802', true);
+do $block$
+begin
+  begin
+    perform public.staff_leave_decide(
+      '00000000-0000-0000-0000-000000000816', 'approve', null, 'decide-key-inactive-route'
+    );
+    raise exception 'expected_inactive_configured_approver_denial';
+  exception when sqlstate '42501' then
+    if sqlerrm <> 'configured_approver_inactive_or_missing' then raise; end if;
+  end;
+end $block$;
+reset role;
 
 rollback;
