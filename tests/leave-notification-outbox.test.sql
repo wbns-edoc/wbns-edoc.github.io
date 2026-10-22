@@ -190,4 +190,55 @@ end;
 $rls$;
 reset role;
 
+
+-- Notification read-state authorization: a recipient may mark only their own row read.
+-- Column grants also prevent changing recipient_id/event_key/payload from the client.
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
+do $read_acl$
+declare
+  affected integer;
+begin
+  update public.staff_leave_notifications
+  set read_at = now()
+  where event_key = 'test-event-key-001';
+  get diagnostics affected = row_count;
+  if affected <> 0 then
+    raise exception 'non-recipient must not mark another user notification read';
+  end if;
+end;
+$read_acl$;
+reset role;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', true);
+do $read_acl$
+declare
+  affected integer;
+begin
+  update public.staff_leave_notifications
+  set read_at = now()
+  where event_key = 'test-event-key-001';
+  get diagnostics affected = row_count;
+  if affected <> 1 then
+    raise exception 'recipient must be able to mark their own notification read';
+  end if;
+end;
+$read_acl$;
+reset role;
+
+-- Notification previews must not include leave reasons or cancellation reasons.
+do $safe_preview$
+begin
+  if exists (
+    select 1
+    from public.staff_leave_notifications
+    where safe_payload ?| array['reason','leave_reason','cancellation_reason']
+  ) then
+    raise exception 'notification preview must not expose leave/cancellation reasons';
+  end if;
+end;
+$safe_preview$;
+
+
 rollback;
