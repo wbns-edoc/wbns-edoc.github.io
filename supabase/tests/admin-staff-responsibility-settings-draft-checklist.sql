@@ -75,4 +75,85 @@ begin
 end
 $test$;
 
+
+-- RPC integration checks with disposable identities. All data is rolled back below.
+do $rpc_test$
+declare
+  v_admin uuid := '00000000-0000-0000-0000-000000000001';
+  v_staff uuid := '00000000-0000-0000-0000-000000000002';
+  v_director uuid := '00000000-0000-0000-0000-000000000003';
+  v_vice uuid := '00000000-0000-0000-0000-000000000004';
+  v_inactive uuid := '00000000-0000-0000-0000-000000000005';
+  v_role uuid := '00000000-0000-0000-0000-000000000011';
+  v_result jsonb;
+  v_rejected boolean;
+begin
+  insert into public.profiles(id,full_name,email,employee_code,is_active) values
+    (v_admin,'CI System Admin','admin@example.invalid','CI001',true),
+    (v_staff,'CI Staff','staff@example.invalid','CI002',true),
+    (v_director,'CI Director','director@example.invalid','CI003',true),
+    (v_vice,'CI Vice Director','vice@example.invalid','CI004',true),
+    (v_inactive,'CI Inactive','inactive@example.invalid','CI005',false);
+  insert into public.roles(id,code,name) values(v_role,'system_admin','System Admin');
+  insert into public.user_roles(user_id,role_id) values(v_admin,v_role);
+
+  perform set_config('request.jwt.claim.sub',v_staff::text,true);
+  v_rejected := false;
+  begin
+    perform public.admin_get_school_responsibilities();
+  exception when others then
+    if sqlerrm = 'system_admin_required' then v_rejected := true; else raise; end if;
+  end;
+  if not v_rejected then raise exception 'non_admin_rpc_access_not_rejected'; end if;
+
+  perform set_config('request.jwt.claim.sub',v_admin::text,true);
+  v_result := public.admin_save_school_responsibilities(
+    jsonb_build_object('director',v_director::text,
+      'vice_director','','personnel_head','','budget_head','',
+      'academic_head','','general_head',''),false);
+  if (v_result->>'has_vice_director')::boolean is distinct from false then
+    raise exception 'vice_director_optional_setting_not_saved';
+  end if;
+  if not exists(select 1 from public.school_responsibility_audit
+      where responsibility_key='director' and new_user_id=v_director
+        and actor_user_id=v_admin and change_kind='assignment_changed') then
+    raise exception 'assignment_audit_missing';
+  end if;
+
+  v_rejected := false;
+  begin
+    perform public.admin_save_school_responsibilities(
+      jsonb_build_object('director',v_director::text,'vice_director','','personnel_head','',
+        'budget_head','','academic_head','','general_head',''),true);
+  exception when others then
+    if sqlerrm = 'active_vice_director_required' then v_rejected := true; else raise; end if;
+  end;
+  if not v_rejected then raise exception 'missing_vice_director_not_rejected'; end if;
+
+  v_rejected := false;
+  begin
+    perform public.admin_save_school_responsibilities(
+      jsonb_build_object('director',v_inactive::text,'vice_director',v_vice::text,
+        'personnel_head','','budget_head','','academic_head','','general_head',''),true);
+  exception when others then
+    if sqlerrm = 'assigned_user_missing_or_inactive' then v_rejected := true; else raise; end if;
+  end;
+  if not v_rejected then raise exception 'inactive_assignee_not_rejected'; end if;
+
+  v_result := public.admin_save_school_responsibilities(
+    jsonb_build_object('director',v_director::text,'vice_director',v_vice::text,
+      'personnel_head','','budget_head','','academic_head','','general_head',''),true);
+  if (v_result->>'has_vice_director')::boolean is distinct from true then
+    raise exception 'vice_director_enabled_setting_not_saved';
+  end if;
+  if not exists(select 1 from public.school_responsibility_audit
+      where responsibility_key='vice_director'
+        and change_kind='vice_director_setting_changed'
+        and previous_has_vice_director=false and new_has_vice_director=true
+        and actor_user_id=v_admin) then
+    raise exception 'vice_director_setting_audit_missing';
+  end if;
+end
+$rpc_test$;
+
 rollback;
