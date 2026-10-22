@@ -178,6 +178,13 @@ begin
         and action='routed' and metadata->>'idempotency_key'='decide-key-stage-one') <> 1 then
     raise exception 'stage_one_retry_must_append_one_route_action';
   end if;
+  if (select count(*) from public.staff_leave_notification_outbox
+      where request_id='00000000-0000-0000-0000-000000000814'
+        and recipient_id='00000000-0000-0000-0000-000000000802'
+        and event_type='approver_assigned'
+        and event_key='leave-stage-advance:00000000-0000-0000-0000-000000000814:decide-key-stage-one') <> 1 then
+    raise exception 'stage_one_retry_must_enqueue_one_director_notification';
+  end if;
 end $block$;
 
 -- Only the configured Director can complete the final stage.
