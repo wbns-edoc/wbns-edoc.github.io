@@ -130,6 +130,9 @@ select public.staff_leave_decide(
 select public.staff_leave_decide(
   '00000000-0000-0000-0000-000000000814', 'approve', null, 'decide-key-stage-one'
 );
+-- Inspect the post-transition row as the test owner: the deputy's RLS access
+-- correctly ends once the request is reassigned to the Director.
+reset role;
 select id, status, approval_stage, current_approver_user_id, decided_at
 from public.staff_leave_requests where id='00000000-0000-0000-0000-000000000814';
 do $block$
@@ -154,6 +157,7 @@ begin
 end $block$;
 
 -- Only the configured Director can complete the final stage.
+set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000802', true);
 select public.staff_leave_decide(
   '00000000-0000-0000-0000-000000000814', 'approve', null, 'decide-key-stage-two'
