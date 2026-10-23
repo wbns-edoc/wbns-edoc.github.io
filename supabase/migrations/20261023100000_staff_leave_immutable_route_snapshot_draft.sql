@@ -18,6 +18,30 @@ alter table public.staff_leave_requests add constraint staff_leave_route_snapsho
         and nullif(approval_route_snapshot->>'vice_director_user_id','') is not null
         and approval_route_snapshot->>'vice_director_user_id'<>approval_route_snapshot->>'director_user_id'))
  ));
+-- Prevent later updates from replacing or clearing a captured route, even by
+-- privileged application code that might otherwise issue direct UPDATEs.
+create or replace function public.staff_leave_guard_route_snapshot_immutable()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, public
+as $
+begin
+  if old.approval_route_snapshot is not null
+     and new.approval_route_snapshot is distinct from old.approval_route_snapshot then
+    raise exception 'approval_route_snapshot_immutable' using errcode = '55000';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists staff_leave_route_snapshot_immutable
+  on public.staff_leave_requests;
+create trigger staff_leave_route_snapshot_immutable
+before update of approval_route_snapshot on public.staff_leave_requests
+for each row execute function public.staff_leave_guard_route_snapshot_immutable();
+
+revoke all on function public.staff_leave_guard_route_snapshot_immutable() from public, anon, authenticated;
+
 create or replace function public.staff_leave_submit(p_request_id uuid,p_idempotency_key text)
 returns uuid language plpgsql security definer set search_path=pg_catalog,public as $$
 
