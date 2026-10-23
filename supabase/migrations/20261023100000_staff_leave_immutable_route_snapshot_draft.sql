@@ -3,7 +3,7 @@ begin;
 alter table public.staff_leave_requests add column if not exists approval_route_snapshot jsonb;
 alter table public.staff_leave_requests drop constraint if exists staff_leave_route_snapshot_shape_chk;
 alter table public.staff_leave_requests add constraint staff_leave_route_snapshot_shape_chk check (
- approval_route_snapshot is null or (
+ approval_route_snapshot is null or ((
   jsonb_typeof(approval_route_snapshot)='object'
   and approval_route_snapshot->>'version'='1'
   and approval_route_snapshot->>'route_kind' in ('vice_director_then_director','director_only_confirmed_no_vice')
@@ -17,7 +17,8 @@ alter table public.staff_leave_requests add constraint staff_leave_route_snapsho
     or (approval_route_snapshot->>'route_kind'='vice_director_then_director'
         and nullif(approval_route_snapshot->>'vice_director_user_id','') is not null
         and approval_route_snapshot->>'vice_director_user_id'<>approval_route_snapshot->>'director_user_id'))
- ));
+ ) is true)
+);
 -- Prevent later updates from replacing or clearing a captured route, even by
 -- privileged application code that might otherwise issue direct UPDATEs.
 create or replace function public.staff_leave_guard_route_snapshot_immutable()
@@ -29,6 +30,11 @@ begin
   if old.approval_route_snapshot is not null
      and new.approval_route_snapshot is distinct from old.approval_route_snapshot then
     raise exception 'approval_route_snapshot_immutable' using errcode = '55000';
+  end if;
+  if old.approval_route_snapshot is null
+     and new.approval_route_snapshot is not null
+     and current_setting('app.staff_leave_route_snapshot_write', true) is distinct from 'on' then
+    raise exception 'approval_route_snapshot_rpc_only' using errcode = '42501';
   end if;
   return new;
 end;
@@ -110,6 +116,7 @@ begin
   end if;
 
   -- Freeze the verified route in the same transaction as submission.
+  perform set_config('app.staff_leave_route_snapshot_write', 'on', true);
   update public.staff_leave_requests
   set approval_route_snapshot = jsonb_build_object(
     'version', 1,
@@ -122,6 +129,7 @@ begin
     'authority_verified_at', v_route.verified_at,
     'captured_at', statement_timestamp()
   ), updated_at = statement_timestamp() where id = v_request.id;
+  perform set_config('app.staff_leave_route_snapshot_write', 'off', true);
 
   if v_route.no_vice_director_confirmed then
     update public.staff_leave_requests set status='pending_approval',
