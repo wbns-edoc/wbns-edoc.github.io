@@ -18,6 +18,7 @@ on:
       - 'tests/leave-cancel-rpc.test.sql'
       - 'tests/leave-submit-rpc.test.sql'
       - 'tests/leave-decide-rpc.test.sql'
+      - 'tests/leave-responsibility-route-bridge.test.sql'
       - '.github/workflows/leave-schema-rls-ci.yml'
   push:
     branches:
@@ -115,3 +116,5 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql
       - name: Run decision RPC authorization, idempotency, and two-stage tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-decide-rpc.test.sql
+      - name: Run responsibility-to-route bridge regression tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-responsibility-route-bridge.test.sql
