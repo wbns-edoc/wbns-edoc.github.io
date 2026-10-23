@@ -28,38 +28,38 @@ values ('00000000-0000-0000-0000-000000000821', 'decide_test', 'Decision test', 
 on conflict (id) do update set is_active = true;
 
 insert into public.staff_leave_requests (
-  id, applicant_id, leave_type_id, starts_on, ends_on, reason, status, current_approver_user_id, approval_stage
+  id, applicant_id, leave_type_id, starts_on, ends_on, reason, status, current_approver_user_id, approval_stage, approval_route_snapshot
 ) values
   ('00000000-0000-0000-0000-000000000811',
    '00000000-0000-0000-0000-000000000801',
    '00000000-0000-0000-0000-000000000821',
    date '2026-12-01', date '2026-12-01', 'synthetic approval fixture', 'pending_approval',
-   '00000000-0000-0000-0000-000000000802', 'director_final_review'),
+   '00000000-0000-0000-0000-000000000802', 'director_final_review', jsonb_build_object('version',1,'route_kind','vice_director_then_director','vice_director_user_id','00000000-0000-0000-0000-000000000803','director_user_id','00000000-0000-0000-0000-000000000802','authority_reference','synthetic-test-authority-reference','authority_verified_by','00000000-0000-0000-0000-000000000802','authority_verified_at',now(),'captured_at',now())),
   ('00000000-0000-0000-0000-000000000812',
    '00000000-0000-0000-0000-000000000803',
    '00000000-0000-0000-0000-000000000821',
    date '2026-12-02', date '2026-12-02', 'synthetic rejection fixture', 'pending_approval',
-   '00000000-0000-0000-0000-000000000802', 'director_final_review'),
+   '00000000-0000-0000-0000-000000000802', 'director_final_review', jsonb_build_object('version',1,'route_kind','vice_director_then_director','vice_director_user_id','00000000-0000-0000-0000-000000000803','director_user_id','00000000-0000-0000-0000-000000000802','authority_reference','synthetic-test-authority-reference','authority_verified_by','00000000-0000-0000-0000-000000000802','authority_verified_at',now(),'captured_at',now())),
   ('00000000-0000-0000-0000-000000000813',
    '00000000-0000-0000-0000-000000000802',
    '00000000-0000-0000-0000-000000000821',
    date '2026-12-03', date '2026-12-03', 'synthetic self-approval fixture', 'pending_approval',
-   '00000000-0000-0000-0000-000000000802', 'director_final_review'),
+   '00000000-0000-0000-0000-000000000802', 'director_final_review', jsonb_build_object('version',1,'route_kind','vice_director_then_director','vice_director_user_id','00000000-0000-0000-0000-000000000803','director_user_id','00000000-0000-0000-0000-000000000802','authority_reference','synthetic-test-authority-reference','authority_verified_by','00000000-0000-0000-0000-000000000802','authority_verified_at',now(),'captured_at',now())),
   ('00000000-0000-0000-0000-000000000814',
    '00000000-0000-0000-0000-000000000801',
    '00000000-0000-0000-0000-000000000821',
    date '2026-12-04', date '2026-12-04', 'synthetic two-stage fixture', 'pending_approval',
-   '00000000-0000-0000-0000-000000000803', 'vice_director_review'),
+   '00000000-0000-0000-0000-000000000803', 'vice_director_review', jsonb_build_object('version',1,'route_kind','vice_director_then_director','vice_director_user_id','00000000-0000-0000-0000-000000000803','director_user_id','00000000-0000-0000-0000-000000000802','authority_reference','synthetic-test-authority-reference','authority_verified_by','00000000-0000-0000-0000-000000000802','authority_verified_at',now(),'captured_at',now())),
   ('00000000-0000-0000-0000-000000000815',
    '00000000-0000-0000-0000-000000000801',
    '00000000-0000-0000-0000-000000000821',
    date '2026-12-05', date '2026-12-05', 'synthetic stage-skip fixture', 'pending_approval',
-   '00000000-0000-0000-0000-000000000803', 'vice_director_review'),
+   '00000000-0000-0000-0000-000000000803', 'vice_director_review', jsonb_build_object('version',1,'route_kind','vice_director_then_director','vice_director_user_id','00000000-0000-0000-0000-000000000803','director_user_id','00000000-0000-0000-0000-000000000802','authority_reference','synthetic-test-authority-reference','authority_verified_by','00000000-0000-0000-0000-000000000802','authority_verified_at',now(),'captured_at',now())),
   ('00000000-0000-0000-0000-000000000816',
    '00000000-0000-0000-0000-000000000801',
    '00000000-0000-0000-0000-000000000821',
    date '2026-12-06', date '2026-12-06', 'synthetic inactive-approver fixture', 'pending_approval',
-   '00000000-0000-0000-0000-000000000803', 'vice_director_review')
+   '00000000-0000-0000-0000-000000000803', 'vice_director_review', jsonb_build_object('version',1,'route_kind','vice_director_then_director','vice_director_user_id','00000000-0000-0000-0000-000000000803','director_user_id','00000000-0000-0000-0000-000000000802','authority_reference','synthetic-test-authority-reference','authority_verified_by','00000000-0000-0000-0000-000000000802','authority_verified_at',now(),'captured_at',now()))
 on conflict (id) do nothing;
 
 set local role authenticated;
@@ -363,6 +363,31 @@ begin
 end $block$;
 
 
+
+-- Route snapshot regression: mutate the singleton after submission. The in-flight
+-- request must continue to use the originally captured Vice Director and Director.
+update public.staff_leave_approval_route_config set
+  vice_director_user_id='00000000-0000-0000-0000-000000000803',
+  director_user_id='00000000-0000-0000-0000-000000000802',
+  authority_reference='synthetic-route-changed-after-submit',
+  verified_by='00000000-0000-0000-0000-000000000802',
+  verified_at=now(), authority_verified=true, no_vice_director_confirmed=false
+where singleton=true;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000610', true);
+select public.staff_leave_decide('00000000-0000-0000-0000-000000000818','approve',null,'snapshot-route-stage-one');
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000611', true);
+select public.staff_leave_decide('00000000-0000-0000-0000-000000000818','approve',null,'snapshot-route-stage-two');
+reset role;
+do $block$
+begin
+ if not exists (select 1 from public.staff_leave_requests
+   where id='00000000-0000-0000-0000-000000000818' and status='approved'
+   and approval_route_snapshot->>'vice_director_user_id'='00000000-0000-0000-0000-000000000610'
+   and approval_route_snapshot->>'director_user_id'='00000000-0000-0000-0000-000000000611') then
+   raise exception 'in_flight_request_must_keep_original_route_snapshot';
+ end if;
+end $block$;
 
 -- Explicit no-Vice configuration routes directly to the Director and permits
 -- only the Director to make the final decision.
