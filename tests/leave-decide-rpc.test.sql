@@ -389,6 +389,20 @@ begin
  end if;
 end $block$;
 
+-- The snapshot is immutable once captured; even a direct privileged UPDATE
+-- must not be able to rewrite the route for an in-flight request.
+do $block$
+begin
+  begin
+    update public.staff_leave_requests
+      set approval_route_snapshot = jsonb_build_object('version',1,'route_kind','director_only_confirmed_no_vice')
+      where id='00000000-0000-0000-0000-000000000818';
+    raise exception 'expected_immutable_route_snapshot_rejection';
+  exception when sqlstate '55000' then
+    if sqlerrm <> 'approval_route_snapshot_immutable' then raise; end if;
+  end;
+end $block$;
+
 -- Explicit no-Vice configuration routes directly to the Director and permits
 -- only the Director to make the final decision.
 insert into public.staff_leave_requests (
