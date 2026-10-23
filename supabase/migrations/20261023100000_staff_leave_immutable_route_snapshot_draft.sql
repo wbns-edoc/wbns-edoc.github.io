@@ -24,7 +24,7 @@ create or replace function public.staff_leave_guard_route_snapshot_immutable()
 returns trigger
 language plpgsql
 set search_path = pg_catalog, public
-as $
+as $$
 begin
   if old.approval_route_snapshot is not null
      and new.approval_route_snapshot is distinct from old.approval_route_snapshot then
@@ -32,7 +32,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists staff_leave_route_snapshot_immutable
   on public.staff_leave_requests;
