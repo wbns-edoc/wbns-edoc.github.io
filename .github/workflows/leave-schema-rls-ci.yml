@@ -11,11 +11,15 @@ on:
       - 'supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql'
       - 'supabase/migrations/20261022210000_staff_leave_submit_two_stage_route_draft.sql'
       - 'supabase/migrations/20261023100000_staff_leave_immutable_route_snapshot_draft.sql'
+      - 'supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql'
+      - 'supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
       - 'tests/leave-submit-rpc.test.sql'
       - 'tests/leave-decide-rpc.test.sql'
+      - 'tests/leave-responsibility-route-bridge.test.sql'
+      - 'tests/leave-responsibility-submit-e2e.test.sql'
       - '.github/workflows/leave-schema-rls-ci.yml'
   push:
     branches:
@@ -107,5 +111,13 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261022210000_staff_leave_submit_two_stage_route_draft.sql
       - name: Apply immutable approval route snapshot draft migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023100000_staff_leave_immutable_route_snapshot_draft.sql
+      - name: Apply school responsibility settings draft migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql
+      - name: Apply responsibility-to-leave route bridge draft migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql
       - name: Run decision RPC authorization, idempotency, and two-stage tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-decide-rpc.test.sql
+      - name: Run responsibility-to-route bridge regression tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-responsibility-route-bridge.test.sql
+      - name: Run end-to-end responsibility-to-submission routing tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-responsibility-submit-e2e.test.sql
