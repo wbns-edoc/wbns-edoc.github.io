@@ -19,6 +19,7 @@ on:
       - 'tests/leave-submit-rpc.test.sql'
       - 'tests/leave-decide-rpc.test.sql'
       - 'tests/leave-responsibility-route-bridge.test.sql'
+      - 'tests/leave-responsibility-submit-e2e.test.sql'
       - '.github/workflows/leave-schema-rls-ci.yml'
   push:
     branches:
@@ -118,3 +119,5 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-decide-rpc.test.sql
       - name: Run responsibility-to-route bridge regression tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-responsibility-route-bridge.test.sql
+      - name: Run end-to-end responsibility-to-submission routing tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-responsibility-submit-e2e.test.sql
