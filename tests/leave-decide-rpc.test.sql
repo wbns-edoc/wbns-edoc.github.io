@@ -309,28 +309,6 @@ insert into public.staff_leave_requests (
   date '2026-12-08', date '2026-12-08', 'synthetic verified submit route', 'draft'
 ) on conflict (id) do nothing;
 
--- A caller must not be able to populate a previously empty snapshot directly.
-do $block$
-begin
-  begin
-    update public.staff_leave_requests
-      set approval_route_snapshot = jsonb_build_object(
-        'version', 1,
-        'route_kind', 'director_only_confirmed_no_vice',
-        'vice_director_user_id', null,
-        'director_user_id', '00000000-0000-0000-0000-000000000611',
-        'authority_reference', 'synthetic-direct-write-attempt',
-        'authority_verified_by', '00000000-0000-0000-0000-000000000611',
-        'authority_verified_at', now(),
-        'captured_at', now()
-      )
-      where id='00000000-0000-0000-0000-000000000819';
-    raise exception 'expected_rpc_only_route_snapshot_rejection';
-  exception when sqlstate '42501' then
-    if sqlerrm <> 'approval_route_snapshot_rpc_only' then raise; end if;
-  end;
-end $block$;
-
 insert into public.staff_leave_approval_route_config (
   singleton, vice_director_user_id, director_user_id, authority_verified,
   direct_to_vice_enabled, authority_reference, verified_by, verified_at
@@ -435,6 +413,28 @@ insert into public.staff_leave_requests (
   '00000000-0000-0000-0000-000000000821',
   date '2026-12-09', date '2026-12-09', 'synthetic no-vice submit route', 'draft'
 ) on conflict (id) do nothing;
+
+-- A caller must not be able to populate a previously empty snapshot directly.
+do $block$
+begin
+  begin
+    update public.staff_leave_requests
+      set approval_route_snapshot = jsonb_build_object(
+        'version', 1,
+        'route_kind', 'director_only_confirmed_no_vice',
+        'vice_director_user_id', null,
+        'director_user_id', '00000000-0000-0000-0000-000000000611',
+        'authority_reference', 'synthetic-direct-write-attempt',
+        'authority_verified_by', '00000000-0000-0000-0000-000000000611',
+        'authority_verified_at', now(),
+        'captured_at', now()
+      )
+      where id='00000000-0000-0000-0000-000000000819';
+    raise exception 'expected_rpc_only_route_snapshot_rejection';
+  exception when sqlstate '42501' then
+    if sqlerrm <> 'approval_route_snapshot_rpc_only' then raise; end if;
+  end;
+end $block$;
 
 insert into public.staff_leave_approval_route_config (
   singleton, vice_director_user_id, director_user_id, authority_verified,
