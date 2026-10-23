@@ -56,7 +56,8 @@ begin
        or not exists(select 1 from public.profiles p where p.id=v_director and p.is_active=true)
        or not exists(select 1 from public.profiles p where p.id=v_vice and p.is_active=true) then
       update public.staff_leave_approval_route_config
-         set authority_verified=false, updated_at=statement_timestamp()
+         set authority_verified=false, no_vice_director_confirmed=false,
+             updated_at=statement_timestamp()
        where singleton=true;
       return new;
     end if;
@@ -64,7 +65,8 @@ begin
     if v_director is null
        or not exists(select 1 from public.profiles p where p.id=v_director and p.is_active=true) then
       update public.staff_leave_approval_route_config
-         set authority_verified=false, updated_at=statement_timestamp()
+         set authority_verified=false, no_vice_director_confirmed=false,
+             updated_at=statement_timestamp()
        where singleton=true;
       return new;
     end if;
