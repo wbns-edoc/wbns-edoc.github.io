@@ -436,6 +436,8 @@ begin
   end;
 end $block$;
 
+
+
 insert into public.staff_leave_approval_route_config (
   singleton, vice_director_user_id, director_user_id, authority_verified,
   direct_to_vice_enabled, authority_reference, verified_by, verified_at,
