@@ -59,6 +59,10 @@ begin
 end
 $test$;
 
+update public.school_responsibility_settings
+ set has_vice_director=true,updated_at=now(),
+     updated_by='00000000-0000-0000-0000-000000000703'
+ where singleton=true;
 update public.school_responsibility_assignments
  set user_id='00000000-0000-0000-0000-000000000702'
  where responsibility_key='director';
