@@ -10,6 +10,7 @@ on:
       - 'supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql'
       - 'supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql'
       - 'supabase/migrations/20261022210000_staff_leave_submit_two_stage_route_draft.sql'
+      - 'supabase/migrations/20261023100000_staff_leave_immutable_route_snapshot_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
@@ -104,5 +105,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql
       - name: Apply two-stage submission routing draft migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261022210000_staff_leave_submit_two_stage_route_draft.sql
+      - name: Apply immutable approval route snapshot draft migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023100000_staff_leave_immutable_route_snapshot_draft.sql
       - name: Run decision RPC authorization, idempotency, and two-stage tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-decide-rpc.test.sql
