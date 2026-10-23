@@ -120,14 +120,19 @@ begin
     raise exception 'approver_authority_unverified' using errcode = '42501';
   end if;
   if not exists (select 1 from public.profiles p where p.id = v_route.director_user_id and p.is_active = true)
-     or not exists (select 1 from public.profiles p where p.id = v_route.vice_director_user_id and p.is_active = true) then
+     or (v_route.no_vice_director_confirmed and v_route.vice_director_user_id is not null)
+     or (not v_route.no_vice_director_confirmed and
+       (v_route.vice_director_user_id is null
+        or not exists (select 1 from public.profiles p where p.id = v_route.vice_director_user_id and p.is_active = true))) then
     raise exception 'configured_approver_inactive_or_missing' using errcode = '42501';
   end if;
 
   if p_decision = 'reject' then
-    if v_request.current_approver_user_id is distinct from v_actor
-       or (v_request.approval_stage = 'vice_director_review' and v_actor <> v_route.vice_director_user_id)
-       or (v_request.approval_stage = 'director_final_review' and v_actor <> v_route.director_user_id) then
+    -- The Deputy Director may review and forward only; final rejection belongs
+    -- exclusively to the Director at the director_final_review stage.
+    if v_request.approval_stage <> 'director_final_review'
+       or v_actor <> v_route.director_user_id
+       or v_request.current_approver_user_id is distinct from v_actor then
       raise exception 'leave_request_not_found_or_not_assigned' using errcode = '42501';
     end if;
     v_action := 'rejected';

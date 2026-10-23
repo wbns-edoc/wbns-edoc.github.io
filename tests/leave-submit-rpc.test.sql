@@ -4,7 +4,9 @@ begin;
 insert into public.profiles (id, is_active) values
   ('00000000-0000-0000-0000-000000000601', true),
   ('00000000-0000-0000-0000-000000000602', true),
-  ('00000000-0000-0000-0000-000000000603', false)
+  ('00000000-0000-0000-0000-000000000603', false),
+  ('00000000-0000-0000-0000-000000000610', true),
+  ('00000000-0000-0000-0000-000000000611', true)
 on conflict (id) do update set is_active = excluded.is_active;
 
 insert into public.staff_leave_types (id, code, name, is_active)
@@ -25,7 +27,11 @@ insert into public.staff_leave_requests (
   ('00000000-0000-0000-0000-000000000607',
    '00000000-0000-0000-0000-000000000603',
    '00000000-0000-0000-0000-000000000604',
-   date '2026-11-20', date '2026-11-20', 'inactive applicant draft', 'draft')
+   date '2026-11-20', date '2026-11-20', 'inactive applicant draft', 'draft'),
+  ('00000000-0000-0000-0000-000000000608',
+   '00000000-0000-0000-0000-000000000601',
+   '00000000-0000-0000-0000-000000000604',
+   date '2026-11-21', date '2026-11-21', 'verified route draft', 'draft')
 on conflict (id) do nothing;
 
 set local role authenticated;
