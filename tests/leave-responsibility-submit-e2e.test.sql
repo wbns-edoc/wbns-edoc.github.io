@@ -98,7 +98,7 @@ begin
      and r.approval_stage='director_final_review'
      and r.current_approver_user_id='00000000-0000-0000-0000-000000000802'
      and r.approval_route_snapshot->>'route_kind'='director_only_confirmed_no_vice'
-     and r.approval_route_snapshot->>'vice_director_user_id'='null'
+     and r.approval_route_snapshot->'vice_director_user_id'='null'::jsonb
  ) then raise exception 'confirmed_no_vice_did_not_reach_director_only_snapshot'; end if;
  if not exists (
    select 1 from public.staff_leave_notification_outbox n
