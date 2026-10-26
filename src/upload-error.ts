@@ -7,7 +7,8 @@ export function getUploadErrorMessage(code: unknown): string {
     case "INVALID_FILE_NAME":
       return "ชื่อไฟล์ไม่ถูกต้อง กรุณาตรวจสอบชื่อไฟล์และลองใหม่";
     case "FILE_TOO_LARGE":
-      return "ไฟล์มีขนาดเกิน 25 MiB";
+    case "FILE_TOO_LARGE_FOR_DRIVE_BRIDGE":
+      return "ไฟล์มีขนาดเกิน 20 MiB";
     case "EMPTY_FILE":
       return "ไฟล์ว่างเปล่า กรุณาเลือกไฟล์ใหม่";
     case "AUTH_REQUIRED":
@@ -22,6 +23,8 @@ export function getUploadErrorMessage(code: unknown): string {
     case "GOOGLE_DRIVE_CONFIGURATION_INVALID":
       return "การตั้งค่าบัญชีจัดเก็บไฟล์ไม่ถูกต้อง กรุณาติดต่อผู้ดูแลระบบ";
     case "GOOGLE_DRIVE_CONFIGURATION_MISSING":
+    case "APPS_SCRIPT_BRIDGE_CONFIGURATION_MISSING":
+    case "APPS_SCRIPT_BRIDGE_CONFIGURATION_INVALID":
     case "SERVER_DATABASE_CONFIGURATION_MISSING":
     case "SUPABASE_CONFIGURATION_MISSING":
       return "ระบบจัดเก็บไฟล์ยังตั้งค่าไม่ครบ กรุณาติดต่อผู้ดูแลระบบ";
@@ -29,6 +32,9 @@ export function getUploadErrorMessage(code: unknown): string {
     case "DOCUMENT_FILE_ATTACH_FAILED":
       return "จัดเก็บไฟล์แล้วแต่เชื่อมโยงกับเอกสารไม่สำเร็จ ระบบอาจต้องตรวจสอบก่อนลองใหม่";
     case "GOOGLE_DRIVE_UPLOAD_FAILED":
+    case "APPS_SCRIPT_BRIDGE_HTTP_FAILED":
+    case "APPS_SCRIPT_BRIDGE_OPERATION_FAILED":
+    case "APPS_SCRIPT_BRIDGE_HEALTH_FAILED":
     case "GOOGLE_DRIVE_RESPONSE_INVALID":
     case "GOOGLE_DRIVE_UPLOAD_ERROR":
       return "ส่งไฟล์ไปยัง Google Drive ไม่สำเร็จ กรุณาลองใหม่";
