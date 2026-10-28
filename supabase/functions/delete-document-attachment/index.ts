@@ -10,102 +10,91 @@ function out(data: unknown, status = 200) {
     "Access-Control-Allow-Methods": "POST, OPTIONS"
   }});
 }
-function base64Url(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-}
-async function trashDriveFile(fileId: string) {
-  const url = Deno.env.get("GOOGLE_APPS_SCRIPT_BRIDGE_URL");
-  const secret = Deno.env.get("GOOGLE_APPS_SCRIPT_BRIDGE_SECRET");
-  if (!url || !secret || !/^https:\/\//i.test(url)) throw new Error("BRIDGE_CONFIGURATION_INVALID");
-  const payload = { action: "delete", timestamp: Math.floor(Date.now() / 1000), requestId: crypto.randomUUID(), fileId };
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const signature = base64Url(new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(JSON.stringify(payload)))));
-  const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, signature }), signal: AbortSignal.timeout(90000) });
-  if (!response.ok) throw new Error("BRIDGE_HTTP_FAILED");
-  const result = await response.json().catch(() => null);
-  if (!result || result.ok !== true || result.trashed !== true || result.file_id !== fileId) throw new Error("BRIDGE_TRASH_FAILED");
-}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ALLOWED_ROLE_NAMES = new Set([
+  "System Admin", "system_admin",
+  "ผู้อำนวยการโรงเรียน", "Director", "director",
+  "เจ้าหน้าที่สารบรรณ", "Registry Officer", "registry_officer"
+]);
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return out({ ok: true });
   if (req.method !== "POST") return out({ ok: false, code: "METHOD_NOT_ALLOWED" }, 405);
+
   const authorization = req.headers.get("Authorization");
   if (!authorization?.startsWith("Bearer ")) return out({ ok: false, code: "AUTH_REQUIRED" }, 401);
+
   const url = Deno.env.get("SUPABASE_URL");
   const anon = Deno.env.get("SUPABASE_ANON_KEY");
   const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !anon || !service) return out({ ok: false, code: "SERVER_CONFIGURATION_MISSING" }, 500);
-  const user = createClient(url, anon, { global: { headers: { Authorization: authorization } }, auth: { persistSession: false, autoRefreshToken: false } });
+
+  const user = createClient(url, anon, {
+    global: { headers: { Authorization: authorization } },
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
   const { data: authData, error: authError } = await user.auth.getUser();
   if (authError || !authData.user) return out({ ok: false, code: "AUTH_INVALID" }, 401);
-  // Deletion is restricted to the three explicitly authorized school roles.
-  // Do not rely on a broad document.update permission for this destructive action.
+
+  // Destructive actions are restricted to explicitly authorized school roles.
   const { data: userRoles, error: roleError } = await user.from("user_roles")
     .select("roles(name,code)").eq("user_id", authData.user.id);
   if (roleError) return out({ ok: false, code: "ROLE_CHECK_FAILED" }, 403);
-  const allowedRoleNames = new Set([
-    "System Admin", "system_admin",
-    "ผู้อำนวยการโรงเรียน", "Director", "director",
-    "เจ้าหน้าที่สารบรรณ", "Registry Officer", "registry_officer"
-  ]);
-  const hasDeleteRole = (userRoles || []).some((row: any) => {
-    const role = Array.isArray(row.roles) ? row.roles[0] : row.roles;
-    return role && (allowedRoleNames.has(role.name) || allowedRoleNames.has(role.code));
+  const hasDeleteRole = (userRoles ?? []).some((row: { roles: unknown }) => {
+    const related = row.roles;
+    const role = Array.isArray(related) ? related[0] : related;
+    if (!role || typeof role !== "object") return false;
+    const candidate = role as { name?: unknown; code?: unknown };
+    return (typeof candidate.name === "string" && ALLOWED_ROLE_NAMES.has(candidate.name)) ||
+      (typeof candidate.code === "string" && ALLOWED_ROLE_NAMES.has(candidate.code));
   });
   if (!hasDeleteRole) return out({ ok: false, code: "INSUFFICIENT_ROLE" }, 403);
+
   let body: { document_file_id?: unknown };
-  try { body = await req.json(); } catch { return out({ ok: false, code: "INVALID_JSON" }, 400); }
-  const attachmentId = typeof body.document_file_id === "string" ? body.document_file_id : "";
-  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(attachmentId)) return out({ ok: false, code: "INVALID_ATTACHMENT_ID" }, 400);
-
-  // Read through the caller's RLS policies first: inaccessible attachments cannot be targeted.
-  const { data: attachment, error: attachmentError } = await user.from("document_files")
-    .select("*,documents(id),google_drive_files(id,drive_file_id,name)")
-    .eq("id", attachmentId).maybeSingle();
-  if (attachmentError || !attachment) return out({ ok: false, code: "ATTACHMENT_NOT_FOUND_OR_NOT_ACCESSIBLE" }, 404);
-  const meta = Array.isArray(attachment.google_drive_files) ? attachment.google_drive_files[0] : attachment.google_drive_files;
-  if (!meta?.id || !meta?.drive_file_id) return out({ ok: false, code: "DRIVE_METADATA_MISSING" }, 409);
-
-  const admin = createClient(url, service, { auth: { persistSession: false, autoRefreshToken: false } });
-  const { data: refs, error: refsError } = await admin.from("document_files").select("id").eq("google_drive_file_id", attachment.google_drive_file_id);
-  if (refsError || !refs) return out({ ok: false, code: "ATTACHMENT_REFERENCE_CHECK_FAILED" }, 500);
-  if (refs.length !== 1 || refs[0].id !== attachmentId) {
-    // Shared Drive metadata must never be trashed when another attachment references it.
-    return out({ ok: false, code: "SHARED_FILE_DELETE_BLOCKED", message: "ไฟล์นี้ถูกอ้างอิงโดยรายการอื่น จึงไม่ลบไฟล์ต้นฉบับเพื่อป้องกันข้อมูลสูญหาย" }, 409);
-  }
-
-  // Recheck immediately before the external side effect. This narrows the race
-  // window if another attachment was added after the initial reference check.
-  const { data: latestRefs, error: latestRefsError } = await admin.from("document_files")
-    .select("id").eq("google_drive_file_id", attachment.google_drive_file_id);
-  if (latestRefsError || !latestRefs) {
-    return out({ ok: false, code: "FINAL_REFERENCE_CHECK_FAILED", message: "ตรวจสอบการใช้งานไฟล์ซ้ำครั้งสุดท้ายไม่สำเร็จ จึงยกเลิกการลบเพื่อความปลอดภัย" }, 500);
-  }
-  if (latestRefs.length !== 1 || latestRefs[0].id !== attachmentId) {
-    return out({ ok: false, code: "SHARED_FILE_DELETE_BLOCKED", message: "พบรายการอื่นอ้างอิงไฟล์นี้อยู่ จึงยกเลิกการลบเพื่อป้องกันข้อมูลสูญหาย" }, 409);
-  }
-
-  // Trash Drive first. A timeout can leave the outcome uncertain; in that case,
-  // keep the DB attachment row intact so the record remains visible for admin repair.
-  // This avoids silently detaching a file when Drive did not confirm the operation.
   try {
-    await trashDriveFile(meta.drive_file_id);
-  } catch (e) {
-    console.error("Attachment Drive trash failed or outcome uncertain; DB reference preserved", e);
-    return out({ ok: false, code: "DRIVE_TRASH_FAILED_OR_UNCERTAIN", message: "Google Drive ยังไม่ยืนยันการย้ายไฟล์ไปถังขยะ ระบบคงข้อมูลไฟล์แนบไว้เพื่อให้ตรวจสอบได้ กรุณาตรวจสอบ Drive ก่อนลองใหม่" }, 502);
+    body = await req.json();
+  } catch {
+    return out({ ok: false, code: "INVALID_JSON" }, 400);
+  }
+  const attachmentId = typeof body.document_file_id === "string" ? body.document_file_id : "";
+  if (!UUID_RE.test(attachmentId)) return out({ ok: false, code: "INVALID_ATTACHMENT_ID" }, 400);
+
+  // Read via caller RLS first so inaccessible attachments cannot be targeted.
+  const { data: attachment, error: attachmentError } = await user.from("document_files")
+    .select("id,document_id,google_drive_file_id,file_role,version_no")
+    .eq("id", attachmentId).maybeSingle();
+  if (attachmentError || !attachment) {
+    return out({ ok: false, code: "ATTACHMENT_NOT_FOUND_OR_NOT_ACCESSIBLE" }, 404);
   }
 
-  // Only detach after Drive confirms the exact file was trashed. If this DB step
-  // fails, the row remains visible and can be reconciled by an administrator.
+  // SAFETY: this endpoint only detaches the relationship from this document.
+  // It deliberately does not call Google Drive, trash the source file, or
+  // delete google_drive_files metadata. Orphan cleanup is a separate workflow.
+  const admin = createClient(url, service, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
   const { data: detachedRows, error: detachError } = await admin.from("document_files")
-    .delete().eq("id", attachmentId).select("*");
-  if (detachError || !detachedRows || detachedRows.length !== 1) {
-    console.error("CRITICAL: Drive file was trashed but attachment row cleanup failed", detachError?.message || "row count mismatch");
-    return out({ ok: false, code: "DRIVE_TRASHED_DB_CLEANUP_FAILED", message: "ย้ายไฟล์ไปถังขยะแล้ว แต่ลบข้อมูลอ้างอิงในระบบไม่สำเร็จ กรุณาให้ผู้ดูแลระบบตรวจสอบรายการนี้" }, 500);
+    .delete()
+    .eq("id", attachment.id)
+    .eq("document_id", attachment.document_id)
+    .eq("google_drive_file_id", attachment.google_drive_file_id)
+    .select("id");
+
+  if (detachError) {
+    console.error("Attachment detach failed; source Drive file and metadata were preserved", detachError.message);
+    return out({ ok: false, code: "ATTACHMENT_DETACH_FAILED" }, 500);
+  }
+  if (!detachedRows || detachedRows.length !== 1) {
+    return out({ ok: false, code: "ATTACHMENT_CHANGED_OR_ALREADY_DETACHED" }, 409);
   }
 
-  const { error: metadataDeleteError } = await admin.from("google_drive_files").delete().eq("id", meta.id);
-  if (metadataDeleteError) console.error("Orphaned Drive metadata cleanup required", metadataDeleteError.message);
-  return out({ ok: true, attachment_id: attachmentId, drive_file_trashed: true, metadata_cleanup_pending: Boolean(metadataDeleteError) });
+  return out({
+    ok: true,
+    attachment_id: attachment.id,
+    attachment_detached: true,
+    drive_file_trashed: false,
+    drive_file_preserved: true,
+    metadata_preserved: true
+  });
 });
