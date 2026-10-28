@@ -70,5 +70,5 @@ Deno.serve(async (req) => {
     return out({ ok: false, code: "ATTACHMENT_DETACH_FAILED" }, 500);
   }
 
-  return out({ ok: true, ...data });
+  return out({ ok: true, ...(typeof data === "object" && data !== null ? data : {}) });
 });
