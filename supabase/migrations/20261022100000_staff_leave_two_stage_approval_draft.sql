@@ -140,28 +140,27 @@ begin
         raise exception 'leave_request_not_found_or_not_assigned' using errcode = '42501';
       end if;
 
-      -- Exceptional direct-to-Deputy final approval is only available when the
-      -- trusted, verified route explicitly enables it. Default remains two-stage.
+      -- A configuration flag is not evidence that the Director is absent.
+      -- Until a trusted, request-applicable absence record is implemented and
+      -- checked in this transaction, fail closed and leave the request unchanged.
       if v_route.direct_to_vice_enabled then
-        v_action := 'approved';
-        update public.staff_leave_requests set status='approved', approval_stage='completed',
-          decided_at=statement_timestamp(), updated_at=statement_timestamp() where id=v_request.id;
-      else
-        update public.staff_leave_requests set approval_stage='director_final_review',
-          current_approver_user_id=v_route.director_user_id, updated_at=statement_timestamp()
-          where id=v_request.id;
-        insert into public.staff_leave_approval_actions(request_id,actor_id,action,reason,metadata)
-        values(v_request.id,v_actor,'routed',nullif(btrim(coalesce(p_reason,'')),''),
-          jsonb_build_object('idempotency_key',v_key,'decision','approve',
-            'from_stage','vice_director_review','to_stage','director_final_review',
-            'next_approver_id',v_route.director_user_id));
-        insert into public.staff_leave_notification_outbox(event_key,request_id,recipient_id,event_type,channel,safe_payload,status)
-        values('leave-stage-advance:'||v_request.id::text||':'||v_key,v_request.id,v_route.director_user_id,
-          'approver_assigned','in_app',jsonb_build_object('event','leave_approver_assigned',
-          'request_id',v_request.id::text,'stage','director_final_review'),'pending')
-        on conflict(event_key) do nothing;
-        return v_request.id;
+        raise exception 'director_absence_evidence_required' using errcode = '42501';
       end if;
+
+      update public.staff_leave_requests set approval_stage='director_final_review',
+        current_approver_user_id=v_route.director_user_id, updated_at=statement_timestamp()
+        where id=v_request.id;
+      insert into public.staff_leave_approval_actions(request_id,actor_id,action,reason,metadata)
+      values(v_request.id,v_actor,'routed',nullif(btrim(coalesce(p_reason,'')),''),
+        jsonb_build_object('idempotency_key',v_key,'decision','approve',
+          'from_stage','vice_director_review','to_stage','director_final_review',
+          'next_approver_id',v_route.director_user_id));
+      insert into public.staff_leave_notification_outbox(event_key,request_id,recipient_id,event_type,channel,safe_payload,status)
+      values('leave-stage-advance:'||v_request.id::text||':'||v_key,v_request.id,v_route.director_user_id,
+        'approver_assigned','in_app',jsonb_build_object('event','leave_approver_assigned',
+        'request_id',v_request.id::text,'stage','director_final_review'),'pending')
+      on conflict(event_key) do nothing;
+      return v_request.id;
     elsif v_request.approval_stage = 'director_final_review' then
       if v_actor <> v_route.director_user_id
          or v_request.current_approver_user_id is distinct from v_actor then
