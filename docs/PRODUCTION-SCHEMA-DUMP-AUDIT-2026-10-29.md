@@ -71,3 +71,33 @@ The checked-in local file `supabase/migrations/20261007200000_foundation_schema_
 ### Next safe gate
 
 Request/export a fresh **schema-only** snapshot from the trusted Production owner environment, including types, tables, sequences, functions, triggers, policies, grants, and extensions; compare it to the supplied dump and current live catalog. Then perform clean replay only in an isolated zero-cost local environment and document semantic/catalog parity before considering release.
+
+
+## Live catalog trigger cross-check — 2026-10-29
+
+A read-only query against the live Production catalog returned **14 non-internal triggers in schema `public`**, while the supplied dump text scan found zero `CREATE TRIGGER` statements. This is a concrete mismatch that must be resolved before the dump is treated as a complete recovery artifact.
+
+| Table | Trigger | Operation | Function |
+|---|---|---|---|
+| `approvals` | `audit_approvals` | AFTER INSERT/UPDATE/DELETE | `private.audit_row_change()` |
+| `deadlines` | `audit_deadlines` | AFTER INSERT/UPDATE/DELETE | `private.audit_row_change()` |
+| `departments` | `departments_updated_at` | BEFORE UPDATE | `public.set_updated_at()` |
+| `document_assignment_reports` | `trg_assignment_reports_set_updated_at` | BEFORE UPDATE | `public.set_updated_at()` |
+| `document_assignments` | `audit_document_assignments` | AFTER INSERT/UPDATE/DELETE | `private.audit_row_change()` |
+| `document_files` | `audit_document_files` | AFTER INSERT/UPDATE/DELETE | `private.audit_row_change()` |
+| `documents` | `audit_documents` | AFTER INSERT/UPDATE/DELETE | `private.audit_row_change()` |
+| `documents` | `documents_default_department` | BEFORE INSERT | `private.default_document_department()` |
+| `documents` | `documents_guard_department_change` | BEFORE UPDATE OF department_id | `private.guard_document_department_change()` |
+| `documents` | `documents_updated_at` | BEFORE UPDATE | `public.set_updated_at()` |
+| `incoming_document_details` | `trg_notify_leadership_on_incoming_registration` | AFTER INSERT | `private.notify_leadership_on_incoming_registration()` |
+| `number_sequences` | `number_sequences_updated_at` | BEFORE UPDATE | `public.set_updated_at()` |
+| `profiles` | `profiles_updated_at` | BEFORE UPDATE | `public.set_updated_at()` |
+| `senders` | `senders_updated_at` | BEFORE UPDATE | `public.set_updated_at()` |
+
+The live catalog definitions for the trigger functions were also read without changing the database. Important dependencies include audit-log insertion, active-profile department defaults, system-admin-only department changes, and notifications to director/deputy-director users when an incoming registration is inserted.
+
+A separate live catalog count returned 27 public tables, 34 public functions, 27 private functions, 50 public policies, 14 public triggers, 2 public views, 5 public enum types, 86 public indexes, 98 public constraints, and 7 installed extensions (extension count is database-wide). These are live catalog counts, not a claim of parity with the supplied dump; differences in counting scope and SQL text patterns need object-by-object reconciliation.
+
+### Release implication
+
+Do not replay the supplied dump as a complete backup or use it to overwrite a baseline. Obtain a trusted schema-only export including trigger DDL, compare object definitions, then verify a clean replay and catalog parity in an isolated zero-cost environment. Production remains unchanged.
