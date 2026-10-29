@@ -27,6 +27,7 @@ on:
       - 'supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql'
       - 'supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
+      - 'tests/leave-schema-preflight.sh'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
       - 'tests/leave-submit-rpc.test.sql'
