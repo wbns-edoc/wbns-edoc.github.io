@@ -101,3 +101,29 @@ A separate live catalog count returned 27 public tables, 34 public functions, 27
 ### Release implication
 
 Do not replay the supplied dump as a complete backup or use it to overwrite a baseline. Obtain a trusted schema-only export including trigger DDL, compare object definitions, then verify a clean replay and catalog parity in an isolated zero-cost environment. Production remains unchanged.
+
+
+## Live Supabase Security Advisor snapshot — 2026-10-29
+
+A read-only Supabase Security Advisor query on Production returned these findings at observation time `2026-10-29T15:29:26.307Z`. This section records findings only; **no grants, policies, Auth settings, or database objects were changed**.
+
+| Finding | Severity | Count | Notes |
+|---|---|---:|---|
+| RLS enabled with no policies | INFO | 4 | `public.department_role_permissions`, `public.system_settings`, `public.user_department_roles`, `public.user_departments` |
+| Public can execute a SECURITY DEFINER function | WARN | 1 | `public.get_public_school_name()` is executable by `anon`; verify whether public school-name lookup is intentionally public and whether returned data is limited |
+| Signed-in users can execute SECURITY DEFINER functions | WARN | 18 | Advisor flags exposed RPC functions; each function's authorization checks and intended caller set must be reviewed before changing grants |
+| Leaked password protection disabled | WARN | 1 | Auth configuration finding; enabling it requires a separately reviewed settings change |
+
+References from Supabase's remediation guidance:
+- RLS enabled without policies: https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy
+- Anonymous execution of SECURITY DEFINER: https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable
+- Authenticated execution of SECURITY DEFINER: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
+- Leaked password protection: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+
+### Interpretation and safe handling
+
+These are advisor warnings, not proof of an exploitable vulnerability by themselves. SECURITY DEFINER RPCs may intentionally be callable by signed-in users if the function body enforces the right authorization. Conversely, removing EXECUTE grants or changing function security blindly could break existing document workflows. Review each function definition, caller needs, grants, and tests before proposing a targeted migration. Tables with RLS enabled and no policies generally deny ordinary API access, but verify intended service/owner workflows and table grants.
+
+### Release gate
+
+Add a focused security review to the recovery/release checklist: inspect the four RLS tables and all flagged SECURITY DEFINER functions, determine intended access, then validate any proposed fix in an isolated test environment. Keep Production unchanged until approved and verified.
