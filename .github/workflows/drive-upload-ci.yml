@@ -7,7 +7,6 @@ on:
       - "src/upload-refresh.ts"
       - "tests/upload-error_test.ts"
       - "supabase/functions/drive-health/**"
-      - "supabase/functions/drive-health/**"
       - "supabase/functions/drive-upload/**"
       - "supabase/functions/permanent-delete-incoming/**"
       - "supabase/functions/user-import/**"
@@ -20,6 +19,7 @@ on:
       - fix/drive-upload-metadata-atomicity-2026-10-09
     paths:
       - "src/main.tsx"
+      - "supabase/functions/drive-health/**"
       - "supabase/functions/drive-upload/**"
       - "supabase/functions/permanent-delete-incoming/**"
       - "supabase/functions/user-import/**"
@@ -41,6 +41,7 @@ jobs:
           node-version: 20
       - name: Require JWT verification for Drive upload and permanent delete
         run: |
+          grep -F -A1 '[functions.drive-health]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
           grep -F -A1 '[functions.drive-upload]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
           grep -F -A1 '[functions.permanent-delete-incoming]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
           grep -F -A1 '[functions.delete-document-attachment]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
