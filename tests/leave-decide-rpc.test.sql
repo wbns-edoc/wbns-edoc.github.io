@@ -265,42 +265,44 @@ begin
   end if;
 end $block$;
 
--- The verified exception allows the Vice Director to final-approve only
--- when the trusted route flag is enabled; default two-stage routing was tested above.
+-- A route flag alone is not proof that the Director is absent.
+-- Until the trusted absence-record workflow exists, direct-to-Vice must fail closed.
 reset role;
 update public.staff_leave_approval_route_config
 set direct_to_vice_enabled = true
 where singleton = true;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000803', true);
-select public.staff_leave_decide(
-  '00000000-0000-0000-0000-000000000817', 'approve', null, 'decide-key-direct-vice'
-);
-select public.staff_leave_decide(
-  '00000000-0000-0000-0000-000000000817', 'approve', null, 'decide-key-direct-vice'
-);
+do $block$
+begin
+  begin
+    perform public.staff_leave_decide(
+      '00000000-0000-0000-0000-000000000817', 'approve', null, 'decide-key-direct-vice'
+    );
+    raise exception 'expected_direct_to_vice_without_absence_evidence_denial';
+  exception when sqlstate '42501' then
+    if sqlerrm <> 'director_absence_evidence_required' then raise; end if;
+  end;
+end $block$;
 reset role;
 do $block$
 begin
   if not exists (
     select 1 from public.staff_leave_requests
     where id='00000000-0000-0000-0000-000000000817'
-      and status='approved' and approval_stage='completed'
+      and status='pending_approval' and approval_stage='vice_director_review'
       and current_approver_user_id='00000000-0000-0000-0000-000000000803'
-      and decided_at is not null
-  ) then raise exception 'verified_direct_to_vice_route_must_allow_final_approval'; end if;
-  if (select count(*) from public.staff_leave_approval_actions
+      and decided_at is null
+  ) then raise exception 'direct_to_vice_without_evidence_must_leave_request_unchanged'; end if;
+  if exists (select 1 from public.staff_leave_approval_actions
       where request_id='00000000-0000-0000-0000-000000000817'
         and actor_id='00000000-0000-0000-0000-000000000803'
-        and action='approved'
-        and metadata->>'idempotency_key'='decide-key-direct-vice') <> 1 then
-    raise exception 'direct_vice_retry_must_append_one_approval_action';
-  end if;
-  if (select count(*) from public.staff_leave_notification_outbox
+        and action='approved') then
+    raise exception 'direct_to_vice_without_evidence_must_not_record_approval'; end if;
+  if exists (select 1 from public.staff_leave_notification_outbox
       where request_id='00000000-0000-0000-0000-000000000817'
-        and event_type='approved') <> 1 then
-    raise exception 'direct_vice_approval_must_enqueue_one_notification';
-  end if;
+        and event_type='approved') then
+    raise exception 'direct_to_vice_without_evidence_must_not_enqueue_approval'; end if;
 end $block$;
 
 -- A configured approver becoming inactive must fail closed.
