@@ -127,3 +127,12 @@ These are advisor warnings, not proof of an exploitable vulnerability by themsel
 ### Release gate
 
 Add a focused security review to the recovery/release checklist: inspect the four RLS tables and all flagged SECURITY DEFINER functions, determine intended access, then validate any proposed fix in an isolated test environment. Keep Production unchanged until approved and verified.
+
+
+## Security Advisor refresh — 2026-10-29
+
+A second read-only Security Advisor check observed at `2026-10-29T15:43:23.369Z` returned the same finding categories and counts as the earlier snapshot: 4 RLS-enabled tables without policies (INFO), 1 anon-executable SECURITY DEFINER function (`public.get_public_school_name()`, WARN), 18 authenticated-executable SECURITY DEFINER functions (WARN), and leaked-password protection disabled (WARN). This refresh does not establish exploitability or justify blanket grant changes. No Production changes were made.
+
+The related staff-leave PR #54 was rechecked at the same work session: it remains open and Draft, with head `426a820a82feecb6288c874dcc8f85c2ca7f9b05`; its latest CI status should be verified from the linked Actions runs before any merge decision. The PR remains stacked on `feat/leave-secure-schema-draft` and must not be merged independently to `main`.
+
+Next action: continue read-only, function-by-function review using narrowly scoped catalog queries and existing test evidence; do not change grants or Auth settings until intended access is confirmed and a tested migration is reviewed.
