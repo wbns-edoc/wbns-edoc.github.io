@@ -6,6 +6,8 @@ on:
       - "src/upload-error.ts"
       - "src/upload-refresh.ts"
       - "tests/upload-error_test.ts"
+      - "supabase/functions/drive-health/**"
+      - "supabase/functions/drive-health/**"
       - "supabase/functions/drive-upload/**"
       - "supabase/functions/permanent-delete-incoming/**"
       - "supabase/functions/user-import/**"
@@ -60,6 +62,8 @@ jobs:
         run: deno test supabase/functions/drive-upload/cleanup-policy_test.ts
       - name: Run upload input validation unit tests
         run: deno test supabase/functions/drive-upload/file-validation_test.ts
+      - name: Type-check Drive health Edge Function
+        run: deno check --node-modules-dir=auto supabase/functions/drive-health/index.ts
       - name: Type-check Drive upload Edge Function
         run: deno check --node-modules-dir=auto supabase/functions/drive-upload/index.ts
       - name: Type-check permanent delete Edge Function
