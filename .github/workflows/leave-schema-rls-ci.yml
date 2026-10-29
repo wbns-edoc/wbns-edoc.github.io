@@ -10,6 +10,7 @@ on:
       - 'supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql'
       - 'supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql'
       - 'tests/leave-schema-rls.test.sql'
+      - 'tests/leave-schema-preflight.sh'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
       - 'tests/leave-submit-rpc.test.sql'
@@ -80,6 +81,8 @@ jobs:
           create table public.profiles (id uuid primary key, is_active boolean not null default true);
           grant select on public.profiles to authenticated;
           SQL
+      - name: Test schema preflight fails closed on incomplete profiles fixtures
+        run: bash tests/leave-schema-preflight.sh
       - name: Apply schema draft to disposable PostgreSQL
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql
       - name: Apply draft RPC migration to disposable PostgreSQL
