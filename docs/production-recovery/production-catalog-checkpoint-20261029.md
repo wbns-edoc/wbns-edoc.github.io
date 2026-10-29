@@ -70,3 +70,16 @@ The Supabase Security Advisor returned these findings:
 The Performance Advisor returned 10 INFO findings for foreign keys without covering indexes and 25 INFO findings for indexes marked unused. Do not drop indexes based on the unused-index report alone; usage statistics may reflect a short observation period. Review foreign-key indexes and query plans in an isolated environment before proposing changes.
 
 No Advisor remediation was applied. The next safe action is to inspect the exact definitions and grants for flagged SECURITY DEFINER functions, create role-based regression tests, and prepare narrowly scoped candidate changes only after isolated validation.
+
+
+## Focused SECURITY DEFINER source review (read-only, 2026-10-29)
+
+Inspected current live definitions of selected flagged functions using `pg_get_functiondef`; no function was changed.
+
+- `admin_set_global_user_role(uuid, uuid, boolean)` checks authenticated identity, active profile, and the `system_admin` role before allowing changes; it restricts global role codes to `system_admin` and `director`, prevents removal of the last active system administrator, and writes an audit record.
+- `admin_save_system_settings` has two live overloads: one with two arguments and one with three. Both definitions check `auth.uid()` and require the `system_admin` role; the overload difference is a concrete frontend/API compatibility issue to reconcile with tracked source before altering either function.
+- `assign_document_many` checks authentication, assignment instructions, unique/non-empty assignees, document status, document access, department permission, future deadline, and validates selected assignees before writing. Its full behavior still requires role-based regression tests for director, vice director, registry officer, and regular staff.
+- These sampled definitions set a fixed `search_path` of `pg_catalog, public, private`. This reduces object-shadowing risk but does not replace testing the authorization logic of every flagged function.
+- `get_public_school_name()` remains an intentionality review item because it is callable by `anon`; verify that it returns only the intended public school-name value and no additional settings.
+
+This is a targeted source review, not a complete security sign-off. The remaining flagged SECURITY DEFINER functions still require review and least-privilege tests. No security grants, function definitions, or Auth settings were changed in Production.
