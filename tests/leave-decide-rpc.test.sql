@@ -59,6 +59,11 @@ insert into public.staff_leave_requests (
    '00000000-0000-0000-0000-000000000801',
    '00000000-0000-0000-0000-000000000821',
    date '2026-12-06', date '2026-12-06', 'synthetic inactive-approver fixture', 'pending_approval',
+   '00000000-0000-0000-0000-000000000803', 'vice_director_review'),
+  ('00000000-0000-0000-0000-000000000817',
+   '00000000-0000-0000-0000-000000000801',
+   '00000000-0000-0000-0000-000000000821',
+   date '2026-12-07', date '2026-12-07', 'synthetic direct-to-deputy exception fixture', 'pending_approval',
    '00000000-0000-0000-0000-000000000803', 'vice_director_review')
 on conflict (id) do nothing;
 
@@ -257,6 +262,44 @@ begin
   end if;
   if not has_function_privilege('authenticated', 'public.staff_leave_decide(uuid,text,text,text)', 'EXECUTE') then
     raise exception 'authenticated_must_execute_staff_leave_decide';
+  end if;
+end $block$;
+
+-- The verified exception allows the Vice Director to final-approve only
+-- when the trusted route flag is enabled; default two-stage routing was tested above.
+reset role;
+update public.staff_leave_approval_route_config
+set direct_to_vice_enabled = true
+where singleton = true;
+set local role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000803', true);
+select public.staff_leave_decide(
+  '00000000-0000-0000-0000-000000000817', 'approve', null, 'decide-key-direct-vice'
+);
+select public.staff_leave_decide(
+  '00000000-0000-0000-0000-000000000817', 'approve', null, 'decide-key-direct-vice'
+);
+reset role;
+do $block$
+begin
+  if not exists (
+    select 1 from public.staff_leave_requests
+    where id='00000000-0000-0000-0000-000000000817'
+      and status='approved' and approval_stage='completed'
+      and current_approver_user_id='00000000-0000-0000-0000-000000000803'
+      and decided_at is not null
+  ) then raise exception 'verified_direct_to_vice_route_must_allow_final_approval'; end if;
+  if (select count(*) from public.staff_leave_approval_actions
+      where request_id='00000000-0000-0000-0000-000000000817'
+        and actor_id='00000000-0000-0000-0000-000000000803'
+        and action='approved'
+        and metadata->>'idempotency_key'='decide-key-direct-vice') <> 1 then
+    raise exception 'direct_vice_retry_must_append_one_approval_action';
+  end if;
+  if (select count(*) from public.staff_leave_notification_outbox
+      where request_id='00000000-0000-0000-0000-000000000817'
+        and event_type='approved') <> 1 then
+    raise exception 'direct_vice_approval_must_enqueue_one_notification';
   end if;
 end $block$;
 
