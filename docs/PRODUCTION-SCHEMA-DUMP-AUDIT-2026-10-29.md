@@ -54,3 +54,20 @@ The two views found are `document_monthly_summary` and `document_report_summary`
 ## Status
 
 **Audit completed; replay and Production equivalence are not yet verified. Production was not changed.**
+
+## Live migration-history cross-check — 2026-10-29
+
+A read-only call to Supabase migration history for Production project `iigzzwyfxxtqbgjawyom` returned a recorded foundation migration at version `20261007133831` named `foundation_schema_rbac_rls`, followed by `harden_rls_and_indexes`, `document_registration_rpc`, `seed_school_registers_2026`, and `workflow_engine_v1`. The recorded history continues through `20261017074815` (`support_be_incoming_register_numbers`).
+
+The checked-in local file `supabase/migrations/20261007200000_foundation_schema_rbac_rls.sql` contains only a comment saying the full SQL is maintained in the migration applied to Supabase, plus a note that the file is the version-controlled source. It does **not** contain the foundation DDL. The local filename timestamp also differs from the recorded Production migration version.
+
+### Interpretation
+
+- The live migration ledger proves that the foundation migration is recorded as applied; it does not recover the original SQL body.
+- The schema dump includes `public.document_status`, while the checked-in foundation file does not create it. A clean replay from the checked-in migration chain is therefore not demonstrated and is known to fail when later workflow SQL expects that type.
+- Do not fabricate or backfill the missing foundation SQL from the dump and label it as the historical original. Any reconstructed baseline must be explicitly marked as reconstructed, reviewed against the live catalog, and validated in an isolated database.
+- No Production migration was applied and no Production data was modified during this cross-check.
+
+### Next safe gate
+
+Request/export a fresh **schema-only** snapshot from the trusted Production owner environment, including types, tables, sequences, functions, triggers, policies, grants, and extensions; compare it to the supplied dump and current live catalog. Then perform clean replay only in an isolated zero-cost local environment and document semantic/catalog parity before considering release.
