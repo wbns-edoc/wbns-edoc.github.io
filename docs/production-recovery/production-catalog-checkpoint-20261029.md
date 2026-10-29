@@ -56,3 +56,17 @@ The Production migration history currently contains 75 entries. The repository F
 Do not apply the fixture or guessed DDL to Production. Required next gate: recover trusted source SQL, reconcile every recorded migration, replay in an isolated Supabase environment with fail-fast settings, compare catalog/security state, run end-to-end tests, verify backup/rollback, and obtain explicit release approval.
 
 **Status: Production remains unchanged. Clean replay and staff-leave release are not yet verified.**
+
+
+## Supabase Advisor follow-up (read-only, 2026-10-29)
+
+The Supabase Security Advisor returned these findings:
+
+- 4 `rls_enabled_no_policy` INFO findings: `department_role_permissions`, `system_settings`, `user_department_roles`, and `user_departments`. These align with the catalog query above; do not treat them alone as proof of unauthorized data exposure.
+- 1 WARN finding: `public.get_public_school_name()` is a SECURITY DEFINER function executable by `anon`. The function is intended to expose the public school name, but its full definition and output scope should be reviewed before deciding whether the grant is intentional.
+- 18 WARN findings for SECURITY DEFINER functions executable by `authenticated`, including administrative RPCs. These warnings do not prove a bypass: each function's internal authorization checks, fixed `search_path`, and grants need review. In particular, verify that admin RPCs enforce `user.manage` / `role.manage` or the corresponding least-privilege permission.
+- 1 WARN finding: leaked-password protection is disabled in Supabase Auth. Enabling it changes Auth configuration and is not included in this read-only audit.
+
+The Performance Advisor returned 10 INFO findings for foreign keys without covering indexes and 25 INFO findings for indexes marked unused. Do not drop indexes based on the unused-index report alone; usage statistics may reflect a short observation period. Review foreign-key indexes and query plans in an isolated environment before proposing changes.
+
+No Advisor remediation was applied. The next safe action is to inspect the exact definitions and grants for flagged SECURITY DEFINER functions, create role-based regression tests, and prepare narrowly scoped candidate changes only after isolated validation.
