@@ -5,12 +5,21 @@
 -- Fail fast on an incomplete recovered core schema; never mutate public.profiles here.
 do $preflight$
 declare
+  v_profiles_oid oid;
   v_type text;
 begin
+  -- Avoid a regclass cast here: it would raise a generic error if profiles itself
+  -- is missing, hiding the actionable preflight diagnostic.
+  v_profiles_oid := pg_catalog.to_regclass('public.profiles');
+
+  if v_profiles_oid is null then
+    raise exception 'staff_leave_schema_preflight_failed: public.profiles table is missing; reconcile the isolated core schema with the verified Production catalog before retrying';
+  end if;
+
   select format_type(a.atttypid, a.atttypmod)
     into v_type
   from pg_catalog.pg_attribute a
-  where a.attrelid = 'public.profiles'::regclass
+  where a.attrelid = v_profiles_oid
     and a.attname = 'is_active'
     and a.attnum > 0
     and not a.attisdropped;
