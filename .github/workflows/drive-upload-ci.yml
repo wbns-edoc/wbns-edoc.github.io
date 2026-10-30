@@ -11,6 +11,7 @@ on:
       - "supabase/functions/user-import/**"
       - "supabase/functions/delete-document-attachment/**"
       - "supabase/functions/drive-health/**"
+      - "tests/drive-health-ui-contract.test.cjs"
       - "supabase/config.toml"
       - ".github/workflows/drive-upload-ci.yml"
       - "package.json"
@@ -36,6 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verify Drive health UI/Edge Function contract
+        run: node tests/drive-health-ui-contract.test.cjs
       - uses: actions/setup-node@v4
         with:
           node-version: 20
