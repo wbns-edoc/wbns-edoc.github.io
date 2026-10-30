@@ -89,12 +89,14 @@ insert into public.school_responsibility_audit(
  'vice_director_setting_changed',true,false
 );
 
-insert into public.staff_leave_requests(id,applicant_id,leave_type_id,starts_on,ends_on,reason,status)
+insert into public.staff_leave_requests(id,applicant_id,leave_type_id,policy_version_id,starts_on,ends_on,day_count,reason,policy_snapshot,status)
 values (
  '00000000-0000-0000-0000-000000000807',
  '00000000-0000-0000-0000-000000000801',
  '00000000-0000-0000-0000-000000000805',
- date '2026-11-26',date '2026-11-26','synthetic no-vice integration test','draft'
+ '00000000-0000-0000-0000-000000000807',
+ date '2026-11-26',date '2026-11-26',1,'synthetic no-vice integration test',
+ '{"policy_version_id":"00000000-0000-0000-0000-000000000807","leave_type_code":"route_e2e_test","verification_status":"approved","calculation_ready":true,"calculated_day_count":1}'::jsonb,'draft'
 ) on conflict(id) do nothing;
 
 set local role authenticated;
