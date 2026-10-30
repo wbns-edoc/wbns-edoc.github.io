@@ -170,6 +170,9 @@ declare v_actor uuid;
 begin
   v_actor:=auth.uid();
   if v_actor is null then raise exception 'authentication_required' using errcode='28000'; end if;
+  if not exists(select 1 from public.profiles p where p.id=v_actor and p.is_active=true) then
+    raise exception 'active_profile_required' using errcode='42501';
+  end if;
   if not exists(
     select 1 from public.user_roles ur join public.roles r on r.id=ur.role_id
     where ur.user_id=v_actor and r.code='system_admin'
