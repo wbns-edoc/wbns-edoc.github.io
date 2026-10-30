@@ -73,7 +73,10 @@ assert.match(productionReadOnlyValidation, /No Production writes were performed/
 assert.match(productionReadOnlyValidation, /Production deployment is \*\*NOT APPROVED\*\*/i);
 assert.match(authorizationCandidate, /JOIN public\.departments d[\s\S]*?d\.is_active = true/i);
 assert.match(authorizationCandidate, /wr\.code IN \(\x27system_admin\x27,\x27director\x27\)/i);
-assert.match(replayWorkflow, /Apply isolated authorization correction candidate \(disposable DB only\)/i);
+assert.match(replayWorkflow, /Apply active-department permission guard \(disposable DB only\)/i);
+assert.match(replayWorkflow, /20261030150000_require_active_department_for_scoped_permissions\.sql/);
+assert.match(activeDepartmentMigration, /wr\.code = 'deputy_director'/i);
+assert.match(activeDepartmentMigration, /p_permission = 'document\.assign'/i);
 assert.match(rlsBehavior, /ordinary user must not retain scoped permission in inactive department/i);
 assert.match(rlsBehavior, /director global permission exception must remain effective/i);
 assert.match(rlsBehavior, /deputy_director must retain the existing global document\.assign exception/i);
