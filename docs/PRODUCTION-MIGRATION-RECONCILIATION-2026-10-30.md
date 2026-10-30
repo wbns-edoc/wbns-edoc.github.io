@@ -255,3 +255,10 @@ The Schema Recovery PostgreSQL Replay workflow now applies the complete current 
 A frontend role-visibility regression was also found: `loadIdentity()` returns role display names before role codes, while the leave dashboard originally checked only role codes. The UI now normalizes names/codes and recognizes the Thai Director/Vice Director display names, and System Admin display name. A dedicated regression test is included in Frontend Build CI.
 
 These passing tests do not close the remaining Foundation, 29 Production migration-name mapping, handbook-policy, full Supabase parity, live notification-delivery, rollback, or zero-cost release blockers.
+
+
+## Historical source search across repository branches
+
+A read-only scan of all **49 repository branches** inspected their recursive trees for migration SQL candidates related to the unmatched Production history. No alternate original Foundation migration path was found; the same placeholder path appears across the branch history sampled, and the file is 285 bytes with a comment that the full SQL is maintained in Supabase. Exact commit searches for the Foundation filename and several unmatched early migration names returned no source commits.
+
+This means the current repository history cannot supply the original Foundation SQL. The October 15 current-state catalog is the best recovered object-definition evidence, but it is not the original migration and does not reconstruct every historical grant, owner, extension, Auth/Storage object, or platform setting. Do not fabricate a historical Foundation file from the migration name or replace it with a current-state dump and then replay later migrations on top.
