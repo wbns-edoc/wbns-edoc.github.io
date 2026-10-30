@@ -56,7 +56,7 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
   setLoading(true);setError('');
   const [t,r,dashboard]=await Promise.all([
    supabase.from('staff_leave_types').select('id,code,name').eq('is_active',true).order('name'),
-   supabase.from('staff_leave_requests').select('id,leave_type_id,starts_on,ends_on,day_count,is_over_limit,reason,status,created_at,policy_version_id,current_approver_user_id,staff_leave_types(name)').order('created_at',{ascending:false}).limit(50),
+   supabase.from('staff_leave_requests').select('id,applicant_id,leave_type_id,starts_on,ends_on,day_count,is_over_limit,reason,status,created_at,policy_version_id,current_approver_user_id,staff_leave_types(name)').order('created_at',{ascending:false}).limit(50),
    canViewDashboard?supabase.rpc('staff_leave_dashboard_summary'):Promise.resolve({data:null,error:null})
   ]);
   if(t.error||r.error){setAvailable(false);setTypes([]);setRows([]);setError('ระบบการลายังไม่พร้อมใช้งานในฐานข้อมูลนี้ กรุณารอการตรวจสอบและเผยแพร่ Migration');}
@@ -71,6 +71,16 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
   const {error}=await supabase.rpc('staff_leave_submit',{p_request_id:row.id,p_idempotency_key:'leave-submit-'+row.id+'-'+crypto.randomUUID()});
   if(error)setError('ส่งคำขอลาไม่สำเร็จ: '+error.message);
   else{setNotice('ส่งคำขอลาแล้ว หรือระบบบันทึกสถานะรอตรวจสอบผู้อนุมัติ');await load();}
+  setBusy(false);
+ }
+ async function cancelRequest(row:any){
+  if(!profile||busy)return;
+  const cancellationReason=window.prompt('ระบุเหตุผลการยกเลิกใบลา');
+  if(!cancellationReason?.trim())return;
+  setBusy(true);setError('');setNotice('');
+  const {error}=await supabase.rpc('staff_leave_cancel',{p_request_id:row.id,p_reason:cancellationReason.trim(),p_idempotency_key:'leave-cancel-'+row.id+'-'+crypto.randomUUID()});
+  if(error)setError('ยกเลิกใบลาไม่สำเร็จ: '+error.message);
+  else{setNotice('บันทึกการยกเลิกใบลาแล้ว');await load();}
   setBusy(false);
  }
  async function decideRequest(row:any,decision:'approve'|'reject'){
@@ -115,7 +125,7 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
    </form>}
   </div>
   <div className="panel"><div className="panel-head"><div><h2>คำขอลาและประวัติ</h2><p>แสดงเฉพาะคำขอที่บัญชีนี้มีสิทธิ์เข้าถึง</p></div></div>
-   {loading?<div className="empty">กำลังโหลดคำขอลา…</div>:rows.length===0?<div className="empty">ยังไม่มีคำขอลา</div>:<div className="table-wrap"><table><thead><tr><th>ประเภท</th><th>ช่วงวันที่ลา</th><th>วันลา</th><th>สถานะ</th><th>วันที่สร้าง</th><th>การดำเนินการ</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{Array.isArray(r.staff_leave_types)?r.staff_leave_types[0]?.name:r.staff_leave_types?.name||'—'}</td><td>{r.starts_on} – {r.ends_on}</td><td>{r.day_count==null?'รอตรวจสอบ':r.day_count+' วัน'} {r.is_over_limit&&<span className="badge">เกินเกณฑ์</span>}</td><td><span className="badge">{statusLabels[r.status]||r.status}</span></td><td>{new Date(r.created_at).toLocaleDateString('th-TH')}</td><td>{r.status==='draft'?(r.policy_version_id&&r.day_count!=null?<button className="ghost" disabled={busy} onClick={()=>submitDraft(r)}>ส่งคำขอ</button>:<span className="muted">รอนโยบายที่อนุมัติ</span>):r.status==='pending_approval'&&r.current_approver_user_id===profile?.id?<><button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'approve')}>อนุมัติ</button> <button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'reject')}>ไม่อนุมัติ</button></>:'—'}</td></tr>)}</tbody></table></div>}
+   {loading?<div className="empty">กำลังโหลดคำขอลา…</div>:rows.length===0?<div className="empty">ยังไม่มีคำขอลา</div>:<div className="table-wrap"><table><thead><tr><th>ประเภท</th><th>ช่วงวันที่ลา</th><th>วันลา</th><th>สถานะ</th><th>วันที่สร้าง</th><th>การดำเนินการ</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{Array.isArray(r.staff_leave_types)?r.staff_leave_types[0]?.name:r.staff_leave_types?.name||'—'}</td><td>{r.starts_on} – {r.ends_on}</td><td>{r.day_count==null?'รอตรวจสอบ':r.day_count+' วัน'} {r.is_over_limit&&<span className="badge">เกินเกณฑ์</span>}</td><td><span className="badge">{statusLabels[r.status]||r.status}</span></td><td>{new Date(r.created_at).toLocaleDateString('th-TH')}</td><td>{r.status==='draft'?(<>{r.policy_version_id&&r.day_count!=null?<button className="ghost" disabled={busy} onClick={()=>submitDraft(r)}>ส่งคำขอ</button>:<span className="muted">รอนโยบายที่อนุมัติ</span>}{r.applicant_id===profile?.id&&<> <button className="ghost" disabled={busy} onClick={()=>cancelRequest(r)}>ยกเลิก</button></>}</>):r.status==='pending_approval'&&r.current_approver_user_id===profile?.id?<><button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'approve')}>อนุมัติ</button> <button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'reject')}>ไม่อนุมัติ</button></>:r.applicant_id===profile?.id&&['blocked_approver_resolution','submitted','pending_approval'].includes(r.status)?<button className="ghost" disabled={busy} onClick={()=>cancelRequest(r)}>ยกเลิก</button>:'—'}</td></tr>)}</tbody></table></div>}
   </div>
  </div>
 }
