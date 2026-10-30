@@ -22,7 +22,8 @@ begin
   if v_status is distinct from 'draft'
      or v_rules->>'verification_status' is distinct from 'pending'
      or v_rules->>'calculation_ready' is distinct from 'false'
-     or jsonb_object_length(v_rules->'leave_types') <> 11
+     or jsonb_typeof(v_rules->'leave_types') is distinct from 'object'
+     or (select count(*) from jsonb_object_keys(v_rules->'leave_types')) <> 11
      or coalesce((v_rules->'calendar'->>'verified')::boolean,true) then
     raise exception 'handbook seed must contain 11 leave types and remain unapproved / not calculation-ready';
   end if;
