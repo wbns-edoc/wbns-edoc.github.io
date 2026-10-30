@@ -13,6 +13,8 @@ on:
       - 'supabase/migrations/20261023100000_staff_leave_immutable_route_snapshot_draft.sql'
       - 'supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql'
       - 'supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql'
+      - 'supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql'
+      - 'tests/leave-notification-outbox.test.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
@@ -32,6 +34,8 @@ on:
       - 'supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql'
       - 'supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql'
       - 'supabase/migrations/20261022210000_staff_leave_submit_two_stage_route_draft.sql'
+      - 'supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql'
+      - 'tests/leave-notification-outbox.test.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
@@ -85,6 +89,17 @@ jobs:
             select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
           $$;
           create table public.profiles (id uuid primary key, is_active boolean not null default true);
+          create table public.notifications (
+            id uuid primary key default gen_random_uuid(),
+            recipient_id uuid not null references public.profiles(id),
+            document_id uuid,
+            type text not null,
+            title text not null,
+            body text not null,
+            priority text not null default 'normal' check (priority in ('normal','high','critical')),
+            read_at timestamptz,
+            created_at timestamptz not null default now()
+          );
           grant select on public.profiles to authenticated;
           SQL
       - name: Apply schema draft to disposable PostgreSQL
@@ -121,3 +136,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-responsibility-route-bridge.test.sql
       - name: Run end-to-end responsibility-to-submission routing tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-responsibility-submit-e2e.test.sql
+      - name: Apply in-app notification delivery migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql
+      - name: Run notification privacy and idempotency tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-notification-outbox.test.sql
