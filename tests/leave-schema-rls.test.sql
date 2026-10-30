@@ -1,6 +1,7 @@
 -- Integration-style RLS regression test for the draft leave schema.
 -- Run only against a disposable local PostgreSQL database after applying the candidate migration.
 \set ON_ERROR_STOP on
+begin;
 
 do $seed_assert$
 declare n integer;
@@ -228,3 +229,4 @@ end $anon_privileges$;
 reset role;
 
 select 'staff leave RLS and append-only history draft tests passed' as result;
+rollback;
