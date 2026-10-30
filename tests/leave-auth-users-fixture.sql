@@ -1,5 +1,6 @@
 -- Disposable CI fixture: satisfy the real profiles.id -> auth.users.id FK.
 -- These synthetic identities exist only in the isolated local Supabase test database.
+-- The default is test-only so older fixtures can omit a display name; it is not a production schema change.
 insert into auth.users (id) values
   ('00000000-0000-0000-0000-000000000101'),
   ('00000000-0000-0000-0000-000000000102'),
@@ -37,3 +38,5 @@ insert into auth.users (id) values
   ('86000000-0000-0000-0000-000000000003'),
   ('86000000-0000-0000-0000-000000000004')
 on conflict (id) do nothing;
+
+alter table public.profiles alter column full_name set default 'Synthetic CI User';
