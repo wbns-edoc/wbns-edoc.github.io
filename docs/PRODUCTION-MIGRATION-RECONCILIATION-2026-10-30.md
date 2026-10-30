@@ -177,3 +177,40 @@ A fresh read-only inventory also identified two Production entries whose names d
 | `20261017070749` — `fix_assignment_status_enum_check_for_completion` | No verified source file identified. `20261017021000_reconcile_assignments_for_completed_documents.sql` is a related data backfill, not evidence of the Production enum/check-constraint change. |
 
 Do not mark either history row reconciled until the SQL is compared with a trusted deployment artifact or the resulting Production catalog/data effects can be independently demonstrated. In particular, the current read-only migration ledger proves only that the Production migration names and versions were applied; it does not expose their historical SQL bodies.
+
+
+## October 28 Production schema dump — newer static audit
+
+A user-provided schema-only dump is available in the private Library as `wbns-production-schema.sql` (200,854 bytes; 4,777 lines; captured 2026-10-28). The raw dump is deliberately **not** copied into this public repository. A direct static scan of that file gives:
+
+- **27 public table definitions** (correcting the earlier audit note that reported 28)
+- 5 public enum types
+- 2 public views, both declared with `security_invoker='true'`
+- 69 function definitions: 34 in `public`, 27 in `private`, 6 in `extensions`, and 2 in `graphql_public` (63 unique schema-qualified function names)
+- 14 public triggers
+- 48 indexes
+- 50 public RLS policies
+- 213 GRANT statements, 63 REVOKE statements, 104 owner statements, and 18 default-privilege statements
+- No `CREATE EXTENSION` statements in the dump
+
+All 27 captured public tables have RLS enabled. Four tables have no RLS policies: `department_role_permissions`, `system_settings`, `user_department_roles`, and `user_departments`. The 50 captured policies target `authenticated`; none targets `anon` or `PUBLIC`. The dump nevertheless includes table grants to `anon` on 24 public relations, so the security boundary depends on RLS and invoker-safe views. The two views are configured with `security_invoker=true`.
+
+The no-policy tables are intended to be accessed through reviewed RPC paths or denied direct access; do not add broad policies merely to silence advisors. The system settings table is accessed through restricted settings RPCs; the department membership/permission tables have RPC-only administration paths. These paths still need role-negative tests in a current Supabase stack.
+
+### Snapshot drift
+
+The October 15 recovery snapshot replayed in CI is not the October 28 dump. Compared with that October 15 snapshot, the October 28 dump contains:
+- 2 additional public tables (27 vs 25)
+- 5 additional public policies (50 vs 45)
+- 2 additional public triggers (14 vs 12)
+- 15 additional function definitions (69 vs 54)
+
+Therefore the October 15 replay is historical evidence only. It does **not** prove parity with the October 28 Production schema. The current dump also includes Supabase-managed extension/GraphQL functions and no extension installation statements; a clean replay must provision the correct platform extensions and Auth/Storage dependencies first.
+
+### Additional disposable regression
+
+The Integration branch's October 15 snapshot behavior test now grants SELECT on public tables/views to the disposable `anon` role and asserts that RLS still returns no rows from `documents`, `document_monthly_summary`, and `document_report_summary`. This models the broad anonymous grants found in the October 28 dump while preserving the no-anonymous-policy security boundary. The test does not modify Production and must pass in CI before being treated as evidence.
+
+### Baseline decision
+
+The October 28 dump is a stronger current-state recovery artifact than the October 15 catalog snapshot, but it is not the original Foundation migration and not a complete disaster-recovery backup. Do not replace the placeholder Foundation migration with this dump directly. First separate Supabase-managed objects from school-owned schema, resolve extension/platform dependencies, preserve ownership/grants/default ACL semantics, and replay a candidate baseline in a disposable Supabase stack with catalog parity checks.
