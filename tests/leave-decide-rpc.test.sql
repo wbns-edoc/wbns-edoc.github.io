@@ -27,6 +27,17 @@ insert into public.staff_leave_types (id, code, name, is_active)
 values ('00000000-0000-0000-0000-000000000821', 'decide_test', 'Decision test', true)
 on conflict (id) do update set is_active = true;
 
+insert into public.staff_leave_policy_versions(
+ id,policy_code,version,status,effective_from,policy_rules,reviewed_by,reviewed_at
+) values (
+ '00000000-0000-0000-0000-000000000819',
+ 'school-wide',1,'approved',date '2026-01-01',
+ '{"verification_status":"approved","calculation_ready":true,
+   "calendar":{"non_working_dates":[]},
+   "leave_types":{"decide_test":{"counting_basis":"calendar_days"}}}'::jsonb,
+ '00000000-0000-0000-0000-000000000802',now()
+);
+
 insert into public.staff_leave_requests (
   id, applicant_id, leave_type_id, starts_on, ends_on, reason, status, current_approver_user_id, approval_stage, approval_route_snapshot
 ) values
@@ -301,12 +312,17 @@ insert into public.profiles (id, is_active) values
 on conflict (id) do update set is_active=excluded.is_active;
 
 insert into public.staff_leave_requests (
-  id, applicant_id, leave_type_id, starts_on, ends_on, reason, status
+  id, applicant_id, leave_type_id, policy_version_id, starts_on, ends_on,
+  day_count, reason, policy_snapshot, status
 ) values (
   '00000000-0000-0000-0000-000000000818',
   '00000000-0000-0000-0000-000000000801',
   '00000000-0000-0000-0000-000000000821',
-  date '2026-12-08', date '2026-12-08', 'synthetic verified submit route', 'draft'
+  '00000000-0000-0000-0000-000000000819',
+  date '2026-12-08', date '2026-12-08', 1,
+  'synthetic verified submit route',
+  '{"policy_version_id":"00000000-0000-0000-0000-000000000819","leave_type_code":"decide_test","verification_status":"approved","calculation_ready":true,"calculated_day_count":1}'::jsonb,
+  'draft'
 ) on conflict (id) do nothing;
 
 insert into public.staff_leave_approval_route_config (
