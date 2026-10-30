@@ -214,3 +214,44 @@ The Integration branch's October 15 snapshot behavior test now grants SELECT on 
 ### Baseline decision
 
 The October 28 dump is a stronger current-state recovery artifact than the October 15 catalog snapshot, but it is not the original Foundation migration and not a complete disaster-recovery backup. Do not replace the placeholder Foundation migration with this dump directly. First separate Supabase-managed objects from school-owned schema, resolve extension/platform dependencies, preserve ownership/grants/default ACL semantics, and replay a candidate baseline in a disposable Supabase stack with catalog parity checks.
+
+
+## 2026-10-30 read-only Production ACL and extension checkpoint
+
+A read-only catalog query was run against Production project `iigzzwyfxxtqbgjawyom`; no DDL, DML, migration repair, or deployment was executed.
+
+| Check | Production result |
+|---|---|
+| `authenticated` USAGE on `public`, `auth`, `private` | true |
+| `authenticated` SELECT on `public.profiles` | true |
+| `authenticated` EXECUTE on `auth.uid()` | true |
+| `anon` SELECT privilege on `public.profiles` | true (RLS remains the row-access boundary; the captured policy targets authenticated only) |
+| Information-schema public table-grant rows for `authenticated` | 177 |
+| Information-schema public table-grant rows for `anon` | 168 |
+
+This confirms that the disposable PostgreSQL replay needed explicit test-only grants for the authenticated API role because the October 15 schema snapshot captures RLS policies but not the corresponding Supabase ACLs. The workflow now models the verified Production schema/function/profile grants only inside the disposable database.
+
+Production currently has these seven installed extensions:
+
+- `pg_cron` 1.6.4 in `pg_catalog`
+- `pg_stat_statements` 1.11 in `extensions`
+- `pg_trgm` 1.6 in `extensions`
+- `pgcrypto` 1.3 in `extensions`
+- `plpgsql` 1.0 in `pg_catalog`
+- `supabase_vault` 0.3.1 in `vault`
+- `uuid-ossp` 1.1 in `extensions`
+
+The plain PostgreSQL 17 snapshot replay currently installs `pg_trgm` as a compatibility prerequisite only. It does not reproduce all Supabase-managed extensions, Auth/Storage platform objects, owners, default privileges, or project settings. Therefore the successful snapshot replay is strong SQL/object/RLS evidence, **not complete Supabase clean-install parity**.
+
+## 2026-10-30 deeper staff-leave replay
+
+The Schema Recovery PostgreSQL Replay workflow now applies the complete current staff-leave draft migration set to the reconstructed October 15 Production catalog in a disposable PostgreSQL 17 database, then runs all 12 staff-leave regression SQL tests. This caught missing test-harness API-role grants that the October 10 compatibility fixture did not expose. After adding test-only grants that were independently confirmed by the read-only Production ACL query, the deeper replay passed:
+
+- [Schema Recovery PostgreSQL Replay — PASS, commit `39f5603d`](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/41023644975)
+- Staff-leave migrations applied in the disposable replay: 16 (including the retired no-op foundation draft and school responsibility settings).
+- Staff-leave regression SQL files executed: 12.
+- The real leave-policy activation gate remains fail-closed; synthetic fixture policy approval is confined to rollback-protected tests and does not approve the school's handbook policy.
+
+A frontend role-visibility regression was also found: `loadIdentity()` returns role display names before role codes, while the leave dashboard originally checked only role codes. The UI now normalizes names/codes and recognizes the Thai Director/Vice Director display names, and System Admin display name. A dedicated regression test is included in Frontend Build CI.
+
+These passing tests do not close the remaining Foundation, 29 Production migration-name mapping, handbook-policy, full Supabase parity, live notification-delivery, rollback, or zero-cost release blockers.
