@@ -52,6 +52,7 @@ on:
       - "supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql"
       - "supabase/migrations/20261023160000_staff_leave_approver_dashboard_summary_draft.sql"
       - "supabase/migrations/20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql"
+      - "tests/leave-auth-users-fixture.sql"
       - "tests/leave-schema-rls.test.sql"
       - "tests/leave-create-draft-rpc.test.sql"
       - "tests/leave-submit-rpc.test.sql"
@@ -178,6 +179,7 @@ jobs:
           cp supabase/tests/database/explicit_active_department_membership.test.sql "$test_dir/supabase/tests/explicit_active_department_membership.test.sql"
           cp supabase/tests/database/approval_authorization_denials.test.sql "$test_dir/supabase/tests/approval_authorization_denials.test.sql"
           cp supabase/tests/database/department_scoped_identity_permissions.test.sql "$test_dir/supabase/tests/department_scoped_identity_permissions.test.sql"
+          cp tests/leave-auth-users-fixture.sql "$test_dir/leave-tests/leave-auth-users-fixture.sql"
           cp tests/leave-schema-rls.test.sql "$test_dir/leave-tests/leave-schema-rls.test.sql"
           cp tests/leave-create-draft-rpc.test.sql "$test_dir/leave-tests/leave-create-draft-rpc.test.sql"
           cp tests/leave-submit-rpc.test.sql "$test_dir/leave-tests/leave-submit-rpc.test.sql"
@@ -203,6 +205,7 @@ jobs:
           set -euo pipefail
           DB_URL="$(supabase status -o env | sed -n 's/^DB_URL=//p' | sed 's/^"//;s/"$//')"
           if [ -z "$DB_URL" ]; then DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"; fi
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "leave-tests/leave-auth-users-fixture.sql"
           for test_file in \
             leave-schema-rls.test.sql \
             leave-create-draft-rpc.test.sql \
