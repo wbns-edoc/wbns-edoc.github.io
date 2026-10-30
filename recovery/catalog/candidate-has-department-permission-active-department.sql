@@ -22,7 +22,17 @@ AS $function$
             WHERE ur.user_id = (SELECT auth.uid())
               AND wr.code IN ('system_admin','director')
           )
-          AND p_permission IN ('document.view','document.create','document.approve','document.update')
+          AND p_permission IN ('document.view','document.create','document.approve','document.update','document.assign')
+        )
+        OR (
+          p_permission = 'document.assign'
+          AND EXISTS (
+            SELECT 1
+            FROM public.user_roles ur
+            JOIN public.roles wr ON wr.id = ur.role_id
+            WHERE ur.user_id = (SELECT auth.uid())
+              AND wr.code = 'deputy_director'
+          )
         )
         OR EXISTS (
           SELECT 1
