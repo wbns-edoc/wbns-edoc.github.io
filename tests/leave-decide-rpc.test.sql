@@ -422,12 +422,17 @@ end $block$;
 -- Explicit no-Vice configuration routes directly to the Director and permits
 -- only the Director to make the final decision.
 insert into public.staff_leave_requests (
-  id, applicant_id, leave_type_id, starts_on, ends_on, reason, status
+  id, applicant_id, leave_type_id, policy_version_id, starts_on, ends_on,
+  day_count, reason, policy_snapshot, status
 ) values (
   '00000000-0000-0000-0000-000000000819',
   '00000000-0000-0000-0000-000000000801',
   '00000000-0000-0000-0000-000000000821',
-  date '2026-12-09', date '2026-12-09', 'synthetic no-vice submit route', 'draft'
+  '00000000-0000-0000-0000-000000000819',
+  date '2026-12-09', date '2026-12-09', 1,
+  'synthetic no-vice submit route',
+  '{"policy_version_id":"00000000-0000-0000-0000-000000000819","leave_type_code":"decide_test","verification_status":"approved","calculation_ready":true,"calculated_day_count":1}'::jsonb,
+  'draft'
 ) on conflict (id) do nothing;
 
 -- A caller must not be able to populate a previously empty snapshot directly.
