@@ -10,6 +10,24 @@ insert into public.staff_leave_types(id,code,name,is_active)
 values ('83000000-0000-0000-0000-000000000003','policy_test','Policy test',true)
 on conflict(id) do update set is_active=true;
 
+-- Entitlement calculation is explicitly school-wide and must not branch by personnel category.
+do $schoolwide_policy_contract$
+declare
+  v_definition text;
+begin
+  select pg_get_functiondef(
+    'public.staff_leave_create_draft(uuid,date,date,text)'::regprocedure
+  ) into v_definition;
+
+  if position('policy_code = ''school-wide''' in lower(v_definition)) = 0 then
+    raise exception 'leave calculation must bind only to the school-wide policy';
+  end if;
+  if position('personnel_category' in lower(v_definition)) > 0 then
+    raise exception 'leave calculation must not branch on personnel category';
+  end if;
+end
+$schoolwide_policy_contract$;
+
 -- The recovered handbook is present as a school-wide draft, never auto-approved.
 do $handbook_seed$
 declare
