@@ -21,7 +21,8 @@ INSERT INTO public.profiles(id, full_name, is_active) VALUES
  ('10000000-0000-0000-0000-000000000005', 'Replay Other Group User', true),
  ('10000000-0000-0000-0000-000000000006', 'Replay Multi Group User', true),
  ('10000000-0000-0000-0000-000000000007', 'Replay Inactive Department User', true),
- ('10000000-0000-0000-0000-000000000008', 'Replay Inactive Profile User', false);
+ ('10000000-0000-0000-0000-000000000008', 'Replay Inactive Profile User', false),
+ ('10000000-0000-0000-0000-000000000009', 'Replay Deputy Director', true);
 
 INSERT INTO public.departments(id, parent_id, code, name, is_active) VALUES
  ('20000000-0000-0000-0000-000000000001', NULL, 'REPLAY_A', 'Replay Group A', true),
@@ -32,7 +33,8 @@ INSERT INTO public.departments(id, parent_id, code, name, is_active) VALUES
 INSERT INTO public.roles(id, code, name) VALUES
  ('30000000-0000-0000-0000-000000000001', 'system_admin', 'Replay System Admin'),
  ('30000000-0000-0000-0000-000000000002', 'director', 'Replay Director'),
- ('30000000-0000-0000-0000-000000000003', 'replay_clerk', 'Replay Clerk');
+ ('30000000-0000-0000-0000-000000000003', 'replay_clerk', 'Replay Clerk'),
+ ('30000000-0000-0000-0000-000000000004', 'deputy_director', 'Replay Deputy Director');
 
 INSERT INTO public.permissions(id, code, name) VALUES
  ('40000000-0000-0000-0000-000000000001', 'document.view', 'View documents'),
@@ -42,7 +44,8 @@ INSERT INTO public.permissions(id, code, name) VALUES
 
 INSERT INTO public.user_roles(user_id, role_id) VALUES
  ('10000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000000001'),
- ('10000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000002');
+ ('10000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000000002'),
+ ('10000000-0000-0000-0000-000000000009', '30000000-0000-0000-0000-000000000004');
 
 INSERT INTO public.user_departments(user_id, department_id, is_primary) VALUES
  ('10000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000001', true),
@@ -92,6 +95,7 @@ DO $$ DECLARE n integer; BEGIN
   IF NOT private.has_department_permission('document.create', '20000000-0000-0000-0000-000000000003') THEN RAISE EXCEPTION 'system_admin should have document.create in every department'; END IF;
   IF NOT private.has_department_permission('document.update', '20000000-0000-0000-0000-000000000003') THEN RAISE EXCEPTION 'system_admin should have document.update in every department'; END IF;
   IF NOT private.has_department_permission('document.approve', '20000000-0000-0000-0000-000000000003') THEN RAISE EXCEPTION 'system_admin should have document.approve in every department'; END IF;
+  IF NOT private.has_department_permission('document.assign', '20000000-0000-0000-0000-000000000003') THEN RAISE EXCEPTION 'system_admin should retain document.assign in every department'; END IF;
 END $$;
 
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', true);
@@ -101,6 +105,7 @@ DO $$ DECLARE n integer; BEGIN
   IF NOT private.has_department_permission('document.create', '20000000-0000-0000-0000-000000000003') THEN RAISE EXCEPTION 'director should have document.create in every department'; END IF;
   IF NOT private.has_department_permission('document.update', '20000000-0000-0000-0000-000000000003') THEN RAISE EXCEPTION 'director should have document.update in every department'; END IF;
   IF NOT private.has_department_permission('document.approve', '20000000-0000-0000-0000-000000000003') THEN RAISE EXCEPTION 'director should have document.approve in every department'; END IF;
+  IF NOT private.has_department_permission('document.assign', '20000000-0000-0000-0000-000000000003') THEN RAISE EXCEPTION 'director should retain document.assign in every department'; END IF;
 END $$;
 
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000003', true);
@@ -161,11 +166,22 @@ END $$;
 -- An active user with explicit membership, role and permission must still be denied
 -- department-scoped access when that department is inactive.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000007', true);
-DO $$ BEGIN
+DO $ BEGIN
   IF private.has_department_permission('document.view', '20000000-0000-0000-0000-000000000004') THEN
     RAISE EXCEPTION 'ordinary user must not retain scoped permission in inactive department';
   END IF;
-END $$;
+END $;
+
+-- Preserve the Production-wide Vice Director assignment exception.
+SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000009', true);
+DO $ BEGIN
+  IF NOT private.has_department_permission('document.assign', '20000000-0000-0000-0000-000000000004') THEN
+    RAISE EXCEPTION 'deputy_director must retain the existing global document.assign exception';
+  END IF;
+  IF private.has_department_permission('document.view', '20000000-0000-0000-0000-000000000004') THEN
+    RAISE EXCEPTION 'deputy_director must not gain unrelated global document.view';
+  END IF;
+END $;
 
 -- The explicit global role exception remains effective for an active director.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', true);
