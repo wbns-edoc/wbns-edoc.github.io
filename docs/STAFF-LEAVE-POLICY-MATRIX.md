@@ -1,57 +1,68 @@
-# Staff Leave Policy Matrix (Draft — HR Validation Required)
+# Staff Leave Policy Matrix — School-wide Draft
 
-## Purpose and guardrails
-This matrix is a data-entry and review template, not an approved legal policy. Do not enable leave submission or calculate official balances from this draft. The supplied guide is specifically about civil servants; it does not establish entitlements for contract teachers or government employees.
+สถานะ: **ร่างนโยบายกลางเพื่อทบทวนก่อนเปิดใช้** ไม่ใช่การรับรองสิทธิทางกฎหมายหรือการอนุมัติ Policy Version ในฐานข้อมูล
 
-## Leave types transcribed from the supplied guide's table of contents
-| ID | Leave type | Civil servant guide reference | Rule verification |
+## หลักการที่โรงเรียนกำหนด
+
+โรงเรียนกำหนดให้บุคลากรทุกประเภทใช้กฎการลาชุดเดียวกันตามคู่มือที่โรงเรียนเลือก ไม่แยกสูตรตามสถานะข้าราชการ ครูอัตราจ้าง หรือพนักงานราชการ ประเภทบุคลากรเก็บไว้เพื่อรายงานเท่านั้นและห้ามนำมาเลือกสิทธิหรือสูตรคำนวณ
+
+แหล่งหลักที่โรงเรียนเคยส่งคือคู่มือ BICT/MOE เรื่องการลาประเภทต่าง ๆ ของข้าราชการ (เผยแพร่ปี 2567/2024) ส่วนคู่มือกรมควบคุมโรคด้านลาของข้าราชการและระเบียบสำนักนายกรัฐมนตรีว่าด้วยการลาของข้าราชการ พ.ศ. 2555 ใช้เป็นแหล่งเทียบเคียงเพื่อถอดวิธีนับวันและเงื่อนไขตัวอย่าง การนำมาใช้กับบุคลากรทุกประเภทเป็น **นโยบายภายในของโรงเรียน** ตามข้อกำหนดของโรงเรียน ไม่ใช่การกล่าวอ้างว่ากฎหมายกำหนดสิทธิตามสถานะการจ้างเหมือนกันทุกประเภท
+
+## วิธีนับวันกลาง
+
+- รอบการลาและการสรุปสิทธิอ้างอิงปีงบประมาณ เว้นแต่กฎของประเภทการลาระบุเป็นอย่างอื่น
+- โดยทั่วไปนับวันหยุดราชการที่คั่นอยู่ในช่วงวันลาเป็นวันลาด้วย
+- ข้อยกเว้นที่นับเฉพาะวันทำการ ได้แก่ **ลาป่วย ลาไปช่วยเหลือภริยาที่คลอดบุตร ลากิจส่วนตัว และลาพักผ่อน**
+- การคำนวณวันทำการต้องใช้ปฏิทินวันหยุด/วันปิดทำการที่โรงเรียนตรวจสอบแล้ว ไม่ใช้การเดาจากวันจันทร์–ศุกร์เพียงอย่างเดียว
+- หากข้อมูลปฏิทินหรือกฎเฉพาะประเภทไม่ครบ ให้บันทึกร่างได้ แต่ห้ามส่งอนุมัติหรือคำนวณยอดสิทธิอัตโนมัติ
+
+## 11 ประเภทการลาและกฎอ้างอิงที่ถอดได้
+
+| รหัส | ประเภทการลา | วิธีนับ | กฎอ้างอิงเบื้องต้น |
 |---|---|---|---|
-| sick_leave | การลาป่วย | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
-| maternity_leave | การลาคลอดบุตร | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
-| assist_spouse_childbirth | การลาไปช่วยเหลือภริยาที่คลอดบุตร | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
-| personal_leave | การลากิจส่วนตัว | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
-| annual_leave | การลาพักผ่อน | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
-| ordination_hajj | การลาอุปสมบทหรือลาไปประกอบพิธีฮัจย์ | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
-| military_selection_training | การลาเข้ารับการตรวจเลือกหรือเข้ารับการเตรียมพล | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
-| study_training_research | การลาไปศึกษา ฝึกอบรม ปฏิบัติการวิจัย หรือดูงาน | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
-| international_organization | การลาไปปฏิบัติงานในองค์การระหว่างประเทศ | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
-| spouse_following | การลาติดตามคู่สมรส | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
-| vocational_rehabilitation | การลาไปฟื้นฟูสมรรถภาพด้านอาชีพ | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
+| sick_leave | การลาป่วย | วันทำการ | ลาได้เท่าที่ป่วยจริง; สิทธิได้รับเงินเดือนระหว่างลาป่วยไม่เกิน 60 วันทำการต่อปีงบประมาณ และอาจอนุญาตเพิ่มได้อีกไม่เกิน 60 วันตามดุลพินิจผู้มีอำนาจ; ใบรับรองแพทย์เมื่อป่วยติดต่อกันตั้งแต่ 30 วันขึ้นไป |
+| maternity_leave | การลาคลอดบุตร | วันปฏิทิน | ไม่เกิน 90 วัน รวมวันหยุดราชการ |
+| assist_spouse_childbirth | การลาไปช่วยเหลือภริยาที่คลอดบุตร | วันทำการ | ไม่เกิน 15 วันทำการ และใช้สิทธิภายใน 90 วันนับแต่วันคลอด ตามเงื่อนไขคู่มือ |
+| personal_leave | การลากิจส่วนตัว | วันทำการ | ได้รับเงินเดือนระหว่างลาไม่เกิน 45 วันทำการต่อปีงบประมาณ; ปีแรกที่เริ่มรับราชการไม่เกิน 15 วันทำการ; การลาเพื่อเลี้ยงดูบุตรต่อเนื่องจากลาคลอดมีเงื่อนไขเฉพาะและอาจไม่รับเงินเดือน |
+| annual_leave | การลาพักผ่อน | วันทำการ | สิทธิพื้นฐาน 10 วันทำการต่อปี; ผู้เริ่มปฏิบัติงานยังไม่ครบ 6 เดือนอาจยังไม่มีสิทธิ; สะสมรวมกับปีปัจจุบันได้ไม่เกิน 20 วันทำการ (อายุงานต่ำกว่า 10 ปี) หรือ 30 วันทำการ (ตั้งแต่ 10 ปีขึ้นไป); ต้องตรวจเงื่อนไขปฏิทินปิดภาคเรียนของโรงเรียน |
+| ordination_hajj | การลาอุปสมบทหรือไปประกอบพิธีฮัจย์ | วันปฏิทิน | โดยหลักไม่เกิน 120 วัน และเป็นสิทธิครั้งเดียวตามเงื่อนไขอายุงาน/การไม่เคยใช้สิทธิ; มีข้อกำหนดการยื่นล่วงหน้า |
+| military_selection_training | การลาเข้ารับการตรวจเลือกหรือเตรียมพล | วันปฏิทินตามหมายเรียก | ใช้ตามระยะเวลาที่ได้รับหมาย; มีหน้าที่รายงานตัว/กลับเข้าปฏิบัติงานภายในกำหนดหลังได้รับหมายหรือเสร็จภารกิจ |
+| study_training_research | การลาไปศึกษา ฝึกอบรม วิจัย หรือดูงาน | วันปฏิทิน | โดยหลักไม่เกิน 4 ปีต่อกรณี; กรณีขยายตามดุลพินิจรวมแล้วไม่เกิน 6 ปี |
+| international_organization | การลาไปปฏิบัติงานในองค์การระหว่างประเทศ | วันปฏิทิน | ระยะเวลาตามหลักเกณฑ์ไม่เกิน 1 ปี พร้อมกำหนดรายงานกลับและรายงานผลหลังเสร็จภารกิจ |
+| spouse_following | การลาติดตามคู่สมรส | วันปฏิทิน | ไม่เกิน 2 ปีต่อครั้ง และรวมทั้งหมดไม่เกิน 4 ปี; ตามคู่มืออ้างอิงไม่มีเงินเดือนระหว่างลา |
+| vocational_rehabilitation | การลาไปฟื้นฟูสมรรถภาพด้านอาชีพ | วันปฏิทิน | ไม่เกิน 12 เดือนตามหลักสูตร/ระยะเวลาที่ได้รับอนุมัติ และต้องมีหลักฐานประกอบ |
 
-## One school-wide policy for all personnel
-HR must complete one shared policy row for each leave type above. The same eligibility, entitlement, counting, and approval rules apply to every school personnel category. Personnel category may be stored only as reporting metadata; it must not select a different policy or calculation.
+> ตัวเลขข้างต้นเป็นการถอดกฎอ้างอิงจากคู่มือราชการที่เผยแพร่โดยหน่วยงานรัฐเพื่อเตรียมโครงสร้างนโยบายกลาง ไม่ได้เปิดใช้เป็นสิทธิอัตโนมัติในระบบ จนกว่าจะตรวจเทียบกับคู่มือ BICT ฉบับโรงเรียนและจัดทำ Policy Version ที่อนุมัติแล้ว โดยเฉพาะเงื่อนไขข้อยกเว้น การได้รับเงินเดือน การใช้สิทธิซ้ำ และอำนาจอนุญาต
 
-## Required fields per shared leave type
-| Field | Required value |
-|---|---|
-| Eligibility | Allowed / not allowed / conditional; define condition |
-| Entitlement | Numeric value and unit, or not applicable |
-| Counting method | Working days / calendar days / hours / policy-defined |
-| Annual period | Calendar year / fiscal year / employment anniversary / other |
-| Accrual and carryover | Rule or not applicable |
-| Minimum notice | Rule or not applicable |
-| Required evidence | Evidence type, when required, and privacy classification |
-| Partial-day support | Yes/no and counting method |
-| Overlap and holidays | Explicit calculation rule |
-| Approval route | Role/position sequence, delegation, and conflict-of-interest rule |
-| Cancellation/withdrawal | Allowed states, cutoff, and required reason |
-| Effective from/to | Dates |
-| Source | Official regulation/contract/policy title, version/date, article/page |
-| Approved by | HR owner and approving authority |
-| Verification status | Pending / reviewed / approved / retired |
+## ข้อมูลที่ระบบต้องใช้เพิ่มก่อนคำนวณสิทธิ
 
-## Implementation rules
-1. Missing or unapproved shared rules must block submission for that leave type; never create category-specific fallback rules.
-2. No balance calculation is authoritative for any staff member until the shared source, counting method, annual period, carryover, and effective dates are approved.
-3. Sensitive evidence (for example, medical documents) must have stricter access controls than ordinary office documents.
-4. Policy edits are versioned and auditable. Historical requests retain the policy version used at submission.
-5. Changes require automated tests for authorization, date ranges, overlap, status transitions, self-approval prevention, and privacy boundaries.
+1. ปฏิทินวันหยุด/วันปิดทำการของโรงเรียนตามปีงบประมาณ
+2. วันเริ่มปฏิบัติงานของบุคลากร เพื่อคำนวณสิทธิปีแรกและอายุงาน
+3. ประวัติการใช้สิทธิย้อนหลังที่จำเป็น โดยเฉพาะลาพักผ่อนสะสมและการลาอุปสมบท/ฮัจย์ที่เป็นสิทธิครั้งเดียว
+4. วันเกิดบุตรหรือวันที่เกี่ยวข้องสำหรับการลาไปช่วยเหลือภริยาที่คลอดบุตร
+5. หลักฐานและสถานะการได้รับเงินเดือนระหว่างลาแยกจากจำนวนวันที่ลา
 
-## Approval checklist before enabling a category
-- [ ] Applicable official rule or signed/approved employment policy attached
-- [ ] Eligibility and entitlements verified
-- [ ] Working-day/calendar-day calculations verified with examples
-- [ ] Approval route confirmed by school leadership
-- [ ] Evidence and privacy requirements reviewed
-- [ ] HR signs off and effective date assigned
-- [ ] Synthetic end-to-end test passes
+## ข้อกำหนดสำหรับระบบ
+
+- นโยบายกลางใช้ policy_code = school-wide และมีเวอร์ชัน/วันที่เริ่มใช้/วันที่สิ้นสุด
+- policy_rules ต้องเก็บกฎต่อประเภทการลา, counting basis, holiday calendar, quota/limit, first-year rules, carryover, evidence, และการคำนวณที่ตรวจสอบย้อนหลังได้
+- ทุกคำขอต้องเก็บ policy_version_id, policy snapshot, จำนวนวันที่คำนวณได้ และสถานะเกินเกณฑ์ ณ เวลายื่น
+- คำขอที่ไม่มี Policy Version สถานะ approved หรือไม่มีสูตรคำนวณครบ จะคงเป็นฉบับร่างและส่งอนุมัติไม่ได้
+- การเกินเกณฑ์ไม่ควรถูกปฏิเสธโดยอัตโนมัติทุกกรณี แต่ต้องทำเครื่องหมายและแจ้งผู้อำนวยการ/รองผู้อำนวยการเพื่อพิจารณาตามอำนาจ
+- การอนุมัติแทนผู้อำนวยการโดยรองผู้อำนวยการต้องมีหลักฐานการไม่อยู่ที่บันทึกโดย System Admin และมี audit trail
+
+## แหล่งอ้างอิง
+
+1. คู่มือ BICT/MOE ที่โรงเรียนเคยส่ง: https://bict.moe.go.th/wp-content/uploads/2024/08/%E0%B8%84%E0%B8%B9%E0%B9%88%E0%B8%A1%E0%B8%B7%E0%B8%AD%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%A5%E0%B8%B2%E0%B8%82%E0%B8%AD%E0%B8%87%E0%B9%80%E0%B8%88%E0%B9%89%E0%B8%B2%E0%B8%AB%E0%B8%99%E0%B9%89%E0%B8%B2%E0%B8%97%E0%B8%B5%E0%B9%88-%E0%B8%A8%E0%B8%97%E0%B8%81_page-0001.pdf
+2. คู่มือการลาและการได้รับเงินเดือนระหว่างลาสำหรับข้าราชการ กรมควบคุมโรค (พ.ศ. 2562): https://ddc.moph.go.th/uploads/publish/929020191008084938.pdf
+3. ระเบียบสำนักนายกรัฐมนตรีว่าด้วยการลาของข้าราชการ พ.ศ. 2555 และฉบับแก้ไขที่เกี่ยวข้อง
+4. หนังสือสำนักงาน ก.ค.ศ. ว14/2568 เรื่องผู้มีอำนาจพิจารณาหรืออนุญาตการลา: https://circular.otepc.go.th/files/w14-2568.pdf
+
+## สถานะก่อนเปิดใช้งาน
+
+- [ ] เทียบตัวเลขและข้อยกเว้นทุกประเภทกับ PDF BICT ฉบับเต็ม
+- [ ] ตรวจสอบระเบียบ/หนังสือฉบับปัจจุบันและอำนาจอนุญาต
+- [ ] ตั้งค่าปฏิทินวันหยุดโรงเรียน
+- [ ] นำเข้าวันเริ่มงานและประวัติสิทธิที่จำเป็น
+- [ ] สร้าง Policy Version กลางและให้ผู้มีอำนาจโรงเรียนอนุมัติ
+- [ ] ทดสอบตัวอย่างวันทำการ/วันปฏิทิน/ข้ามปีงบประมาณ/เกินสิทธิ/การลาแทน
