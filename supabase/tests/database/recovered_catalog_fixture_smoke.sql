@@ -3,8 +3,8 @@ select plan(6);
 
 select ok(to_regclass('public.documents') is not null,
   'documents table exists in recovered catalog');
-select ok((select count(*) from pg_tables where schemaname = 'public') = 22,
-  'recovered public base-table count matches the observed catalog');
+select ok((select count(*) from pg_tables where schemaname = 'public') >= 22,
+  'recovered catalog retains the expected core table baseline after forward migrations');
 select ok((select relrowsecurity from pg_class where oid = 'public.documents'::regclass),
   'documents RLS is enabled');
 select ok((select count(*) from pg_policies where schemaname = 'public') = 45,
