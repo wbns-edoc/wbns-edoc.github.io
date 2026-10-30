@@ -262,3 +262,13 @@ These passing tests do not close the remaining Foundation, 29 Production migrati
 A read-only scan of all **49 repository branches** inspected their recursive trees for migration SQL candidates related to the unmatched Production history. No alternate original Foundation migration path was found; the same placeholder path appears across the branch history sampled, and the file is 285 bytes with a comment that the full SQL is maintained in Supabase. Exact commit searches for the Foundation filename and several unmatched early migration names returned no source commits.
 
 This means the current repository history cannot supply the original Foundation SQL. The October 15 current-state catalog is the best recovered object-definition evidence, but it is not the original migration and does not reconstruct every historical grant, owner, extension, Auth/Storage object, or platform setting. Do not fabricate a historical Foundation file from the migration name or replace it with a current-state dump and then replay later migrations on top.
+
+
+## 2026-10-30 notifications realtime readiness
+
+A read-only Production query confirmed that the `supabase_realtime` publication exists and emits INSERT/UPDATE/DELETE/TRUNCATE changes, but `public.notifications` was not a member of that publication. The existing notifications RLS policies are recipient-scoped:
+
+- SELECT: `recipient_id = auth.uid()`, role `authenticated` only.
+- UPDATE: `recipient_id = auth.uid()`, role `authenticated` only.
+
+The Integration branch now contains draft migration `20261030110000_notifications_realtime_publication_draft.sql`, which adds only `public.notifications` to the existing publication if it is not already present. The NotificationBell subscribes to INSERT events with a `recipient_id=eq.<current-user-id>` filter and removes its channel on unmount. Regression tests assert the subscription contract and publication membership in local Supabase. This is not yet deployed to Production.
