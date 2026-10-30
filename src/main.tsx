@@ -36,8 +36,8 @@ function NotificationBell({profile,setError}:{profile:Profile|null;setError:(v:s
 function Nav({children,active,onClick}:{children:React.ReactNode;active:boolean;onClick:()=>void}){return <button className={active?'nav active':'nav'}onClick={onClick}>{children}</button>}
 function formatIncomingRegisterNumber(number:number|null|undefined,registeredAt:string|null|undefined){if(number==null)return '—';if(!registeredAt)return String(number);const year=Number(new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Bangkok',year:'numeric'}).format(new Date(registeredAt)))+543;return String(number)+'/'+year}
 function pageTitle(p:Page){return({dashboard:'ภาพรวมระบบ',incoming:'ทะเบียนหนังสือรับ',outgoing:'ทะเบียนหนังสือส่ง',senders:'หน่วยงานผู้ส่ง',tasks:'งานของฉัน',leave:'ระบบการลาและคำขอวันลา',assigned:'งานที่มอบหมายแล้ว',approvals:'รายการรออนุมัติ',audit:'ประวัติการใช้งาน',reports:'รายงานและสถิติ',admin:'ผู้ใช้และสิทธิ์',departments:'หน่วยงานบุคลากร',permissions:'กำหนดสิทธิ์รายกลุ่มงาน',deleted:'ถังรายการที่ลบ',settings:'ตั้งค่าระบบ',about:'เกี่ยวกับระบบ'}as any)[p]}
-function PageContent({page,profile,roles,permissions,canManageSenders,canManageSettings,schoolName,onSchoolNameChange,setError,selectedDocId,setSelectedDocId}:{page:Page;profile:Profile|null;roles:string[];permissions:string[];canManageSenders:boolean;canManageSettings:boolean;schoolName:string;onSchoolNameChange:(v:string)=>void;setError:(v:string)=>void;selectedDocId:string|null;setSelectedDocId:(v:string|null)=>void}){if(selectedDocId)return <DocumentDetail documentId={selectedDocId} onBack={()=>setSelectedDocId(null)} setError={setError} permissions={permissions} roles={roles}/>;if(page==='incoming')return <Incoming setError={setError} openDocument={setSelectedDocId} permissions={permissions}/>;if(page==='deleted')return <DeletedIncoming setError={setError}/>;if(page==='outgoing')return <Outgoing setError={setError} openDocument={setSelectedDocId}/>;if(page==='reports')return <Reports/>;if(page==='senders')return <Senders setError={setError} canManage={canManageSenders}/>;if(page==='tasks')return <Tasks profile={profile} openDocument={setSelectedDocId}/>;if(page==='leave')return <StaffLeave profile={profile} setError={setError}/>;if(page==='assigned')return <AssignedWork profile={profile} setError={setError} openDocument={setSelectedDocId}/>;if(page==='approvals')return <Approvals profile={profile} setError={setError} openDocument={setSelectedDocId}/>;if(page==='audit')return <AuditLogs setError={setError}/>;if(page==='admin')return <AdminUsers setError={setError}/>;if(page==='departments')return <Departments setError={setError}/>;if(page==='permissions')return <DepartmentPermissions setError={setError}/>;if(page==='settings')return <SystemSettings setError={setError} canManage={canManageSettings} schoolName={schoolName} onSchoolNameChange={onSchoolNameChange}/>;if(page==='about')return <AboutSystem/>;return <Dashboard profile={profile}/>}
-function StaffLeave({profile,setError}:{profile:Profile|null;setError:(v:string)=>void}){
+function PageContent({page,profile,roles,permissions,canManageSenders,canManageSettings,schoolName,onSchoolNameChange,setError,selectedDocId,setSelectedDocId}:{page:Page;profile:Profile|null;roles:string[];permissions:string[];canManageSenders:boolean;canManageSettings:boolean;schoolName:string;onSchoolNameChange:(v:string)=>void;setError:(v:string)=>void;selectedDocId:string|null;setSelectedDocId:(v:string|null)=>void}){if(selectedDocId)return <DocumentDetail documentId={selectedDocId} onBack={()=>setSelectedDocId(null)} setError={setError} permissions={permissions} roles={roles}/>;if(page==='incoming')return <Incoming setError={setError} openDocument={setSelectedDocId} permissions={permissions}/>;if(page==='deleted')return <DeletedIncoming setError={setError}/>;if(page==='outgoing')return <Outgoing setError={setError} openDocument={setSelectedDocId}/>;if(page==='reports')return <Reports/>;if(page==='senders')return <Senders setError={setError} canManage={canManageSenders}/>;if(page==='tasks')return <Tasks profile={profile} openDocument={setSelectedDocId}/>;if(page==='leave')return <StaffLeave profile={profile} roles={roles} setError={setError}/>;if(page==='assigned')return <AssignedWork profile={profile} setError={setError} openDocument={setSelectedDocId}/>;if(page==='approvals')return <Approvals profile={profile} setError={setError} openDocument={setSelectedDocId}/>;if(page==='audit')return <AuditLogs setError={setError}/>;if(page==='admin')return <AdminUsers setError={setError}/>;if(page==='departments')return <Departments setError={setError}/>;if(page==='permissions')return <DepartmentPermissions setError={setError}/>;if(page==='settings')return <SystemSettings setError={setError} canManage={canManageSettings} schoolName={schoolName} onSchoolNameChange={onSchoolNameChange}/>;if(page==='about')return <AboutSystem/>;return <Dashboard profile={profile}/>}
+function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[];setError:(v:string)=>void}){
  const [types,setTypes]=React.useState<any[]>([]);
  const [rows,setRows]=React.useState<any[]>([]);
  const [selectedType,setSelectedType]=React.useState('');
@@ -48,19 +48,23 @@ function StaffLeave({profile,setError}:{profile:Profile|null;setError:(v:string)
  const [busy,setBusy]=React.useState(false);
  const [notice,setNotice]=React.useState('');
  const [available,setAvailable]=React.useState(true);
+ const [summary,setSummary]=React.useState<any>(null);
+ const canViewDashboard=roles.some(role=>['director','deputy_director','system_admin'].includes(role));
  const statusLabels:any={draft:'ฉบับร่าง',submitted:'ส่งแล้ว',blocked_approver_resolution:'รอตรวจสอบผู้อนุมัติ',pending_approval:'รอพิจารณา',approved:'อนุมัติแล้ว',rejected:'ไม่อนุมัติ',cancelled:'ยกเลิกแล้ว',withdrawn:'ถอนคำขอ'};
  async function load(){
   if(!profile){setLoading(false);return}
   setLoading(true);setError('');
-  const [t,r]=await Promise.all([
+  const [t,r,dashboard]=await Promise.all([
    supabase.from('staff_leave_types').select('id,code,name').eq('is_active',true).order('name'),
-   supabase.from('staff_leave_requests').select('id,leave_type_id,starts_on,ends_on,day_count,reason,status,created_at,policy_version_id,current_approver_user_id,staff_leave_types(name)').order('created_at',{ascending:false}).limit(50)
+   supabase.from('staff_leave_requests').select('id,leave_type_id,starts_on,ends_on,day_count,is_over_limit,reason,status,created_at,policy_version_id,current_approver_user_id,staff_leave_types(name)').order('created_at',{ascending:false}).limit(50),
+   canViewDashboard?supabase.rpc('staff_leave_dashboard_summary'):Promise.resolve({data:null,error:null})
   ]);
   if(t.error||r.error){setAvailable(false);setTypes([]);setRows([]);setError('ระบบการลายังไม่พร้อมใช้งานในฐานข้อมูลนี้ กรุณารอการตรวจสอบและเผยแพร่ Migration');}
   else{setAvailable(true);setTypes(t.data||[]);setRows(r.data||[]);if(!selectedType&&t.data?.length)setSelectedType(t.data[0].id);}
+  setSummary(!dashboard.error&&dashboard.data?dashboard.data:null);
   setLoading(false);
  }
- React.useEffect(()=>{load()},[profile?.id]);
+ React.useEffect(()=>{load()},[profile?.id,canViewDashboard]);
  async function submitDraft(row:any){
   if(!row.policy_version_id||row.day_count==null||busy)return;
   setBusy(true);setError('');setNotice('');
@@ -91,6 +95,14 @@ function StaffLeave({profile,setError}:{profile:Profile|null;setError:(v:string)
  }
  return <div className="staff-leave-page">
   <div className="toolbar"><div><h1>ระบบการลา</h1><p>คำขอลาและประวัติการพิจารณาของบุคลากรโรงเรียน</p></div><button className="ghost" onClick={load} disabled={loading||busy}>รีเฟรช</button></div>
+  {summary&&<div className="stats-grid">
+   <div className="stat-card"><span>คำขอทั้งหมด</span><strong>{summary.total??0}</strong></div>
+   <div className="stat-card"><span>รอพิจารณา</span><strong>{summary.pending??0}</strong></div>
+   <div className="stat-card"><span>รอรองผู้อำนวยการ</span><strong>{summary.waiting_vice??0}</strong></div>
+   <div className="stat-card"><span>รอผู้อำนวยการ</span><strong>{summary.waiting_director??0}</strong></div>
+   <div className="stat-card"><span>อนุมัติแล้ว</span><strong>{summary.approved??0}</strong></div>
+   <div className="stat-card"><span>เกินเกณฑ์</span><strong>{summary.over_limit??0}</strong></div>
+  </div>}
   <div className="panel"><div className="panel-head"><div><h2>ยื่นคำขอลา (บันทึกร่าง)</h2><p>ใช้กฎการลากลางชุดเดียวกันสำหรับบุคลากรทุกประเภท</p></div></div>
    <div className="notice" role="status">ระบบจะคำนวณวันลาและเปิดให้ส่งอนุมัติเฉพาะเมื่อมีนโยบายกลางที่ตรวจสอบและอนุมัติแล้วเท่านั้น คำขอที่ยังไม่มีนโยบายจะบันทึกเป็นร่างโดยไม่เดาจำนวนวันลา</div>
    {!available?<div className="empty">ยังไม่พบโครงสร้างระบบลาในฐานข้อมูลนี้</div>:<form className="form-grid" onSubmit={saveDraft}>
@@ -103,7 +115,7 @@ function StaffLeave({profile,setError}:{profile:Profile|null;setError:(v:string)
    </form>}
   </div>
   <div className="panel"><div className="panel-head"><div><h2>คำขอลาและประวัติ</h2><p>แสดงเฉพาะคำขอที่บัญชีนี้มีสิทธิ์เข้าถึง</p></div></div>
-   {loading?<div className="empty">กำลังโหลดคำขอลา…</div>:rows.length===0?<div className="empty">ยังไม่มีคำขอลา</div>:<div className="table-wrap"><table><thead><tr><th>ประเภท</th><th>ช่วงวันที่ลา</th><th>วันลา</th><th>สถานะ</th><th>วันที่สร้าง</th><th>การดำเนินการ</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{Array.isArray(r.staff_leave_types)?r.staff_leave_types[0]?.name:r.staff_leave_types?.name||'—'}</td><td>{r.starts_on} – {r.ends_on}</td><td>{r.day_count==null?'รอตรวจสอบ':r.day_count+' วัน'}</td><td><span className="badge">{statusLabels[r.status]||r.status}</span></td><td>{new Date(r.created_at).toLocaleDateString('th-TH')}</td><td>{r.status==='draft'?(r.policy_version_id&&r.day_count!=null?<button className="ghost" disabled={busy} onClick={()=>submitDraft(r)}>ส่งคำขอ</button>:<span className="muted">รอนโยบายที่อนุมัติ</span>):r.status==='pending_approval'&&r.current_approver_user_id===profile?.id?<><button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'approve')}>อนุมัติ</button> <button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'reject')}>ไม่อนุมัติ</button></>:'—'}</td></tr>)}</tbody></table></div>}
+   {loading?<div className="empty">กำลังโหลดคำขอลา…</div>:rows.length===0?<div className="empty">ยังไม่มีคำขอลา</div>:<div className="table-wrap"><table><thead><tr><th>ประเภท</th><th>ช่วงวันที่ลา</th><th>วันลา</th><th>สถานะ</th><th>วันที่สร้าง</th><th>การดำเนินการ</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{Array.isArray(r.staff_leave_types)?r.staff_leave_types[0]?.name:r.staff_leave_types?.name||'—'}</td><td>{r.starts_on} – {r.ends_on}</td><td>{r.day_count==null?'รอตรวจสอบ':r.day_count+' วัน'} {r.is_over_limit&&<span className="badge">เกินเกณฑ์</span>}</td><td><span className="badge">{statusLabels[r.status]||r.status}</span></td><td>{new Date(r.created_at).toLocaleDateString('th-TH')}</td><td>{r.status==='draft'?(r.policy_version_id&&r.day_count!=null?<button className="ghost" disabled={busy} onClick={()=>submitDraft(r)}>ส่งคำขอ</button>:<span className="muted">รอนโยบายที่อนุมัติ</span>):r.status==='pending_approval'&&r.current_approver_user_id===profile?.id?<><button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'approve')}>อนุมัติ</button> <button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'reject')}>ไม่อนุมัติ</button></>:'—'}</td></tr>)}</tbody></table></div>}
   </div>
  </div>
 }
