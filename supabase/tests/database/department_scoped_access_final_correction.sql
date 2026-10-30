@@ -22,7 +22,7 @@ SELECT ok(
 );
 
 SELECT ok(
-  position('join public.departments d' IN lower(pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0
+  position('join public.departments d' IN lower(pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure))) > 0
   AND position('d.is_active = true' IN pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0,
   'department-scoped permissions require the target department to remain active'
 );
