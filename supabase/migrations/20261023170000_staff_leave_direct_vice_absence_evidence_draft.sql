@@ -165,7 +165,7 @@ returns table(
 language plpgsql
 security definer
 set search_path = pg_catalog, public
-as $
+as $$
 declare v_actor uuid;
 begin
   v_actor:=auth.uid();
@@ -181,7 +181,7 @@ begin
     order by e.recorded_at desc
     limit 30;
 end;
-$;
+$$;
 
 revoke all on function public.admin_record_staff_leave_director_absence(date,date,text,text) from public,anon;
 grant execute on function public.admin_record_staff_leave_director_absence(date,date,text,text) to authenticated;
