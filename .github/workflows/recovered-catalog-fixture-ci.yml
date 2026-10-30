@@ -282,7 +282,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install pinned SQL parser
-        run: python -m pip install --disable-pip-version-check pglast==7.10
+        run: python -m pip install --disable-pip-version-check pglast==7.21
       - name: Parse and generate dependency-ordered SQL phases
         run: python tests/schema-recovery-replay.test.py --out-dir "$RUNNER_TEMP/wbns-replay"
       - name: Bootstrap disposable compatibility objects
