@@ -144,6 +144,13 @@ begin
          or v_request.current_approver_user_id is distinct from v_actor then
         raise exception 'leave_request_not_found_or_not_assigned' using errcode = '42501';
       end if;
+      -- A configuration flag is not evidence that the Director is absent.
+      -- Until trusted, request-specific absence evidence is checked transactionally,
+      -- fail closed and leave the request unchanged.
+      if v_route.direct_to_vice_enabled then
+        raise exception 'director_absence_evidence_required' using errcode = '42501';
+      end if;
+
       update public.staff_leave_requests set approval_stage='director_final_review',
         current_approver_user_id=v_route.director_user_id, updated_at=statement_timestamp()
         where id=v_request.id;
