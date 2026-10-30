@@ -108,7 +108,8 @@ begin
       'verification_status', 'approved',
       'calculation_ready', true,
       'counting_basis', v_counting_basis,
-      'calculated_day_count', v_day_count
+      'calculated_day_count', v_day_count,
+      'policy_rules_snapshot', v_policy_rules
     );
   else
     v_policy_snapshot := jsonb_build_object(
@@ -163,7 +164,8 @@ begin
     if not found
        or new.policy_snapshot->>'verification_status' <> 'approved'
        or new.policy_snapshot->>'calculation_ready' <> 'true'
-       or new.policy_snapshot->>'policy_version_id' <> new.policy_version_id::text then
+       or new.policy_snapshot->>'policy_version_id' <> new.policy_version_id::text
+       or coalesce((new.policy_snapshot->>'calculated_day_count')::numeric,0) <> new.day_count then
       raise exception 'leave_policy_not_verified_or_day_count_missing'
         using errcode = '55000';
     end if;
@@ -173,7 +175,7 @@ begin
     where lt.id = new.leave_type_id and lt.is_active = true;
 
     if v_type_code is null
-       or jsonb_typeof(v_policy_rules->'leave_types'->v_type_code) <> 'object'
+       or jsonb_typeof(v_policy_rules->'leave_types'->v_type_code) is distinct from 'object'
        or new.policy_snapshot->>'leave_type_code' <> v_type_code then
       raise exception 'leave_policy_rule_missing_for_type'
         using errcode = '55000';
