@@ -174,6 +174,6 @@ A fresh read-only inventory also identified two Production entries whose names d
 | Production version/name | Candidate repository file | Evidence / status |
 |---|---|---|
 | `20261017070421` — `allow_assignees_to_complete_active_assignments` | `20261017020000_sync_assignment_when_assignee_completes_document.sql` | Semantic candidate: updates the status RPC so an active assignee can complete assigned work and marks that assignee's assignment completed. Exact SQL equivalence and timestamp provenance are not proven. |
-| `20261017070749` — `fix_assignment_status_enum_check_for_completion` | `20261017021000_reconcile_assignments_for_completed_documents.sql` | Semantic candidate: reconciles active assignment rows for documents already completed. The candidate is a data backfill; exact SQL equivalence and whether it fully represents the Production migration are not proven. |
+| `20261017070749` — `fix_assignment_status_enum_check_for_completion` | No verified source file identified. `20261017021000_reconcile_assignments_for_completed_documents.sql` is a related data backfill, not evidence of the Production enum/check-constraint change. |
 
 Do not mark either history row reconciled until the SQL is compared with a trusted deployment artifact or the resulting Production catalog/data effects can be independently demonstrated. In particular, the current read-only migration ledger proves only that the Production migration names and versions were applied; it does not expose their historical SQL bodies.
