@@ -149,8 +149,44 @@ begin
 end;
 $$;
 
+create or replace function public.admin_list_staff_leave_director_absences()
+returns table(
+  id uuid,
+  director_user_id uuid,
+  vice_director_user_id uuid,
+  absence_start date,
+  absence_end date,
+  reason text,
+  authority_reference text,
+  recorded_at timestamptz,
+  revoked_at timestamptz,
+  revocation_reason text
+)
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $
+declare v_actor uuid;
+begin
+  v_actor:=auth.uid();
+  if v_actor is null then raise exception 'authentication_required' using errcode='28000'; end if;
+  if not exists(
+    select 1 from public.user_roles ur join public.roles r on r.id=ur.role_id
+    where ur.user_id=v_actor and r.code='system_admin'
+  ) then raise exception 'system_admin_required' using errcode='42501'; end if;
+  return query
+    select e.id,e.director_user_id,e.vice_director_user_id,e.absence_start,e.absence_end,
+           e.reason,e.authority_reference,e.recorded_at,e.revoked_at,e.revocation_reason
+    from public.staff_leave_director_absence_evidence e
+    order by e.recorded_at desc
+    limit 30;
+end;
+$;
+
 revoke all on function public.admin_record_staff_leave_director_absence(date,date,text,text) from public,anon;
 grant execute on function public.admin_record_staff_leave_director_absence(date,date,text,text) to authenticated;
+revoke all on function public.admin_list_staff_leave_director_absences() from public,anon;
+grant execute on function public.admin_list_staff_leave_director_absences() to authenticated;
 revoke all on function public.admin_revoke_staff_leave_director_absence(uuid,text) from public,anon;
 grant execute on function public.admin_revoke_staff_leave_director_absence(uuid,text) to authenticated;
 
