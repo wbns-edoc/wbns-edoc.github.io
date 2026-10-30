@@ -31,9 +31,9 @@ insert into public.staff_leave_policy_versions(
  id,policy_code,version,status,effective_from,policy_rules,reviewed_by,reviewed_at
 ) values (
  '00000000-0000-0000-0000-000000000819',
- 'school-wide',1,'approved',date '2026-01-01',
- '{"verification_status":"approved","calculation_ready":true,
-   "calendar":{"non_working_dates":[]},
+ 'school-wide',2,'approved',date '2026-01-01',
+ '{"fixture":true,"verification_status":"approved","calculation_ready":true,
+   "calendar":{"verified":true,"non_working_dates":[]},"implementation_gaps":[],
    "leave_types":{"decide_test":{"counting_basis":"calendar_days"}}}'::jsonb,
  '00000000-0000-0000-0000-000000000802',now()
 );
