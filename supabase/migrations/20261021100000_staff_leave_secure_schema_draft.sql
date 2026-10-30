@@ -2,6 +2,29 @@
 -- Do not apply to Production. RPCs, grants, isolated migration replay, and RLS tests
 -- must be implemented and reviewed before this migration can be considered release-ready.
 -- Leave policy versions are school-wide: personnel category is NOT an entitlement key.
+-- Fail fast on an incomplete recovered core schema; never mutate public.profiles here.
+do $preflight$
+declare
+  v_profiles_oid oid;
+  v_type text;
+begin
+  v_profiles_oid := pg_catalog.to_regclass('public.profiles');
+  if v_profiles_oid is null then
+    raise exception 'staff_leave_schema_preflight_failed: public.profiles table is missing; reconcile the isolated core schema with the verified Production catalog before retrying';
+  end if;
+  select format_type(a.atttypid, a.atttypmod) into v_type
+  from pg_catalog.pg_attribute a
+  where a.attrelid=v_profiles_oid and a.attname='is_active'
+    and a.attnum>0 and not a.attisdropped;
+  if v_type is null then
+    raise exception 'staff_leave_schema_preflight_failed: public.profiles.is_active is missing; reconcile the isolated core schema with the verified Production catalog before retrying';
+  end if;
+  if v_type <> 'boolean' then
+    raise exception 'staff_leave_schema_preflight_failed: public.profiles.is_active must be boolean (found %); no core schema changes were made',v_type;
+  end if;
+end;
+$preflight$;
+
 begin;
 
 create table if not exists public.staff_leave_types (
