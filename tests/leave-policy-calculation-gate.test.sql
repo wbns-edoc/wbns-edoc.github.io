@@ -17,8 +17,7 @@ select set_config('request.jwt.claim.sub','83000000-0000-0000-0000-000000000001'
 select public.staff_leave_create_draft(
  '83000000-0000-0000-0000-000000000003',
  date '2026-11-09',date '2026-11-13','synthetic policy gate test'
-) as pending_policy_request_id
-\gset
+);
 
 reset role;
 
@@ -31,7 +30,7 @@ begin
   select policy_version_id,day_count,policy_snapshot
     into v_policy_id,v_day_count,v_snapshot
   from public.staff_leave_requests
-  where id=:'pending_policy_request_id';
+  where applicant_id='83000000-0000-0000-0000-000000000001' and reason='synthetic policy gate test';
   if v_policy_id is not null or v_day_count is not null
      or v_snapshot->>'verification_status'<>'pending' then
     raise exception 'unverified policy must leave the draft uncalculated';
@@ -40,7 +39,7 @@ begin
   begin
     update public.staff_leave_requests
        set status='pending_approval'
-     where id=:'pending_policy_request_id';
+     where applicant_id='83000000-0000-0000-0000-000000000001' and reason='synthetic policy gate test';
     raise exception 'expected unverified policy submission to fail';
   exception when sqlstate '55000' then
     if sqlerrm <> 'leave_policy_not_verified_or_day_count_missing' then raise; end if;
@@ -65,8 +64,7 @@ select set_config('request.jwt.claim.sub','83000000-0000-0000-0000-000000000001'
 select public.staff_leave_create_draft(
  '83000000-0000-0000-0000-000000000003',
  date '2026-11-09',date '2026-11-13','synthetic verified policy test'
-) as verified_policy_request_id
-\gset
+);
 reset role;
 
 do $test$
@@ -78,7 +76,7 @@ begin
   select policy_version_id,day_count,policy_snapshot
     into v_policy_id,v_day_count,v_snapshot
   from public.staff_leave_requests
-  where id=:'verified_policy_request_id';
+  where applicant_id='83000000-0000-0000-0000-000000000001' and reason='synthetic verified policy test';
   if v_policy_id <> '83000000-0000-0000-0000-000000000004'
      or v_day_count <> 4
      or v_snapshot->>'verification_status'<>'approved'
@@ -89,7 +87,7 @@ begin
 
   update public.staff_leave_requests
      set status='pending_approval'
-   where id=:'verified_policy_request_id';
+   where applicant_id='83000000-0000-0000-0000-000000000001' and reason='synthetic verified policy test';
 end
 $test$;
 
