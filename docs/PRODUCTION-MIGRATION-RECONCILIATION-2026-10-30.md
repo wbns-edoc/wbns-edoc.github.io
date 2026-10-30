@@ -146,3 +146,22 @@ Historical read-only reports:
 ## Next engineering action
 
 The restored authorization migrations and CI coverage must pass on the current Integration head. Then reconcile the remaining unmatched Production migrations and recover the original Foundation source. The migration inventory above is read-only and must be refreshed immediately before any future migration operation.
+
+
+## October 15 Production catalog snapshot — isolated replay result
+
+The previously captured October 15 catalog evidence from the read-only recovery branch has now been restored into this integration branch together with its dependency-order parser, PostgreSQL compatibility bootstrap, and RLS behavior regression suite.
+
+- [Schema Recovery PostgreSQL Replay — PASS](https://github.com/wbns-edoc/wbns-edoc.github.io/actions/runs/41018845542)
+- Replay target: disposable PostgreSQL 17 service only; no Supabase Production connection.
+- Verified inventory: 25 public tables, 5 public enums, 45 public RLS policies, 12 non-internal public triggers, 54 public/private functions, and 2 public views.
+- Verified security properties: all captured public tables have RLS enabled; both views retain `security_invoker=true`; no captured public policy targets `anon` or `PUBLIC`.
+- Behavioral tests cover System Admin/Director global document permissions, parent/subgroup visibility, multi-department membership, inactive departments/profiles, removed memberships, disabled permissions, and denial of unauthorized admin RPC calls.
+
+This is stronger evidence than the October 10 fixture replay, but it is still a compatibility-harness replay of a catalog snapshot, not a complete Supabase clean-install parity proof. The captured artifacts do not fully establish object ownership, grants, default ACLs, all extension/platform configuration, Auth/Storage internals, or the exact historical SQL that produced the current Production state.
+
+## Integration branch CI checkpoint
+
+On integration head `f9e5803d689f8c27ebdd4d168f85f8ae515a0c18`, all seven CI workflows passed, including the separate October 15 catalog snapshot replay and the local Supabase leave/workflow regression suite. The latter continues to use the October 10 recovered compatibility fixture for its local Supabase stack; the October 15 PostgreSQL replay is a distinct test. Neither test authorizes Production deployment.
+
+The Foundation migration remains a 285-byte placeholder and the Production migration ledger still contains unreconciled historical source entries. Production remains unchanged and release remains blocked.
