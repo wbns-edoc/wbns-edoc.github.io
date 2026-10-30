@@ -54,13 +54,31 @@ function StaffLeave({profile,setError}:{profile:Profile|null;setError:(v:string)
   setLoading(true);setError('');
   const [t,r]=await Promise.all([
    supabase.from('staff_leave_types').select('id,code,name').eq('is_active',true).order('name'),
-   supabase.from('staff_leave_requests').select('id,leave_type_id,starts_on,ends_on,day_count,reason,status,created_at,policy_version_id,staff_leave_types(name)').order('created_at',{ascending:false}).limit(50)
+   supabase.from('staff_leave_requests').select('id,leave_type_id,starts_on,ends_on,day_count,reason,status,created_at,policy_version_id,current_approver_user_id,staff_leave_types(name)').order('created_at',{ascending:false}).limit(50)
   ]);
   if(t.error||r.error){setAvailable(false);setTypes([]);setRows([]);setError('ระบบการลายังไม่พร้อมใช้งานในฐานข้อมูลนี้ กรุณารอการตรวจสอบและเผยแพร่ Migration');}
   else{setAvailable(true);setTypes(t.data||[]);setRows(r.data||[]);if(!selectedType&&t.data?.length)setSelectedType(t.data[0].id);}
   setLoading(false);
  }
  React.useEffect(()=>{load()},[profile?.id]);
+ async function submitDraft(row:any){
+  if(!row.policy_version_id||row.day_count==null||busy)return;
+  setBusy(true);setError('');setNotice('');
+  const {error}=await supabase.rpc('staff_leave_submit',{p_request_id:row.id,p_idempotency_key:'leave-submit-'+row.id+'-'+crypto.randomUUID()});
+  if(error)setError('ส่งคำขอลาไม่สำเร็จ: '+error.message);
+  else{setNotice('ส่งคำขอลาแล้ว หรือระบบบันทึกสถานะรอตรวจสอบผู้อนุมัติ');await load();}
+  setBusy(false);
+ }
+ async function decideRequest(row:any,decision:'approve'|'reject'){
+  if(!profile||busy)return;
+  const decisionReason=decision==='reject'?window.prompt('ระบุเหตุผลการไม่อนุมัติ (จำเป็น)'):null;
+  if(decision==='reject'&&!decisionReason?.trim())return;
+  setBusy(true);setError('');setNotice('');
+  const {error}=await supabase.rpc('staff_leave_decide',{p_request_id:row.id,p_decision:decision,p_reason:decisionReason?.trim()||null,p_idempotency_key:'leave-decision-'+row.id+'-'+crypto.randomUUID()});
+  if(error)setError('บันทึกผลการพิจารณาไม่สำเร็จ: '+error.message);
+  else{setNotice(decision==='approve'?'บันทึกผลการพิจารณาแล้ว':'บันทึกผลการไม่อนุมัติแล้ว');await load();}
+  setBusy(false);
+ }
  async function saveDraft(e:React.FormEvent){
   e.preventDefault();if(!profile||busy||!available)return;
   if(!selectedType||!startsOn||!endsOn||!reason.trim()){setError('กรุณากรอกประเภทการลา วันที่เริ่มต้น วันที่สิ้นสุด และเหตุผล');return}
@@ -74,7 +92,7 @@ function StaffLeave({profile,setError}:{profile:Profile|null;setError:(v:string)
  return <div className="staff-leave-page">
   <div className="toolbar"><div><h1>ระบบการลา</h1><p>คำขอลาและประวัติการพิจารณาของบุคลากรโรงเรียน</p></div><button className="ghost" onClick={load} disabled={loading||busy}>รีเฟรช</button></div>
   <div className="panel"><div className="panel-head"><div><h2>ยื่นคำขอลา (บันทึกร่าง)</h2><p>ใช้กฎการลากลางชุดเดียวกันสำหรับบุคลากรทุกประเภท</p></div></div>
-   <div className="notice" role="status">ยังไม่เปิดส่งคำขอเพื่ออนุมัติหรือคำนวณยอดวันลาอัตโนมัติ จนกว่านโยบายกลางและสูตรนับวันลาจะได้รับการตรวจสอบและบันทึกเวอร์ชันที่อนุมัติแล้ว</div>
+   <div className="notice" role="status">ระบบจะคำนวณวันลาและเปิดให้ส่งอนุมัติเฉพาะเมื่อมีนโยบายกลางที่ตรวจสอบและอนุมัติแล้วเท่านั้น คำขอที่ยังไม่มีนโยบายจะบันทึกเป็นร่างโดยไม่เดาจำนวนวันลา</div>
    {!available?<div className="empty">ยังไม่พบโครงสร้างระบบลาในฐานข้อมูลนี้</div>:<form className="form-grid" onSubmit={saveDraft}>
     <label className="wide">ประเภทการลา<select value={selectedType} onChange={e=>setSelectedType(e.target.value)} required><option value="">— เลือกประเภทการลา —</option>{types.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
     <label>วันที่เริ่มลา<input type="date" value={startsOn} onChange={e=>setStartsOn(e.target.value)} required/></label>
@@ -85,7 +103,7 @@ function StaffLeave({profile,setError}:{profile:Profile|null;setError:(v:string)
    </form>}
   </div>
   <div className="panel"><div className="panel-head"><div><h2>คำขอลาและประวัติ</h2><p>แสดงเฉพาะคำขอที่บัญชีนี้มีสิทธิ์เข้าถึง</p></div></div>
-   {loading?<div className="empty">กำลังโหลดคำขอลา…</div>:rows.length===0?<div className="empty">ยังไม่มีคำขอลา</div>:<div className="table-wrap"><table><thead><tr><th>ประเภท</th><th>ช่วงวันที่ลา</th><th>สถานะ</th><th>วันที่สร้าง</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{Array.isArray(r.staff_leave_types)?r.staff_leave_types[0]?.name:r.staff_leave_types?.name||'—'}</td><td>{r.starts_on} – {r.ends_on}</td><td><span className="badge">{statusLabels[r.status]||r.status}</span></td><td>{new Date(r.created_at).toLocaleDateString('th-TH')}</td></tr>)}</tbody></table></div>}
+   {loading?<div className="empty">กำลังโหลดคำขอลา…</div>:rows.length===0?<div className="empty">ยังไม่มีคำขอลา</div>:<div className="table-wrap"><table><thead><tr><th>ประเภท</th><th>ช่วงวันที่ลา</th><th>วันลา</th><th>สถานะ</th><th>วันที่สร้าง</th><th>การดำเนินการ</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{Array.isArray(r.staff_leave_types)?r.staff_leave_types[0]?.name:r.staff_leave_types?.name||'—'}</td><td>{r.starts_on} – {r.ends_on}</td><td>{r.day_count==null?'รอตรวจสอบ':r.day_count+' วัน'}</td><td><span className="badge">{statusLabels[r.status]||r.status}</span></td><td>{new Date(r.created_at).toLocaleDateString('th-TH')}</td><td>{r.status==='draft'?(r.policy_version_id&&r.day_count!=null?<button className="ghost" disabled={busy} onClick={()=>submitDraft(r)}>ส่งคำขอ</button>:<span className="muted">รอนโยบายที่อนุมัติ</span>):r.status==='pending_approval'&&r.current_approver_user_id===profile?.id?<><button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'approve')}>อนุมัติ</button> <button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'reject')}>ไม่อนุมัติ</button></>:'—'}</td></tr>)}</tbody></table></div>}
   </div>
  </div>
 }
