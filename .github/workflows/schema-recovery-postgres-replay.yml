@@ -170,9 +170,14 @@ jobs:
         run: |
           set -euo pipefail
           psql -v ON_ERROR_STOP=1 -f tests/leave-auth-users-fixture.sql
-          # The recovered schema artifact captures RLS policies but not Supabase table ACLs.
-          # Mirror the expected authenticated profile-read grant in this disposable database only.
-          psql -v ON_ERROR_STOP=1 -c 'GRANT SELECT ON public.profiles TO authenticated;'
+          # The recovered schema artifact captures RLS policies but not Supabase API-role ACLs.
+          # Mirror the required API-role schema/function/profile grants in this disposable database only.
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          GRANT USAGE ON SCHEMA public, private, auth TO authenticated;
+          GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
+          GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA private TO authenticated;
+          GRANT SELECT ON public.profiles TO authenticated;
+          SQL
           for migration in \
             20261020230000_staff_leave_workflow_foundation_draft.sql \
             20261021100000_staff_leave_secure_schema_draft.sql \
