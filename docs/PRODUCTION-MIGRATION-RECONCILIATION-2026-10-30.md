@@ -165,3 +165,15 @@ This is stronger evidence than the October 10 fixture replay, but it is still a 
 On integration head `f9e5803d689f8c27ebdd4d168f85f8ae515a0c18`, all seven CI workflows passed, including the separate October 15 catalog snapshot replay and the local Supabase leave/workflow regression suite. The latter continues to use the October 10 recovered compatibility fixture for its local Supabase stack; the October 15 PostgreSQL replay is a distinct test. Neither test authorizes Production deployment.
 
 The Foundation migration remains a 285-byte placeholder and the Production migration ledger still contains unreconciled historical source entries. Production remains unchanged and release remains blocked.
+
+
+## October 17 assignment migration candidates
+
+A fresh read-only inventory also identified two Production entries whose names do not exactly match the checked-in migration stems, but have plausible source candidates in the Integration branch:
+
+| Production version/name | Candidate repository file | Evidence / status |
+|---|---|---|
+| `20261017070421` — `allow_assignees_to_complete_active_assignments` | `20261017020000_sync_assignment_when_assignee_completes_document.sql` | Semantic candidate: updates the status RPC so an active assignee can complete assigned work and marks that assignee's assignment completed. Exact SQL equivalence and timestamp provenance are not proven. |
+| `20261017070749` — `fix_assignment_status_enum_check_for_completion` | `20261017021000_reconcile_assignments_for_completed_documents.sql` | Semantic candidate: reconciles active assignment rows for documents already completed. The candidate is a data backfill; exact SQL equivalence and whether it fully represents the Production migration are not proven. |
+
+Do not mark either history row reconciled until the SQL is compared with a trusted deployment artifact or the resulting Production catalog/data effects can be independently demonstrated. In particular, the current read-only migration ledger proves only that the Production migration names and versions were applied; it does not expose their historical SQL bodies.
