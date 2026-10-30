@@ -75,7 +75,7 @@ jobs:
             20261011210000_require_department_membership_for_scoped_permissions.sql \
             20261011230000_manage_department_membership_rpc.sql \
             20261011231000_require_active_membership_for_approvers.sql \
-            20261011232000_require_explicit_active_department_membership.sql
+            20261011232000_require_explicit_active_department_membership.sql \
             20261030150000_require_active_department_for_scoped_permissions.sql
           do
             cp "supabase/migrations/$migration" "$test_dir/supabase/migrations/"
