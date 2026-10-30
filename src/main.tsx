@@ -60,7 +60,7 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
  async function load(){
   if(!profile){setLoading(false);return}
   setLoading(true);setError('');
-  const [t,r,dashboard]=await Promise.all([
+  const [t,r,dashboard,absence]=await Promise.all([
    supabase.from('staff_leave_types').select('id,code,name').eq('is_active',true).order('name'),
    supabase.from('staff_leave_requests').select('id,applicant_id,leave_type_id,starts_on,ends_on,day_count,is_over_limit,reason,status,created_at,policy_version_id,current_approver_user_id,staff_leave_types(name)').order('created_at',{ascending:false}).limit(50),
    canViewDashboard?supabase.rpc('staff_leave_dashboard_summary'):Promise.resolve({data:null,error:null}),
