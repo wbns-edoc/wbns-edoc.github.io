@@ -29,8 +29,10 @@ values ('20000000-0000-0000-0000-000000000001', 'annual', 'Annual leave');
 insert into public.staff_leave_policy_versions(
  id, policy_code, version, status, reviewed_by, reviewed_at, policy_rules
 ) values (
- '30000000-0000-0000-0000-000000000001', 'school-wide', 1, 'approved',
- '10000000-0000-0000-0000-000000000001', now(), '{"fixture":true}'::jsonb
+ '30000000-0000-0000-0000-000000000001', 'school-wide', 2, 'approved',
+ '10000000-0000-0000-0000-000000000001', now(),
+ '{"fixture":true,"verification_status":"approved","calculation_ready":true,
+   "calendar":{"verified":true,"non_working_dates":[]},"implementation_gaps":[]}'::jsonb
 );
 
 insert into public.staff_leave_requests(
