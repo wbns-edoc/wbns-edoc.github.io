@@ -6,10 +6,10 @@
 
 - Production Supabase project: `wbns-edoc` (`iigzzwyfxxtqbgjawyom`), Singapore
 - Production migration history: **75 applied entries**
-- Integration branch migration files: **83 SQL files**
+- Integration branch migration files: **84 SQL files**
 - Exact normalized filename-stem matches: **46**
 - Production history names without exact filename-stem match: **29**
-- Repository migration names not represented by exact Production name: **37**
+- Repository migration names not represented by exact Production name: **38**
 
 A name mismatch does not prove SQL is missing. Some migrations were applied directly to Production under a timestamp/name different from the tracked source file. Every candidate still needs content and catalog-effect verification.
 
