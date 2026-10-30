@@ -7,6 +7,64 @@ on:
       - "tests/schema-recovery-*.test.*"
       - "tests/schema-recovery-replay-bootstrap.sql"
       - "tests/schema-recovery-rls-behavior.sql"
+      - "supabase/migrations/20261020230000_staff_leave_workflow_foundation_draft.sql"
+      - "supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql"
+      - "supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql"
+      - "supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql"
+      - "supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql"
+      - "supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql"
+      - "supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql"
+      - "supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql"
+      - "supabase/migrations/20261022210000_staff_leave_submit_two_stage_route_draft.sql"
+      - "supabase/migrations/20261023100000_staff_leave_immutable_route_snapshot_draft.sql"
+      - "supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql"
+      - "supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql"
+      - "supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql"
+      - "supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql"
+      - "supabase/migrations/20261023160000_staff_leave_approver_dashboard_summary_draft.sql"
+      - "supabase/migrations/20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql"
+      - "tests/leave-auth-users-fixture.sql"
+      - "tests/leave-schema-rls.test.sql"
+      - "tests/leave-create-draft-rpc.test.sql"
+      - "tests/leave-submit-rpc.test.sql"
+      - "tests/leave-cancel-rpc.test.sql"
+      - "tests/leave-decide-rpc.test.sql"
+      - "tests/leave-notification-outbox.test.sql"
+      - "tests/leave-responsibility-route-bridge.test.sql"
+      - "tests/leave-responsibility-submit-e2e.test.sql"
+      - "tests/leave-policy-calculation-gate.test.sql"
+      - "tests/leave-over-limit-notification.test.sql"
+      - "tests/leave-dashboard-summary.test.sql"
+      - "tests/leave-direct-vice-absence-evidence.test.sql"
+      - "supabase/migrations/20261020230000_staff_leave_workflow_foundation_draft.sql"
+      - "supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql"
+      - "supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql"
+      - "supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql"
+      - "supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql"
+      - "supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql"
+      - "supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql"
+      - "supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql"
+      - "supabase/migrations/20261022210000_staff_leave_submit_two_stage_route_draft.sql"
+      - "supabase/migrations/20261023100000_staff_leave_immutable_route_snapshot_draft.sql"
+      - "supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql"
+      - "supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql"
+      - "supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql"
+      - "supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql"
+      - "supabase/migrations/20261023160000_staff_leave_approver_dashboard_summary_draft.sql"
+      - "supabase/migrations/20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql"
+      - "tests/leave-auth-users-fixture.sql"
+      - "tests/leave-schema-rls.test.sql"
+      - "tests/leave-create-draft-rpc.test.sql"
+      - "tests/leave-submit-rpc.test.sql"
+      - "tests/leave-cancel-rpc.test.sql"
+      - "tests/leave-decide-rpc.test.sql"
+      - "tests/leave-notification-outbox.test.sql"
+      - "tests/leave-responsibility-route-bridge.test.sql"
+      - "tests/leave-responsibility-submit-e2e.test.sql"
+      - "tests/leave-policy-calculation-gate.test.sql"
+      - "tests/leave-over-limit-notification.test.sql"
+      - "tests/leave-dashboard-summary.test.sql"
+      - "tests/leave-direct-vice-absence-evidence.test.sql"
       - ".github/workflows/schema-recovery-postgres-replay.yml"
   push:
     branches:
@@ -107,6 +165,50 @@ jobs:
           SQL
       - name: Test admin and department document RLS behavior
         run: psql -v ON_ERROR_STOP=1 -f tests/schema-recovery-rls-behavior.sql
+      - name: Apply staff leave draft to recovered October 15 catalog (disposable PostgreSQL only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          psql -v ON_ERROR_STOP=1 -f tests/leave-auth-users-fixture.sql
+          for migration in \
+            20261020230000_staff_leave_workflow_foundation_draft.sql \
+            20261021100000_staff_leave_secure_schema_draft.sql \
+            20261021120000_staff_leave_create_draft_rpc_draft.sql \
+            20261021140000_staff_leave_cancel_rpc_draft.sql \
+            20261021160000_staff_leave_submit_rpc_draft.sql \
+            20261021180000_staff_leave_decide_rpc_draft.sql \
+            20261022100000_staff_leave_two_stage_approval_draft.sql \
+            20261022130000_school_responsibility_assignments_draft.sql \
+            20261022210000_staff_leave_submit_two_stage_route_draft.sql \
+            20261023100000_staff_leave_immutable_route_snapshot_draft.sql \
+            20261023120000_staff_leave_responsibility_route_bridge_draft.sql \
+            20261023130000_staff_leave_in_app_notification_delivery_draft.sql \
+            20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql \
+            20261023150000_staff_leave_over_limit_notifications_draft.sql \
+            20261023160000_staff_leave_approver_dashboard_summary_draft.sql \
+            20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql; do
+            echo "::group::Applying $migration to disposable PostgreSQL catalog"
+            psql -v ON_ERROR_STOP=1 -f "supabase/migrations/$migration"
+            echo "::endgroup::"
+          done
+          for test_file in \
+            leave-schema-rls.test.sql \
+            leave-create-draft-rpc.test.sql \
+            leave-submit-rpc.test.sql \
+            leave-cancel-rpc.test.sql \
+            leave-decide-rpc.test.sql \
+            leave-notification-outbox.test.sql \
+            leave-responsibility-route-bridge.test.sql \
+            leave-responsibility-submit-e2e.test.sql \
+            leave-policy-calculation-gate.test.sql \
+            leave-over-limit-notification.test.sql \
+            leave-dashboard-summary.test.sql \
+            leave-direct-vice-absence-evidence.test.sql; do
+            echo "::group::Running $test_file on disposable PostgreSQL catalog"
+            psql -v ON_ERROR_STOP=1 -f "tests/$test_file"
+            echo "::endgroup::"
+          done
+
       - name: Run static snapshot assertions
         uses: actions/setup-node@v4
         with:
