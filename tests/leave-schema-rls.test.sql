@@ -16,11 +16,11 @@ begin
 end
 $seed_assert$;
 
-insert into public.profiles(id) values
- ('10000000-0000-0000-0000-000000000001'),
- ('10000000-0000-0000-0000-000000000002'),
- ('10000000-0000-0000-0000-000000000003'),
- ('10000000-0000-0000-0000-000000000004');
+insert into public.profiles(id, full_name) values
+ ('10000000-0000-0000-0000-000000000001', 'Leave Applicant Fixture'),
+ ('10000000-0000-0000-0000-000000000002', 'Leave Approver Fixture'),
+ ('10000000-0000-0000-0000-000000000003', 'Unrelated Staff Fixture'),
+ ('10000000-0000-0000-0000-000000000004', 'Inactive Staff Fixture');
 update public.profiles set is_active = false where id = '10000000-0000-0000-0000-000000000004';
 
 insert into public.staff_leave_types(id, code, name)
