@@ -207,7 +207,6 @@ as $$
 declare
   v_actor uuid;
   v_request public.staff_leave_requests%rowtype;
-  v_route public.staff_leave_approval_route_config%rowtype;
   v_snapshot_director uuid;
   v_snapshot_vice uuid;
   v_snapshot_kind text;
@@ -216,7 +215,6 @@ declare
   v_key text;
   v_event_key text;
   v_prior_reason text;
-  v_next_approver uuid;
   v_absence_id uuid;
   v_absence_reference text;
   v_absence_start date;
