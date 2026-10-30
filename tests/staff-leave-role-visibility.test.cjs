@@ -24,7 +24,7 @@ assert.match(leave, /const canManageAbsence=.*system_admin.*ผู้ดูแ�
   "only System Admin role code/name may manage Director absence evidence");
 
 const bellStart = source.indexOf("function NotificationBell(");
-const bellEnd = source.indexOf("\\nfunction Nav(", bellStart);
+const bellEnd = source.indexOf("\nfunction Nav(", bellStart);
 assert.ok(bellStart >= 0 && bellEnd > bellStart, "NotificationBell component must exist");
 const bell = source.slice(bellStart, bellEnd);
 assert.match(bell, /supabase\\.channel\\('notifications:'\\+profile\\.id\\)/,
