@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(12);
+SELECT plan(11);
 
 SELECT ok(
   position('has_document_wide_read_role' IN pg_get_functiondef('private.can_access_document(uuid)'::regprocedure)) = 0,
