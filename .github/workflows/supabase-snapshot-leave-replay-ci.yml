@@ -11,6 +11,7 @@ on:
       - "tests/schema-recovery-supabase-bootstrap.sql"
       - "tests/schema-recovery-rls-behavior.sql"
       - "tests/leave-*.test.sql"
+      - "tests/assert-notifications-realtime-publication.sql"
       - "tests/leave-auth-users-fixture.sql"
       - "supabase/migrations/*.sql"
       - ".github/workflows/supabase-snapshot-leave-replay-ci.yml"
