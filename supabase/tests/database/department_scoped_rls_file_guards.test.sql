@@ -51,9 +51,9 @@ SELECT ok(
 );
 
 SELECT ok(
-  position('JOIN public.user_departments ud' in pg_get_functiondef(
+  position('join public.user_departments ud' in lower(pg_get_functiondef(
     'private.has_department_permission(text,uuid)'::regprocedure
-  )) > 0,
+  ))) > 0,
   'scoped role grants require current department membership'
 );
 
