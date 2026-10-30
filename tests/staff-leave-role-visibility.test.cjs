@@ -27,9 +27,9 @@ const bellStart = source.indexOf("function NotificationBell(");
 const bellEnd = source.indexOf("\nfunction Nav(", bellStart);
 assert.ok(bellStart >= 0 && bellEnd > bellStart, "NotificationBell component must exist");
 const bell = source.slice(bellStart, bellEnd);
-assert.match(bell, /supabase\\.channel\\('notifications:'\\+profile\\.id\\)/,
+assert.ok(bell.includes("supabase.channel('notifications:'+profile.id"),
   "notification bell must subscribe to the current user's channel");
-assert.match(bell, /event:'INSERT',schema:'public',table:'notifications'/,
+assert.ok(bell.includes("event:'INSERT',schema:'public',table:'notifications'"),
   "notification bell must receive newly inserted notification rows");
 assert.ok(bell.includes("filter:'recipient_id=eq.'+profile.id"),
   "realtime subscription must filter by the authenticated recipient");
