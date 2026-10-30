@@ -1,0 +1,151 @@
+name: Supabase Snapshot and Staff Leave Replay CI
+
+on:
+  pull_request:
+    paths:
+      - "recovery/catalog/**"
+      - "tests/schema-recovery-*.test.*"
+      - "tests/schema-recovery-replay-bootstrap.sql"
+      - "tests/schema-recovery-supabase-bootstrap.sql"
+      - "tests/schema-recovery-rls-behavior.sql"
+      - "tests/leave-*.test.sql"
+      - "tests/leave-auth-users-fixture.sql"
+      - "supabase/migrations/*.sql"
+      - ".github/workflows/supabase-snapshot-leave-replay-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-snapshot-leave-replay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  local-supabase-snapshot-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.81.3
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned SQL parser
+        run: python -m pip install --disable-pip-version-check pglast==7.21
+
+      - name: Prepare isolated local Supabase project
+        shell: bash
+        run: |
+          set -euo pipefail
+          test_dir="$RUNNER_TEMP/wbns-oct15-supabase-replay"
+          mkdir -p "$test_dir/supabase/migrations"
+          cp supabase/config.toml "$test_dir/supabase/config.toml"
+          sed -i 's/^project_id = .*/project_id = "wbns-oct15-supabase-replay-ci"/' "$test_dir/supabase/config.toml"
+          echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
+
+      - name: Start isolated local Supabase database only
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase start -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Resolve local database URL
+        working-directory: ${{ env.TEST_DIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          db_url="$(supabase status -o env | sed -n 's/^DB_URL=//p' | sed 's/^"//;s/"$//')"
+          if [ -z "$db_url" ]; then
+            db_url="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+          fi
+          echo "DB_URL=$db_url" >> "$GITHUB_ENV"
+
+      - name: Prepare Supabase-managed compatibility objects and API grants
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f tests/schema-recovery-supabase-bootstrap.sql
+
+      - name: Parse October 15 catalog into dependency-ordered phases
+        run: python tests/schema-recovery-replay.test.py --out-dir "$RUNNER_TEMP/wbns-oct15-supabase-phases"
+
+      - name: Replay October 15 Production catalog on local Supabase only
+        shell: bash
+        run: |
+          set -euo pipefail
+          for phase in "$RUNNER_TEMP"/wbns-oct15-supabase-phases/*.sql; do
+            echo "::group::Applying $(basename "$phase") to local Supabase only"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$phase"
+            echo "::endgroup::"
+          done
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f recovery/catalog/candidate-has-department-permission-active-department.sql
+          psql "$DB_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          GRANT USAGE ON SCHEMA public, private, auth TO authenticated;
+          GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated;
+          GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA private TO authenticated;
+          GRANT SELECT ON public.profiles TO authenticated;
+          SQL
+
+      - name: Verify recovered Production catalog authorization behavior
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f tests/schema-recovery-rls-behavior.sql
+
+      - name: Seed synthetic Auth identities for leave regression tests
+        run: psql "$DB_URL" -v ON_ERROR_STOP=1 -f tests/leave-auth-users-fixture.sql
+
+      - name: Apply staff leave draft migrations to local Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          for migration in \
+            20261020230000_staff_leave_workflow_foundation_draft.sql \
+            20261021100000_staff_leave_secure_schema_draft.sql \
+            20261021120000_staff_leave_create_draft_rpc_draft.sql \
+            20261021140000_staff_leave_cancel_rpc_draft.sql \
+            20261021160000_staff_leave_submit_rpc_draft.sql \
+            20261021180000_staff_leave_decide_rpc_draft.sql \
+            20261022100000_staff_leave_two_stage_approval_draft.sql \
+            20261022130000_school_responsibility_assignments_draft.sql \
+            20261022210000_staff_leave_submit_two_stage_route_draft.sql \
+            20261023100000_staff_leave_immutable_route_snapshot_draft.sql \
+            20261023120000_staff_leave_responsibility_route_bridge_draft.sql \
+            20261023130000_staff_leave_in_app_notification_delivery_draft.sql \
+            20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql \
+            20261023150000_staff_leave_over_limit_notifications_draft.sql \
+            20261023160000_staff_leave_approver_dashboard_summary_draft.sql \
+            20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql; do
+            echo "::group::Applying $migration to local Supabase"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/$migration"
+            echo "::endgroup::"
+          done
+
+      - name: Run all staff leave regression SQL tests on local Supabase
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test_file in \
+            leave-schema-rls.test.sql \
+            leave-create-draft-rpc.test.sql \
+            leave-submit-rpc.test.sql \
+            leave-cancel-rpc.test.sql \
+            leave-decide-rpc.test.sql \
+            leave-notification-outbox.test.sql \
+            leave-responsibility-route-bridge.test.sql \
+            leave-responsibility-submit-e2e.test.sql \
+            leave-policy-calculation-gate.test.sql \
+            leave-over-limit-notification.test.sql \
+            leave-dashboard-summary.test.sql \
+            leave-direct-vice-absence-evidence.test.sql; do
+            echo "::group::Running $test_file on local Supabase"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "tests/$test_file"
+            echo "::endgroup::"
+          done
+
+      - name: Lint reconstructed catalog and staff leave migrations
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase db lint --local --schema public,private --fail-on error
+
+      - name: Stop isolated local Supabase stack
+        if: always()
+        working-directory: ${{ env.TEST_DIR }}
+        run: supabase stop --no-backup
