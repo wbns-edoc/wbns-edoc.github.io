@@ -134,17 +134,19 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql
       - name: Apply responsibility-to-leave route bridge draft migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql
+      - name: Apply in-app notification delivery migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql
+      - name: Apply shared policy calculation and submission gate migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql
       - name: Run decision RPC authorization, idempotency, and two-stage tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-decide-rpc.test.sql
       - name: Run responsibility-to-route bridge regression tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-responsibility-route-bridge.test.sql
       - name: Run end-to-end responsibility-to-submission routing tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-responsibility-submit-e2e.test.sql
-      - name: Apply in-app notification delivery migration
-        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql
+
       - name: Run notification privacy and idempotency tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-notification-outbox.test.sql
-      - name: Apply shared policy calculation and submission gate migration
-        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql
+
       - name: Run shared policy calculation and fail-closed submission tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-policy-calculation-gate.test.sql
