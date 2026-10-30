@@ -204,4 +204,23 @@ DO $$ BEGIN
   END IF;
 END $$;
 RESET ROLE;
+
+-- Production's October 28 schema dump shows broad anon table grants on many
+-- public relations. In this disposable replay, grant SELECT on all public
+-- tables/views to anon to model that exposure surface; RLS must still return
+-- no document data because no captured policy targets anon or PUBLIC.
+GRANT USAGE ON SCHEMA public TO anon;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
+SET LOCAL ROLE anon;
+DO $anonymous_rls$ DECLARE n integer; BEGIN
+  SELECT count(*) INTO n FROM public.documents;
+  IF n <> 0 THEN RAISE EXCEPTION 'anon must not read document rows despite table SELECT grants; got %', n; END IF;
+
+  SELECT count(*) INTO n FROM public.document_monthly_summary;
+  IF n <> 0 THEN RAISE EXCEPTION 'anon must not read monthly summary rows through security-invoker view; got %', n; END IF;
+
+  SELECT count(*) INTO n FROM public.document_report_summary;
+  IF n <> 0 THEN RAISE EXCEPTION 'anon must not read report summary rows through security-invoker view; got %', n; END IF;
+END $anonymous_rls$;
+RESET ROLE;
 ROLLBACK;
