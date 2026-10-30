@@ -205,6 +205,10 @@ declare
   v_actor uuid;
   v_request public.staff_leave_requests%rowtype;
   v_route public.staff_leave_approval_route_config%rowtype;
+  v_snapshot_director uuid;
+  v_snapshot_vice uuid;
+  v_snapshot_kind text;
+  v_snapshot_authority_reference text;
   v_action text;
   v_key text;
   v_event_key text;
@@ -276,15 +280,26 @@ begin
     raise exception 'leave_request_state_not_decidable' using errcode = '55000';
   end if;
 
-  select * into v_route from public.staff_leave_approval_route_config where singleton = true;
-  if not found or not v_route.authority_verified then
+  -- In-flight decisions must use the immutable route captured at submission,
+  -- never the mutable singleton configuration for later requests.
+  v_snapshot_kind := v_request.approval_route_snapshot->>'route_kind';
+  v_snapshot_director := nullif(v_request.approval_route_snapshot->>'director_user_id','')::uuid;
+  v_snapshot_vice := nullif(v_request.approval_route_snapshot->>'vice_director_user_id','')::uuid;
+  v_snapshot_authority_reference := v_request.approval_route_snapshot->>'authority_reference';
+
+  if v_snapshot_kind not in ('vice_director_then_director','director_only_confirmed_no_vice')
+     or v_snapshot_director is null
+     or nullif(v_snapshot_authority_reference,'') is null
+     or nullif(v_request.approval_route_snapshot->>'authority_verified_by','') is null
+     or nullif(v_request.approval_route_snapshot->>'authority_verified_at','') is null then
     raise exception 'approver_authority_unverified' using errcode = '42501';
   end if;
-  if not exists (select 1 from public.profiles p where p.id = v_route.director_user_id and p.is_active = true)
-     or (v_route.no_vice_director_confirmed and v_route.vice_director_user_id is not null)
-     or (not v_route.no_vice_director_confirmed and
-       (v_route.vice_director_user_id is null
-        or not exists (select 1 from public.profiles p where p.id = v_route.vice_director_user_id and p.is_active = true))) then
+  if not exists (select 1 from public.profiles p where p.id=v_snapshot_director and p.is_active=true)
+     or (v_snapshot_kind='vice_director_then_director' and
+       (v_snapshot_vice is null or not exists(
+         select 1 from public.profiles p where p.id=v_snapshot_vice and p.is_active=true
+       )))
+     or (v_snapshot_kind='director_only_confirmed_no_vice' and v_snapshot_vice is not null) then
     raise exception 'configured_approver_inactive_or_missing' using errcode = '42501';
   end if;
 
@@ -292,7 +307,7 @@ begin
     -- The Deputy Director may review and forward only; final rejection belongs
     -- exclusively to the Director at the director_final_review stage.
     if v_request.approval_stage <> 'director_final_review'
-       or v_actor <> v_route.director_user_id
+       or v_actor <> v_snapshot_director
        or v_request.current_approver_user_id is distinct from v_actor then
       raise exception 'leave_request_not_found_or_not_assigned' using errcode = '42501';
     end if;
@@ -301,27 +316,23 @@ begin
       decided_at=statement_timestamp(), updated_at=statement_timestamp() where id=v_request.id;
   else
     if v_request.approval_stage = 'vice_director_review' then
-      if v_actor <> v_route.vice_director_user_id
+      if v_snapshot_vice is null or v_actor <> v_snapshot_vice
          or v_request.current_approver_user_id is distinct from v_actor then
         raise exception 'leave_request_not_found_or_not_assigned' using errcode = '42501';
       end if;
       -- Direct Vice Director approval is permitted only when a System Admin
       -- recorded an active, date-bounded absence evidence record for this Director.
-      if v_route.direct_to_vice_enabled then
-        select e.id,e.authority_reference,e.absence_start,e.absence_end
-          into v_absence_id,v_absence_reference,v_absence_start,v_absence_end
-        from public.staff_leave_director_absence_evidence e
-        where e.director_user_id=v_route.director_user_id
-          and e.vice_director_user_id=v_actor
-          and e.revoked_at is null
-          and e.absence_start <= (statement_timestamp() at time zone 'Asia/Bangkok')::date
-          and e.absence_end >= (statement_timestamp() at time zone 'Asia/Bangkok')::date
-        order by e.recorded_at desc
-        limit 1;
-        if not found then
-          raise exception 'director_absence_evidence_required' using errcode = '42501';
-        end if;
-
+      select e.id,e.authority_reference,e.absence_start,e.absence_end
+        into v_absence_id,v_absence_reference,v_absence_start,v_absence_end
+      from public.staff_leave_director_absence_evidence e
+      where e.director_user_id=v_snapshot_director
+        and e.vice_director_user_id=v_actor
+        and e.revoked_at is null
+        and e.absence_start <= (statement_timestamp() at time zone 'Asia/Bangkok')::date
+        and e.absence_end >= (statement_timestamp() at time zone 'Asia/Bangkok')::date
+      order by e.recorded_at desc
+      limit 1;
+      if found then
         v_action := 'approved';
         update public.staff_leave_requests
            set status='approved',approval_stage='completed',
@@ -354,21 +365,21 @@ begin
       end if;
 
       update public.staff_leave_requests set approval_stage='director_final_review',
-        current_approver_user_id=v_route.director_user_id, updated_at=statement_timestamp()
+        current_approver_user_id=v_snapshot_director, updated_at=statement_timestamp()
         where id=v_request.id;
       insert into public.staff_leave_approval_actions(request_id,actor_id,action,reason,metadata)
       values(v_request.id,v_actor,'routed',nullif(btrim(coalesce(p_reason,'')),''),
         jsonb_build_object('idempotency_key',v_key,'decision','approve',
           'from_stage','vice_director_review','to_stage','director_final_review',
-          'next_approver_id',v_route.director_user_id));
+          'next_approver_id',v_snapshot_director));
       insert into public.staff_leave_notification_outbox(event_key,request_id,recipient_id,event_type,channel,safe_payload,status)
-      values('leave-stage-advance:'||v_request.id::text||':'||v_key,v_request.id,v_route.director_user_id,
+      values('leave-stage-advance:'||v_request.id::text||':'||v_key,v_request.id,v_snapshot_director,
         'approver_assigned','in_app',jsonb_build_object('event','leave_approver_assigned',
         'request_id',v_request.id::text,'stage','director_final_review'),'pending')
       on conflict(event_key) do nothing;
       return v_request.id;
     elsif v_request.approval_stage = 'director_final_review' then
-      if v_actor <> v_route.director_user_id
+      if v_actor <> v_snapshot_director
          or v_request.current_approver_user_id is distinct from v_actor then
         raise exception 'leave_request_not_found_or_not_assigned' using errcode = '42501';
       end if;
