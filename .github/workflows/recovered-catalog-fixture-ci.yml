@@ -35,6 +35,37 @@ on:
       - "supabase/migrations/20261011231000_require_active_membership_for_approvers.sql"
       - "supabase/migrations/20261011232000_require_explicit_active_department_membership.sql"
       - "supabase/migrations/20261013001230_include_department_scoped_permissions_in_identity.sql"
+      - "supabase/migrations/20261011230000_manage_department_membership_rpc.sql"
+      - "supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql"
+      - "supabase/migrations/20261020230000_staff_leave_workflow_foundation_draft.sql"
+      - "supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql"
+      - "supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql"
+      - "supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql"
+      - "supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql"
+      - "supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql"
+      - "supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql"
+      - "supabase/migrations/20261022210000_staff_leave_submit_two_stage_route_draft.sql"
+      - "supabase/migrations/20261023100000_staff_leave_immutable_route_snapshot_draft.sql"
+      - "supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql"
+      - "supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql"
+      - "supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql"
+      - "supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql"
+      - "supabase/migrations/20261023160000_staff_leave_approver_dashboard_summary_draft.sql"
+      - "supabase/migrations/20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql"
+      - "tests/leave-schema-rls.test.sql"
+      - "tests/leave-create-draft-rpc.test.sql"
+      - "tests/leave-submit-rpc.test.sql"
+      - "tests/leave-cancel-rpc.test.sql"
+      - "tests/leave-decide-rpc.test.sql"
+      - "tests/leave-notification-outbox.test.sql"
+      - "tests/leave-responsibility-route-bridge.test.sql"
+      - "tests/leave-responsibility-submit-e2e.test.sql"
+      - "tests/leave-policy-calculation-gate.test.sql"
+      - "tests/leave-over-limit-notification.test.sql"
+      - "tests/leave-dashboard-summary.test.sql"
+      - "tests/leave-direct-vice-absence-evidence.test.sql"
+      - "supabase/tests/database/department_membership_management.test.sql"
+      - "supabase/tests/database/global_role_assignment_guard.test.sql"
       - ".github/workflows/recovered-catalog-fixture-ci.yml"
   push:
     branches:
@@ -92,7 +123,7 @@ jobs:
         run: |
           set -euo pipefail
           test_dir="$RUNNER_TEMP/wbns-catalog-fixture"
-          mkdir -p "$test_dir/supabase/migrations" "$test_dir/supabase/tests"
+          mkdir -p "$test_dir/supabase/migrations" "$test_dir/supabase/tests" "$test_dir/leave-tests"
           cp supabase/config.toml "$test_dir/supabase/config.toml"
           sed -i 's/^project_id = .*/project_id = "wbns-edoc-catalog-fixture-ci"/' "$test_dir/supabase/config.toml"
           cp supabase/tests/fixtures/recovered-production-catalog.sql "$test_dir/supabase/migrations/20261010120000_recovered_production_catalog.sql"
@@ -115,6 +146,26 @@ jobs:
           cp supabase/migrations/20261011190000_separate_document_edit_from_approve_assign.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261011200000_guard_document_file_attachment.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261011210000_require_department_membership_for_scoped_permissions.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011230000_manage_department_membership_rpc.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011231000_require_active_membership_for_approvers.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011232000_require_explicit_active_department_membership.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261013001230_include_department_scoped_permissions_in_identity.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261020230000_staff_leave_workflow_foundation_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261022210000_staff_leave_submit_two_stage_route_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023100000_staff_leave_immutable_route_snapshot_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023160000_staff_leave_approver_dashboard_summary_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261011231000_require_active_membership_for_approvers.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261011232000_require_explicit_active_department_membership.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261013001230_include_department_scoped_permissions_in_identity.sql "$test_dir/supabase/migrations/"
@@ -127,11 +178,47 @@ jobs:
           cp supabase/tests/database/explicit_active_department_membership.test.sql "$test_dir/supabase/tests/explicit_active_department_membership.test.sql"
           cp supabase/tests/database/approval_authorization_denials.test.sql "$test_dir/supabase/tests/approval_authorization_denials.test.sql"
           cp supabase/tests/database/department_scoped_identity_permissions.test.sql "$test_dir/supabase/tests/department_scoped_identity_permissions.test.sql"
+          cp tests/leave-schema-rls.test.sql "$test_dir/leave-tests/leave-schema-rls.test.sql"
+          cp tests/leave-create-draft-rpc.test.sql "$test_dir/leave-tests/leave-create-draft-rpc.test.sql"
+          cp tests/leave-submit-rpc.test.sql "$test_dir/leave-tests/leave-submit-rpc.test.sql"
+          cp tests/leave-cancel-rpc.test.sql "$test_dir/leave-tests/leave-cancel-rpc.test.sql"
+          cp tests/leave-decide-rpc.test.sql "$test_dir/leave-tests/leave-decide-rpc.test.sql"
+          cp tests/leave-notification-outbox.test.sql "$test_dir/leave-tests/leave-notification-outbox.test.sql"
+          cp tests/leave-responsibility-route-bridge.test.sql "$test_dir/leave-tests/leave-responsibility-route-bridge.test.sql"
+          cp tests/leave-responsibility-submit-e2e.test.sql "$test_dir/leave-tests/leave-responsibility-submit-e2e.test.sql"
+          cp tests/leave-policy-calculation-gate.test.sql "$test_dir/leave-tests/leave-policy-calculation-gate.test.sql"
+          cp tests/leave-over-limit-notification.test.sql "$test_dir/leave-tests/leave-over-limit-notification.test.sql"
+          cp tests/leave-dashboard-summary.test.sql "$test_dir/leave-tests/leave-dashboard-summary.test.sql"
+          cp tests/leave-direct-vice-absence-evidence.test.sql "$test_dir/leave-tests/leave-direct-vice-absence-evidence.test.sql"
           echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
 
       - name: Apply recovered catalog and forward migration to disposable local database
         working-directory: ${{ env.TEST_DIR }}
         run: supabase start -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Run staff leave regression suite against recovered Production catalog
+        working-directory: ${{ env.TEST_DIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL=//p' | sed 's/^"//;s/"$//')"
+          if [ -z "$DB_URL" ]; then DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"; fi
+          for test_file in \
+            leave-schema-rls.test.sql \
+            leave-create-draft-rpc.test.sql \
+            leave-submit-rpc.test.sql \
+            leave-cancel-rpc.test.sql \
+            leave-decide-rpc.test.sql \
+            leave-notification-outbox.test.sql \
+            leave-responsibility-route-bridge.test.sql \
+            leave-responsibility-submit-e2e.test.sql \
+            leave-policy-calculation-gate.test.sql \
+            leave-over-limit-notification.test.sql \
+            leave-dashboard-summary.test.sql \
+            leave-direct-vice-absence-evidence.test.sql; do
+            echo "Running $test_file"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "leave-tests/$test_file"
+          done
 
       - name: Lint recovered catalog and forward migration
         id: lint
