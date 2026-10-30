@@ -49,7 +49,13 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
  const [notice,setNotice]=React.useState('');
  const [available,setAvailable]=React.useState(true);
  const [summary,setSummary]=React.useState<any>(null);
+ const [absenceRecords,setAbsenceRecords]=React.useState<any[]>([]);
+ const [absenceStart,setAbsenceStart]=React.useState('');
+ const [absenceEnd,setAbsenceEnd]=React.useState('');
+ const [absenceReason,setAbsenceReason]=React.useState('');
+ const [absenceReference,setAbsenceReference]=React.useState('');
  const canViewDashboard=roles.some(role=>['director','deputy_director','system_admin'].includes(role));
+ const canManageAbsence=roles.includes('system_admin');
  const statusLabels:any={draft:'ฉบับร่าง',submitted:'ส่งแล้ว',blocked_approver_resolution:'รอตรวจสอบผู้อนุมัติ',pending_approval:'รอพิจารณา',approved:'อนุมัติแล้ว',rejected:'ไม่อนุมัติ',cancelled:'ยกเลิกแล้ว',withdrawn:'ถอนคำขอ'};
  async function load(){
   if(!profile){setLoading(false);return}
@@ -57,20 +63,41 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
   const [t,r,dashboard]=await Promise.all([
    supabase.from('staff_leave_types').select('id,code,name').eq('is_active',true).order('name'),
    supabase.from('staff_leave_requests').select('id,applicant_id,leave_type_id,starts_on,ends_on,day_count,is_over_limit,reason,status,created_at,policy_version_id,current_approver_user_id,staff_leave_types(name)').order('created_at',{ascending:false}).limit(50),
-   canViewDashboard?supabase.rpc('staff_leave_dashboard_summary'):Promise.resolve({data:null,error:null})
+   canViewDashboard?supabase.rpc('staff_leave_dashboard_summary'):Promise.resolve({data:null,error:null}),
+   canManageAbsence?supabase.rpc('admin_list_staff_leave_director_absences'):Promise.resolve({data:null,error:null})
   ]);
   if(t.error||r.error){setAvailable(false);setTypes([]);setRows([]);setError('ระบบการลายังไม่พร้อมใช้งานในฐานข้อมูลนี้ กรุณารอการตรวจสอบและเผยแพร่ Migration');}
   else{setAvailable(true);setTypes(t.data||[]);setRows(r.data||[]);if(!selectedType&&t.data?.length)setSelectedType(t.data[0].id);}
   setSummary(!dashboard.error&&dashboard.data?dashboard.data:null);
+  setAbsenceRecords(!absence.error&&absence.data?absence.data:[]);
   setLoading(false);
  }
- React.useEffect(()=>{load()},[profile?.id,canViewDashboard]);
+ React.useEffect(()=>{load()},[profile?.id,canViewDashboard,canManageAbsence]);
  async function submitDraft(row:any){
   if(!row.policy_version_id||row.day_count==null||busy)return;
   setBusy(true);setError('');setNotice('');
   const {error}=await supabase.rpc('staff_leave_submit',{p_request_id:row.id,p_idempotency_key:'leave-submit-'+row.id+'-'+crypto.randomUUID()});
   if(error)setError('ส่งคำขอลาไม่สำเร็จ: '+error.message);
   else{setNotice('ส่งคำขอลาแล้ว หรือระบบบันทึกสถานะรอตรวจสอบผู้อนุมัติ');await load();}
+  setBusy(false);
+ }
+ async function recordDirectorAbsence(e:React.FormEvent){
+  e.preventDefault();if(!canManageAbsence||busy)return;
+  if(!absenceStart||!absenceEnd||!absenceReason.trim()||!absenceReference.trim()){setError('กรุณากรอกช่วงวันที่ เหตุผล และเลขที่เอกสารอ้างอิง');return}
+  setBusy(true);setError('');setNotice('');
+  const {error}=await supabase.rpc('admin_record_staff_leave_director_absence',{p_absence_start:absenceStart,p_absence_end:absenceEnd,p_reason:absenceReason.trim(),p_authority_reference:absenceReference.trim()});
+  if(error)setError('บันทึกหลักฐานการไม่อยู่ไม่สำเร็จ: '+error.message);
+  else{setNotice('บันทึกหลักฐานการไม่อยู่ของผู้อำนวยการแล้ว และเปิดใช้ข้อยกเว้นอนุมัติโดยรองผู้อำนวยการตามช่วงวันที่');setAbsenceReason('');setAbsenceReference('');await load();}
+  setBusy(false);
+ }
+ async function revokeDirectorAbsence(record:any){
+  if(!canManageAbsence||busy)return;
+  const reason=window.prompt('ระบุเหตุผลการยกเลิกหลักฐานการไม่อยู่');
+  if(!reason?.trim())return;
+  setBusy(true);setError('');setNotice('');
+  const {error}=await supabase.rpc('admin_revoke_staff_leave_director_absence',{p_absence_id:record.id,p_reason:reason.trim()});
+  if(error)setError('ยกเลิกหลักฐานไม่สำเร็จ: '+error.message);
+  else{setNotice('ยกเลิกหลักฐานการไม่อยู่แล้ว');await load();}
   setBusy(false);
  }
  async function cancelRequest(row:any){
@@ -112,6 +139,16 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
    <div className="stat-card"><span>รอผู้อำนวยการ</span><strong>{summary.waiting_director??0}</strong></div>
    <div className="stat-card"><span>อนุมัติแล้ว</span><strong>{summary.approved??0}</strong></div>
    <div className="stat-card"><span>เกินเกณฑ์</span><strong>{summary.over_limit??0}</strong></div>
+  </div>}
+  {canManageAbsence&&<div className="panel"><div className="panel-head"><div><h2>การไม่อยู่ของผู้อำนวยการ</h2><p>บันทึกโดยผู้ดูแลระบบพร้อมหลักฐานอ้างอิง เพื่อให้รองผู้อำนวยการอนุมัติขั้นสุดท้ายแทนได้เฉพาะช่วงที่มีหลักฐาน</p></div></div>
+   <form className="form-grid" onSubmit={recordDirectorAbsence}>
+    <label>เริ่มวันที่<input type="date" value={absenceStart} onChange={e=>setAbsenceStart(e.target.value)} required/></label>
+    <label>สิ้นสุดวันที่<input type="date" value={absenceEnd} min={absenceStart||undefined} onChange={e=>setAbsenceEnd(e.target.value)} required/></label>
+    <label className="wide">เหตุผล<input value={absenceReason} onChange={e=>setAbsenceReason(e.target.value)} maxLength={1000} required placeholder="เช่น ไปราชการ / ลาป่วย / เข้ารับการอบรม"/></label>
+    <label className="wide">เลขที่คำสั่งหรือหลักฐานอ้างอิง<input value={absenceReference} onChange={e=>setAbsenceReference(e.target.value)} maxLength={500} required placeholder="เลขที่หนังสือ/คำสั่งที่ตรวจสอบย้อนหลังได้"/></label>
+    <div className="form-actions"><button type="submit" disabled={busy}>บันทึกหลักฐานการไม่อยู่</button></div>
+   </form>
+   {absenceRecords.length>0&&<div className="table-wrap"><table><thead><tr><th>ช่วงเวลา</th><th>เหตุผล</th><th>หลักฐาน</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>{absenceRecords.map(a=><tr key={a.id}><td>{a.absence_start} – {a.absence_end}</td><td>{a.reason}</td><td>{a.authority_reference}</td><td>{a.revoked_at?'ยกเลิกแล้ว':'บันทึกแล้ว'}</td><td>{!a.revoked_at?<button className="ghost" disabled={busy} onClick={()=>revokeDirectorAbsence(a)}>ยกเลิกหลักฐาน</button>:'—'}</td></tr>)}</tbody></table></div>}
   </div>}
   <div className="panel"><div className="panel-head"><div><h2>ยื่นคำขอลา (บันทึกร่าง)</h2><p>ใช้กฎการลากลางชุดเดียวกันสำหรับบุคลากรทุกประเภท</p></div></div>
    <div className="notice" role="status">ระบบจะคำนวณวันลาและเปิดให้ส่งอนุมัติเฉพาะเมื่อมีนโยบายกลางที่ตรวจสอบและอนุมัติแล้วเท่านั้น คำขอที่ยังไม่มีนโยบายจะบันทึกเป็นร่างโดยไม่เดาจำนวนวันลา</div>
