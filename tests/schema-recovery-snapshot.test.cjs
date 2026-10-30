@@ -18,6 +18,7 @@ const branchCandidateReview = read("recovery/catalog/branch-candidate-review.md"
 const authorizationSemanticReview = read("recovery/catalog/authorization-semantic-review.md");
 const productionReadOnlyValidation = read("recovery/catalog/production-readonly-validation-2026-10-16.md");
 const authorizationCandidate = read("recovery/catalog/candidate-has-department-permission-active-department.sql");
+const activeDepartmentMigration = read("supabase/migrations/20261030150000_require_active_department_for_scoped_permissions.sql");
 const replayWorkflow = read(".github/workflows/schema-recovery-postgres-replay.yml");
 const rlsBehavior = read("tests/schema-recovery-rls-behavior.sql");
 
@@ -75,6 +76,7 @@ assert.match(authorizationCandidate, /wr\.code IN \(\x27system_admin\x27,\x27dir
 assert.match(replayWorkflow, /Apply isolated authorization correction candidate \(disposable DB only\)/i);
 assert.match(rlsBehavior, /ordinary user must not retain scoped permission in inactive department/i);
 assert.match(rlsBehavior, /director global permission exception must remain effective/i);
+assert.match(rlsBehavior, /deputy_director must retain the existing global document\.assign exception/i);
 assert.match(rlsBehavior, /inactive profile must not retain department-scoped permissions/i);
 assert.match(rlsBehavior, /removed department membership must remove scoped permission/i);
 assert.match(rlsBehavior, /disabled department permission must not authorize update/i);
