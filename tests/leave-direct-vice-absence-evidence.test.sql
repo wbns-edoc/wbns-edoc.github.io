@@ -8,12 +8,23 @@ insert into public.profiles(id,is_active) values
  ('86000000-0000-0000-0000-000000000004',true)
 on conflict(id) do update set is_active=excluded.is_active;
 
+-- Reuse the catalog's canonical System Admin role; seed it only for minimal fixtures.
 insert into public.roles(id,code,name)
-values ('86000000-0000-0000-0000-000000000005','system_admin','System Admin')
-on conflict(id) do nothing;
-insert into public.user_roles(user_id,role_id)
-values ('86000000-0000-0000-0000-000000000001','86000000-0000-0000-0000-000000000005')
+values ('86000000-0000-0000-0000-000000000005','system_admin','System Admin CI fixture')
 on conflict do nothing;
+insert into public.user_roles(user_id,role_id)
+select '86000000-0000-0000-0000-000000000001', id
+from public.roles where code='system_admin'
+on conflict do nothing;
+
+do $role_fixture$
+begin
+  if not exists (
+    select 1 from public.user_roles ur join public.roles r on r.id=ur.role_id
+    where ur.user_id='86000000-0000-0000-0000-000000000001' and r.code='system_admin'
+  ) then raise exception 'system_admin_role_fixture_unavailable'; end if;
+end
+$role_fixture$;
 
 insert into public.staff_leave_types(id,code,name,is_active)
 values ('86000000-0000-0000-0000-000000000006','absence_test','Absence test',true)
