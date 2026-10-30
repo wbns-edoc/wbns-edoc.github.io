@@ -13,6 +13,25 @@ on conflict(id) do update set is_active=true;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','83000000-0000-0000-0000-000000000001',true);
 
+-- The recovered handbook is present as a school-wide draft, never auto-approved.
+do $handbook_seed$
+declare
+  v_status text;
+  v_rules jsonb;
+begin
+  select status, policy_rules into v_status, v_rules
+  from public.staff_leave_policy_versions
+  where policy_code='school-wide' and version=1;
+  if v_status is distinct from 'draft'
+     or v_rules->>'verification_status' is distinct from 'pending'
+     or v_rules->>'calculation_ready' is distinct from 'false'
+     or jsonb_object_length(v_rules->'leave_types') <> 11
+     or coalesce((v_rules->'calendar'->>'verified')::boolean,true) then
+    raise exception 'handbook seed must contain 11 leave types and remain unapproved / not calculation-ready';
+  end if;
+end
+$handbook_seed$;
+
 -- No approved shared policy: create a draft, but never invent a day count.
 select public.staff_leave_create_draft(
  '83000000-0000-0000-0000-000000000003',
@@ -52,7 +71,7 @@ insert into public.staff_leave_policy_versions(
  policy_rules,reviewed_by,reviewed_at
 ) values (
  '83000000-0000-0000-0000-000000000004',
- 'school-wide',1,'approved',date '2026-01-01',null,
+ 'school-wide',2,'approved',date '2026-01-01',null,
  '{"verification_status":"approved","calculation_ready":true,
    "calendar":{"non_working_dates":["2026-11-11"]},
    "leave_types":{"policy_test":{"counting_basis":"working_days"}}}'::jsonb,
