@@ -89,6 +89,19 @@ select public.admin_record_staff_leave_director_absence(
 reset role;
 
 set local role authenticated;
+select set_config('request.jwt.claim.sub','86000000-0000-0000-0000-000000000001',true);
+do $test$
+declare v_count integer;
+begin
+ select count(*) into v_count
+ from public.admin_list_staff_leave_director_absences()
+ where authority_reference='SCHOOL-ORDER-TEST-2026-10' and revoked_at is null;
+ if v_count<>1 then raise exception 'System Admin absence evidence listing failed'; end if;
+end
+$test$;
+reset role;
+
+set local role authenticated;
 select set_config('request.jwt.claim.sub','86000000-0000-0000-0000-000000000002',true);
 select public.staff_leave_decide(
  '86000000-0000-0000-0000-000000000008','approve',null,'absence-approved-vice-01'
