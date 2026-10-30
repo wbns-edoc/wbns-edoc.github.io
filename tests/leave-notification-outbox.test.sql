@@ -1,6 +1,22 @@
 \set ON_ERROR_STOP on
 begin;
 
+do $realtime_publication$
+begin
+  if exists (
+    select 1 from pg_catalog.pg_publication
+    where pubname = 'supabase_realtime'
+  ) and not exists (
+    select 1 from pg_catalog.pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'notifications'
+  ) then
+    raise exception 'public.notifications must be included in supabase_realtime when the publication exists';
+  end if;
+end;
+$realtime_publication$;
+
 insert into public.profiles(id) values
  ('81000000-0000-0000-0000-000000000001'),
  ('81000000-0000-0000-0000-000000000002')
