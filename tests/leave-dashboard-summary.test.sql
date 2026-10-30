@@ -7,6 +7,13 @@ insert into public.profiles(id,is_active) values
  ('85000000-0000-0000-0000-000000000003',true)
 on conflict(id) do update set is_active=excluded.is_active;
 
+-- Seed only when a minimal test catalog lacks these role codes; on a recovered
+-- catalog, keep its canonical role IDs and never duplicate the global codes.
+insert into public.roles(id,code,name) values
+ ('85000000-0000-0000-0000-000000000004','director','Director CI fixture'),
+ ('85000000-0000-0000-0000-000000000005','teacher','Teacher CI fixture')
+on conflict do nothing;
+
 -- Reuse the real role rows from the recovered catalog instead of inserting
 -- duplicate global role codes into the shared disposable database.
 insert into public.user_roles(user_id,role_id)
