@@ -1,5 +1,5 @@
 BEGIN;
-SELECT plan(9);
+SELECT plan(12);
 
 SELECT ok(
   position('has_document_wide_read_role' IN pg_get_functiondef('private.can_access_document(uuid)'::regprocedure)) = 0,
@@ -16,8 +16,21 @@ SELECT ok(
   position('document.view' IN pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0
   AND position('document.create' IN pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0
   AND position('document.update' IN pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0
-  AND position('document.approve' IN pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0,
-  'global roles have explicit read, create, update and approve permissions'
+  AND position('document.approve' IN pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0
+  AND position('document.assign' IN pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0,
+  'System Admin and director retain explicit read, create, update, approve and assign permissions'
+);
+
+SELECT ok(
+  position('JOIN public.departments d' IN pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0
+  AND position('d.is_active = true' IN pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0,
+  'department-scoped permissions require the target department to remain active'
+);
+
+SELECT ok(
+  position('wr.code = ''deputy_director''' IN pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0
+  AND position('p_permission = ''document.assign''' IN pg_get_functiondef('private.has_department_permission(text,uuid)'::regprocedure)) > 0,
+  'Vice Director retains the existing global document.assign exception'
 );
 
 SELECT ok(
