@@ -10,9 +10,6 @@ insert into public.staff_leave_types(id,code,name,is_active)
 values ('83000000-0000-0000-0000-000000000003','policy_test','Policy test',true)
 on conflict(id) do update set is_active=true;
 
-set local role authenticated;
-select set_config('request.jwt.claim.sub','83000000-0000-0000-0000-000000000001',true);
-
 -- The recovered handbook is present as a school-wide draft, never auto-approved.
 do $handbook_seed$
 declare
@@ -31,6 +28,26 @@ begin
   end if;
 end
 $handbook_seed$;
+
+-- Even a System Admin cannot activate the imported handbook until calendar
+-- verification and all special entitlement controls are implemented.
+do $policy_guard$
+begin
+  begin
+    update public.staff_leave_policy_versions
+       set status='approved',
+           reviewed_by='83000000-0000-0000-0000-000000000002',
+           reviewed_at=now()
+     where policy_code='school-wide' and version=1;
+    raise exception 'expected unresolved handbook policy approval to fail';
+  exception when sqlstate '55000' then
+    if sqlerrm <> 'staff_leave_policy_has_unresolved_implementation_gaps' then raise; end if;
+  end;
+end
+$policy_guard$;
+
+set local role authenticated;
+select set_config('request.jwt.claim.sub','83000000-0000-0000-0000-000000000001',true);
 
 -- No approved shared policy: create a draft, but never invent a day count.
 select public.staff_leave_create_draft(
@@ -73,7 +90,8 @@ insert into public.staff_leave_policy_versions(
  '83000000-0000-0000-0000-000000000004',
  'school-wide',2,'approved',date '2026-01-01',null,
  '{"verification_status":"approved","calculation_ready":true,
-   "calendar":{"non_working_dates":["2026-11-11"]},
+   "calendar":{"non_working_dates":["2026-11-11"],"verified":true},
+   "implementation_gaps":[],
    "leave_types":{"policy_test":{"counting_basis":"working_days"}}}'::jsonb,
  '83000000-0000-0000-0000-000000000002',now()
 );
