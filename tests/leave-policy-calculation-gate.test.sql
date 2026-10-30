@@ -47,6 +47,29 @@ begin
 end
 $policy_guard$;
 
+-- An otherwise complete-looking policy must still fail closed if the
+-- implementation_gaps field is omitted rather than explicitly set to [].
+do $missing_gaps_guard$
+begin
+  begin
+    insert into public.staff_leave_policy_versions(
+      id,policy_code,version,status,effective_from,
+      policy_rules,reviewed_by,reviewed_at
+    ) values (
+      '83000000-0000-0000-0000-000000000005',
+      'school-wide',3,'approved',date '2026-01-01',
+      '{"verification_status":"approved","calculation_ready":true,
+        "calendar":{"non_working_dates":[],"verified":true},
+        "leave_types":{"policy_test":{"counting_basis":"calendar_days"}}}'::jsonb,
+      '83000000-0000-0000-0000-000000000002',now()
+    );
+    raise exception 'expected missing implementation_gaps to fail';
+  exception when sqlstate '55000' then
+    if sqlerrm <> 'staff_leave_policy_has_unresolved_implementation_gaps' then raise; end if;
+  end;
+end
+$missing_gaps_guard$;
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub','83000000-0000-0000-0000-000000000001',true);
 
