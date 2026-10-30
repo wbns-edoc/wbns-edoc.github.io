@@ -6,6 +6,9 @@ on:
       - 'supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql'
       - 'supabase/tests/admin-staff-responsibility-settings-draft-checklist.sql'
       - '.github/workflows/school-responsibility-settings-ci.yml'
+      - 'src/main.tsx'
+      - 'package.json'
+      - 'package-lock.json'
   push:
     branches:
       - 'integration/staff-leave-production-readiness-20261030'
@@ -43,6 +46,15 @@ jobs:
       PGDATABASE: responsibility_test
     steps:
       - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install dependencies and build frontend
+        run: |
+          npm ci
+          npm run build
       - name: Install PostgreSQL client
         run: |
           sudo apt-get update
