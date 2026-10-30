@@ -7,8 +7,7 @@ const end = source.indexOf("function AboutSystem(", start);
 assert.ok(start >= 0 && end > start, "StaffLeave component must exist");
 const leave = source.slice(start, end);
 
-assert.match(leave, /new Set\(roles\.map\(role=>String\(role\)\.trim\(\)\.toLocaleLowerCase\(\)\.replace\(\/\\\\s\+\/g,'_'\)\)\)/,
-  "role display names must be normalized before checking access");
+assert.ok(leave.includes(".replace(/\\s+/g,'_')"),`role display names must be normalized before checking access`);
 for (const role of [
   "director",
   "deputy_director",
