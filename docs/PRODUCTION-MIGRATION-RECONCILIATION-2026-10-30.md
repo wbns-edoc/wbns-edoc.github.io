@@ -272,3 +272,10 @@ A read-only Production query confirmed that the `supabase_realtime` publication 
 - UPDATE: `recipient_id = auth.uid()`, role `authenticated` only.
 
 The Integration branch now contains draft migration `20261030110000_notifications_realtime_publication_draft.sql`, which adds only `public.notifications` to the existing publication if it is not already present. The NotificationBell subscribes to INSERT events with a `recipient_id=eq.<current-user-id>` filter and removes its channel on unmount. Regression tests assert the subscription contract and publication membership in local Supabase. This is not yet deployed to Production.
+
+
+## 2026-10-30 Drive health function recovery
+
+The Integration branch's `supabase/config.toml` already declared `[functions.drive-health]` with `verify_jwt = true`, but the corresponding `supabase/functions/drive-health/index.ts` source was missing. The source has been restored from the archived `recovery/restore-drive-health-source-20261029` branch.
+
+The restored Edge Function signs the Apps Script bridge health request with HMAC, requires an HTTPS bridge URL and configured server-side secret, uses a 45-second timeout, returns only the bridge folder name and a read-only status, and keeps JWT verification enabled. The UI was corrected to consume `folder_name` (rather than a non-existent `root_folder` object) and to state that the check performs no write. Drive Upload CI now type-checks this Edge Function and runs a UI/Edge Function response-contract test. This source restoration has not been deployed.
