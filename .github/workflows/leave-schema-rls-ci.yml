@@ -19,6 +19,8 @@ on:
       - 'tests/leave-policy-calculation-gate.test.sql'
       - 'supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql'
       - 'tests/leave-over-limit-notification.test.sql'
+      - 'supabase/migrations/20261023160000_staff_leave_approver_dashboard_summary_draft.sql'
+      - 'tests/leave-dashboard-summary.test.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
       - 'tests/leave-cancel-rpc.test.sql'
@@ -108,6 +110,16 @@ jobs:
             read_at timestamptz,
             created_at timestamptz not null default now()
           );
+          create table public.roles (
+            id uuid primary key,
+            code text not null unique,
+            name text not null
+          );
+          create table public.user_roles (
+            user_id uuid not null references public.profiles(id),
+            role_id uuid not null references public.roles(id),
+            primary key(user_id, role_id)
+          );
           grant select on public.profiles to authenticated;
           SQL
       - name: Apply schema draft to disposable PostgreSQL
@@ -144,6 +156,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql
       - name: Apply over-limit marking and notification migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql
+      - name: Apply approver dashboard summary migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023160000_staff_leave_approver_dashboard_summary_draft.sql
       - name: Run decision RPC authorization, idempotency, and two-stage tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-decide-rpc.test.sql
       - name: Run responsibility-to-route bridge regression tests
@@ -158,3 +172,5 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-policy-calculation-gate.test.sql
       - name: Run over-limit notification fan-out tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-over-limit-notification.test.sql
+      - name: Run approver dashboard authorization and aggregate tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-dashboard-summary.test.sql
