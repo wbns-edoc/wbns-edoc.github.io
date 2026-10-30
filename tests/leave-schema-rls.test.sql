@@ -2,6 +2,19 @@
 -- Run only against a disposable local PostgreSQL database after applying the candidate migration.
 \set ON_ERROR_STOP on
 
+do $seed_assert$
+declare n integer;
+begin
+  select count(*) into n from public.staff_leave_types where is_active=true;
+  if n < 11 then raise exception 'expected eleven seeded leave categories, found %', n; end if;
+  if not exists(select 1 from public.staff_leave_types where code='sick_leave')
+     or not exists(select 1 from public.staff_leave_types where code='annual_leave')
+     or not exists(select 1 from public.staff_leave_types where code='spouse_following') then
+    raise exception 'required handbook leave categories are missing';
+  end if;
+end
+$seed_assert$;
+
 insert into public.profiles(id) values
  ('10000000-0000-0000-0000-000000000001'),
  ('10000000-0000-0000-0000-000000000002'),
