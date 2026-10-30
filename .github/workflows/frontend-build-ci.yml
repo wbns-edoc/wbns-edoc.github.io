@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'src/**'
+      - 'tests/staff-leave-role-visibility.test.cjs'
       - 'package.json'
       - 'vite.config.*'
       - 'tsconfig*.json'
@@ -20,4 +21,5 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm audit --audit-level=high
+      - run: node tests/staff-leave-role-visibility.test.cjs
       - run: npm run build
