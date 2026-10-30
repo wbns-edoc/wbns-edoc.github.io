@@ -104,7 +104,7 @@ jobs:
           as $$
             select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
           $$;
-          create table public.profiles (id uuid primary key, is_active boolean not null default true);
+          create table public.profiles (id uuid primary key, full_name text not null default 'CI Fixture', is_active boolean not null default true);
           create table public.notifications (
             id uuid primary key default gen_random_uuid(),
             recipient_id uuid not null references public.profiles(id),
