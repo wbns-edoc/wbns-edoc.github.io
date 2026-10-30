@@ -7,15 +7,28 @@ insert into public.profiles(id,is_active) values
  ('85000000-0000-0000-0000-000000000003',true)
 on conflict(id) do update set is_active=excluded.is_active;
 
-insert into public.roles(id,code,name) values
- ('85000000-0000-0000-0000-000000000004','director','Director'),
- ('85000000-0000-0000-0000-000000000005','teacher','Teacher')
-on conflict(id) do nothing;
-
-insert into public.user_roles(user_id,role_id) values
- ('85000000-0000-0000-0000-000000000001','85000000-0000-0000-0000-000000000004'),
- ('85000000-0000-0000-0000-000000000003','85000000-0000-0000-0000-000000000005')
+-- Reuse the real role rows from the recovered catalog instead of inserting
+-- duplicate global role codes into the shared disposable database.
+insert into public.user_roles(user_id,role_id)
+select '85000000-0000-0000-0000-000000000001', id
+from public.roles where code='director'
 on conflict do nothing;
+
+insert into public.user_roles(user_id,role_id)
+select '85000000-0000-0000-0000-000000000003', id
+from public.roles where code='teacher'
+on conflict do nothing;
+
+do $role_fixture$
+begin
+  if not exists (select 1 from public.user_roles ur join public.roles r on r.id=ur.role_id
+                 where ur.user_id='85000000-0000-0000-0000-000000000001' and r.code='director')
+     or not exists (select 1 from public.user_roles ur join public.roles r on r.id=ur.role_id
+                    where ur.user_id='85000000-0000-0000-0000-000000000003' and r.code='teacher') then
+    raise exception 'required director/teacher role fixtures are unavailable in recovered catalog';
+  end if;
+end
+$role_fixture$;
 
 insert into public.staff_leave_types(id,code,name,is_active)
 values ('85000000-0000-0000-0000-000000000006','dashboard_test','Dashboard test',true)
