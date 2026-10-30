@@ -373,7 +373,7 @@ create or replace function public.staff_leave_policy_review_guard()
 returns trigger
 language plpgsql
 set search_path = pg_catalog, public
-as $
+as $policy_guard$
 begin
   if new.status = 'approved' then
     if new.policy_rules->>'verification_status' is distinct from 'approved'
@@ -389,7 +389,7 @@ begin
   end if;
   return new;
 end;
-$;
+$policy_guard$;
 
 drop trigger if exists staff_leave_policy_review_guard
   on public.staff_leave_policy_versions;
