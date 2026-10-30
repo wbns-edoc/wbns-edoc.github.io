@@ -17,6 +17,8 @@ on:
       - 'tests/leave-notification-outbox.test.sql'
       - 'supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql'
       - 'tests/leave-policy-calculation-gate.test.sql'
+      - 'supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql'
+      - 'tests/leave-over-limit-notification.test.sql'
       - 'supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql'
       - 'tests/leave-policy-calculation-gate.test.sql'
       - 'tests/leave-schema-rls.test.sql'
@@ -138,6 +140,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql
       - name: Apply shared policy calculation and submission gate migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql
+      - name: Apply over-limit marking and notification migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql
       - name: Run decision RPC authorization, idempotency, and two-stage tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-decide-rpc.test.sql
       - name: Run responsibility-to-route bridge regression tests
@@ -150,3 +154,5 @@ jobs:
 
       - name: Run shared policy calculation and fail-closed submission tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-policy-calculation-gate.test.sql
+      - name: Run over-limit notification fan-out tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-over-limit-notification.test.sql
