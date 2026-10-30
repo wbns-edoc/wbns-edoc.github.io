@@ -92,3 +92,29 @@ Until this reconciliation is complete:
 ## Next engineering action
 
 Build a verified mapping from each Production version/name to its repository file or recovery source, then reconcile the missing applied migrations. The current list above is a read-only snapshot as of 2026-10-30 and must be refreshed before any migration operation.
+
+
+## Historical evidence and candidate mappings
+
+A previous read-only checkpoint is preserved in:
+
+- [2026-10-29 migration reconciliation](./production-recovery/migration-reconciliation-20261029.md)
+- [2026-10-29 Production catalog checkpoint](./production-recovery/production-catalog-checkpoint-20261029.md)
+
+The older checkpoint compared `main` (49 migration files at that time). The current integration branch contains 65 files because leave-module migrations have since been added. The current counts above are calculated against the integration branch, not the older main snapshot.
+
+The following are candidates only and must be checked by comparing full SQL and catalog effects before mapping:
+
+| Production version/name | Candidate repository file | Evidence status |
+|---|---|---|
+| `20261010085023` — secure public workflow RPC wrappers | `20261010130000_secure_public_workflow_rpc_wrappers_v1.sql` | Filename stem aligns with recorded name, but applied version differs |
+| `20261010085025` — grant Director document update | `20261010150000_grant_director_document_update.sql` | Filename stem aligns with recorded name, but applied version differs |
+| `20261010085028` — department-scoped document access | `20261010170000_department_scoped_document_access_v1.sql` | Filename stem aligns with recorded name, but applied version differs |
+| `20261010085031` — scope workflow assignment and status | `20261010180000_scope_workflow_assignment_and_status.sql` | Filename stem aligns with recorded name, but applied version differs |
+| `20261010085034` — department-aware document registration | `20261010190000_department_aware_document_registration_v1.sql` | Filename stem aligns with recorded name, but applied version differs |
+| `20261015005425` — permanent delete incoming Drive | `permanent_delete_incoming_drive.sql` | Semantic similarity only; exact SQL not proven |
+| `20261015005428` — list deleted incoming documents | `list_deleted_incoming_documents.sql` | Semantic similarity only; exact SQL not proven |
+| `20261016161349` — notify Director and Deputy on incoming registration | `20261016233000_notify_leadership_on_incoming_registration.sql` | Semantic similarity only; exact SQL not proven |
+| `20261016162544` — restrict sender directory management | `20261016234500_restrict_sender_directory_management.sql` | Semantic similarity only; exact SQL not proven |
+
+A filename or semantic match is not enough to mark a migration reconciled. The SQL must be compared against a trusted original or an archived commit and its resulting schema/security effects must match Production.
