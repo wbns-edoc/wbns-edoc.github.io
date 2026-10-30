@@ -159,7 +159,7 @@ $test$;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','86000000-0000-0000-0000-000000000001',true);
 select public.admin_revoke_staff_leave_director_absence(
- (select id from public.staff_leave_director_absence_evidence
+ (select id from public.admin_list_staff_leave_director_absences()
   where director_user_id='86000000-0000-0000-0000-000000000003'
     and vice_director_user_id='86000000-0000-0000-0000-000000000002'),
  'Director returned to duty'
