@@ -55,7 +55,7 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
  const [absenceReason,setAbsenceReason]=React.useState('');
  const [absenceReference,setAbsenceReference]=React.useState('');
  // loadIdentity currently returns role.name before role.code; support both persisted codes and Thai display names.
- const roleKeys=new Set(roles.map(role=>String(role).trim().toLocaleLowerCase().replace(/\\s+/g,'_')));
+ const roleKeys=new Set(roles.map(role=>String(role).trim().toLocaleLowerCase().replace(/\s+/g,'_')));
  const canViewDashboard=['director','deputy_director','system_admin','ผู้อำนวยการโรงเรียน','ผู้อำนวยการ','รองผู้อำนวยการโรงเรียน','รองผู้อำนวยการ','ผู้ดูแลระบบ'].some(role=>roleKeys.has(role));
  const canManageAbsence=['system_admin','ผู้ดูแลระบบ'].some(role=>roleKeys.has(role));
  const statusLabels:any={draft:'ฉบับร่าง',submitted:'ส่งแล้ว',blocked_approver_resolution:'รอตรวจสอบผู้อนุมัติ',pending_approval:'รอพิจารณา',approved:'อนุมัติแล้ว',rejected:'ไม่อนุมัติ',cancelled:'ยกเลิกแล้ว',withdrawn:'ถอนคำขอ'};
