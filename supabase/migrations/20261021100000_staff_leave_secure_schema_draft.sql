@@ -37,6 +37,27 @@ create table if not exists public.staff_leave_types (
   updated_at timestamptz not null default now()
 );
 
+
+-- Seed the eleven leave categories from the school's supplied handbook contents.
+-- This seeds labels only; it does not invent entitlements, limits, or day-count rules.
+insert into public.staff_leave_types(code, name, description)
+values
+ ('sick_leave', 'การลาป่วย', 'ประเภทการลาตามสารบัญคู่มือ; สิทธิและวิธีนับวันรอตรวจสอบนโยบาย'),
+ ('maternity_leave', 'การลาคลอดบุตร', 'ประเภทการลาตามสารบัญคู่มือ; สิทธิและวิธีนับวันรอตรวจสอบนโยบาย'),
+ ('assist_spouse_childbirth', 'การลาไปช่วยเหลือภริยาที่คลอดบุตร', 'ประเภทการลาตามสารบัญคู่มือ; สิทธิและวิธีนับวันรอตรวจสอบนโยบาย'),
+ ('personal_leave', 'การลากิจส่วนตัว', 'ประเภทการลาตามสารบัญคู่มือ; สิทธิและวิธีนับวันรอตรวจสอบนโยบาย'),
+ ('annual_leave', 'การลาพักผ่อน', 'ประเภทการลาตามสารบัญคู่มือ; สิทธิและวิธีนับวันรอตรวจสอบนโยบาย'),
+ ('ordination_hajj', 'การลาอุปสมบทหรือการลาไปประกอบพิธีฮัจย์', 'ประเภทการลาตามสารบัญคู่มือ; สิทธิและวิธีนับวันรอตรวจสอบนโยบาย'),
+ ('military_selection_training', 'การลาเข้ารับการตรวจเลือกหรือเข้ารับการเตรียมพล', 'ประเภทการลาตามสารบัญคู่มือ; สิทธิและวิธีนับวันรอตรวจสอบนโยบาย'),
+ ('study_training_research', 'การลาไปศึกษา ฝึกอบรม ปฏิบัติการวิจัย หรือดูงาน', 'ประเภทการลาตามสารบัญคู่มือ; สิทธิและวิธีนับวันรอตรวจสอบนโยบาย'),
+ ('international_organization', 'การลาไปปฏิบัติงานในองค์การระหว่างประเทศ', 'ประเภทการลาตามสารบัญคู่มือ; สิทธิและวิธีนับวันรอตรวจสอบนโยบาย'),
+ ('spouse_following', 'การลาติดตามคู่สมรส', 'ประเภทการลาตามสารบัญคู่มือ; สิทธิและวิธีนับวันรอตรวจสอบนโยบาย'),
+ ('vocational_rehabilitation', 'การลาไปฟื้นฟูสมรรถภาพด้านอาชีพ', 'ประเภทการลาตามสารบัญคู่มือ; สิทธิและวิธีนับวันรอตรวจสอบนโยบาย')
+on conflict (code) do update
+set name=excluded.name,
+    description=excluded.description,
+    updated_at=statement_timestamp();
+
 create table if not exists public.staff_leave_policy_versions (
   id uuid primary key default gen_random_uuid(),
   policy_code text not null,
