@@ -18,14 +18,10 @@ This matrix is a data-entry and review template, not an approved legal policy. D
 | spouse_following | การลาติดตามคู่สมรส | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
 | vocational_rehabilitation | การลาไปฟื้นฟูสมรรถภาพด้านอาชีพ | Table of contents; exact page/rule references pending | Pending page-by-page transcription |
 
-## Personnel categories
-For each leave type above, HR must complete a separate row for each category:
-- ข้าราชการ
-- ครูอัตราจ้าง
-- พนักงานราชการ
-- Other category (configured by school, if applicable)
+## One school-wide policy for all personnel
+HR must complete one shared policy row for each leave type above. The same eligibility, entitlement, counting, and approval rules apply to every school personnel category. Personnel category may be stored only as reporting metadata; it must not select a different policy or calculation.
 
-## Required fields per category + leave type
+## Required fields per shared leave type
 | Field | Required value |
 |---|---|
 | Eligibility | Allowed / not allowed / conditional; define condition |
@@ -45,8 +41,8 @@ For each leave type above, HR must complete a separate row for each category:
 | Verification status | Pending / reviewed / approved / retired |
 
 ## Implementation rules
-1. Missing or unapproved category-specific rules must block submission for that leave type; never fall back to another category's policy.
-2. No balance calculation is authoritative until the source, counting method, annual period, carryover, and effective dates are approved.
+1. Missing or unapproved shared rules must block submission for that leave type; never create category-specific fallback rules.
+2. No balance calculation is authoritative for any staff member until the shared source, counting method, annual period, carryover, and effective dates are approved.
 3. Sensitive evidence (for example, medical documents) must have stricter access controls than ordinary office documents.
 4. Policy edits are versioned and auditable. Historical requests retain the policy version used at submission.
 5. Changes require automated tests for authorization, date ranges, overlap, status transitions, self-approval prevention, and privacy boundaries.
