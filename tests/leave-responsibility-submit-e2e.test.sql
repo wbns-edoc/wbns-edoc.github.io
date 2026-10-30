@@ -31,12 +31,25 @@ insert into public.school_responsibility_audit(
  '00000000-0000-0000-0000-000000000804','assignment_changed'
 );
 
-insert into public.staff_leave_requests(id,applicant_id,leave_type_id,starts_on,ends_on,reason,status)
+insert into public.staff_leave_policy_versions(
+ id,policy_code,version,status,effective_from,policy_rules,reviewed_by,reviewed_at
+) values (
+ '00000000-0000-0000-0000-000000000807',
+ 'school-wide',1,'approved',date '2026-01-01',
+ '{"verification_status":"approved","calculation_ready":true,
+   "calendar":{"non_working_dates":[]},
+   "leave_types":{"route_e2e_test":{"counting_basis":"calendar_days"}}}'::jsonb,
+ '00000000-0000-0000-0000-000000000804',now()
+);
+
+insert into public.staff_leave_requests(id,applicant_id,leave_type_id,policy_version_id,starts_on,ends_on,day_count,reason,policy_snapshot,status)
 values (
  '00000000-0000-0000-0000-000000000806',
  '00000000-0000-0000-0000-000000000801',
  '00000000-0000-0000-0000-000000000805',
- date '2026-11-25',date '2026-11-25','synthetic route integration test','draft'
+ '00000000-0000-0000-0000-000000000807',
+ date '2026-11-25',date '2026-11-25',1,'synthetic route integration test',
+ '{"policy_version_id":"00000000-0000-0000-0000-000000000807","leave_type_code":"route_e2e_test","verification_status":"approved","calculation_ready":true,"calculated_day_count":1}'::jsonb,'draft'
 ) on conflict(id) do nothing;
 
 set local role authenticated;
