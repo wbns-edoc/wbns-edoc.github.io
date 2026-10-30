@@ -167,22 +167,22 @@ END $$;
 -- An active user with explicit membership, role and permission must still be denied
 -- department-scoped access when that department is inactive.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000007', true);
-DO $ BEGIN
+DO $$ BEGIN
   IF private.has_department_permission('document.view', '20000000-0000-0000-0000-000000000004') THEN
     RAISE EXCEPTION 'ordinary user must not retain scoped permission in inactive department';
   END IF;
-END $;
+END $$;
 
 -- Preserve the Production-wide Vice Director assignment exception.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000009', true);
-DO $ BEGIN
+DO $$ BEGIN
   IF NOT private.has_department_permission('document.assign', '20000000-0000-0000-0000-000000000004') THEN
     RAISE EXCEPTION 'deputy_director must retain the existing global document.assign exception';
   END IF;
   IF private.has_department_permission('document.view', '20000000-0000-0000-0000-000000000004') THEN
     RAISE EXCEPTION 'deputy_director must not gain unrelated global document.view';
   END IF;
-END $;
+END $$;
 
 -- The explicit global role exception remains effective for an active director.
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', true);
