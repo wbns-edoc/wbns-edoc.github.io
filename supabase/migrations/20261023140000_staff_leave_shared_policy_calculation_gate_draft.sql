@@ -365,4 +365,40 @@ insert into public.staff_leave_policy_versions (
 )
 on conflict (policy_code, version) do nothing;
 
+
+-- Prevent a handbook policy from being activated while any required control
+-- (school calendar, annual balance, eligibility evidence, or special subtype)
+-- remains unresolved. This is a database-level fail-closed guard.
+create or replace function public.staff_leave_policy_review_guard()
+returns trigger
+language plpgsql
+set search_path = pg_catalog, public
+as $
+begin
+  if new.status = 'approved' then
+    if new.policy_rules->>'verification_status' is distinct from 'approved'
+       or new.policy_rules->>'calculation_ready' is distinct from 'true'
+       or coalesce((new.policy_rules->'calendar'->>'verified')::boolean, false) is not true
+       or (
+         jsonb_typeof(new.policy_rules->'implementation_gaps') = 'array'
+         and jsonb_array_length(new.policy_rules->'implementation_gaps') > 0
+       ) then
+      raise exception 'staff_leave_policy_has_unresolved_implementation_gaps'
+        using errcode = '55000';
+    end if;
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists staff_leave_policy_review_guard
+  on public.staff_leave_policy_versions;
+create trigger staff_leave_policy_review_guard
+before insert or update of status, policy_rules
+on public.staff_leave_policy_versions
+for each row execute function public.staff_leave_policy_review_guard();
+
+revoke all on function public.staff_leave_policy_review_guard()
+  from public, anon, authenticated;
+
 commit;
