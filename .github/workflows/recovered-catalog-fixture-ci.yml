@@ -114,7 +114,7 @@ permissions:
 
 concurrency:
   group: recovered-catalog-fixture-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   recovered-catalog-fixture:
