@@ -44,7 +44,7 @@ The PDF is a scanned/image document and its text was not machine-readable in the
 - Prevent a category from silently falling back to another category's policy. Missing policy must show a clear configuration error and block submission.
 
 ### 2. Leave application
-- Select leave type from the policy assigned to the applicant's personnel category.
+- Select leave type from the single school-wide policy catalogue shared by all personnel.
 - Capture start/end date, full-day or partial-day if policy supports it, reason, contact/coverage information if required, and supporting attachments where applicable.
 - Show a preview of requested days and any known balance before submission.
 - Validate date order, overlapping requests, required fields, and policy-specific limits server-side.
@@ -72,7 +72,7 @@ The PDF is a scanned/image document and its text was not machine-readable in the
 - Log administrative access, exports, policy changes, and decisions.
 
 ## Policy catalogue required before production rules
-For each personnel category and leave type, HR must confirm:
+For each leave type in the single school-wide policy, HR must confirm:
 1. Eligibility and applicable legal/policy source.
 2. Entitlement/maximum days and whether days are calendar or working days.
 3. Counting rules for weekends, holidays, partial days, and cross-year leave.
@@ -126,9 +126,9 @@ Provide role-authorized dashboards for the school director and deputy director w
 Every chart must define whether it counts requests, calendar days, working days, or person-days. Aggregates and drill-downs must enforce the same authorization and privacy rules as the underlying requests. A dashboard role does not grant unrestricted access to sensitive reasons or attachments. An overdue-return alert is a prompt for authorized review, not a disciplinary conclusion.
 
 ## 8. Policy-based day counting (mandatory)
-Calculate leave days only from the verified, effective policy version for the applicant's personnel category, leave type, and relevant dates. The policy catalogue must explicitly state the counting basis and treatment of weekends, official holidays, partial days, date boundaries, and policy-version transitions. Store the calculated result with the policy version and calculation details used at decision time.
+Calculate leave days only from the verified, effective school-wide policy version, leave type, and relevant dates; personnel category must never select or alter the rule. The shared policy catalogue must explicitly state the counting basis and treatment of weekends, official holidays, partial days, date boundaries, and policy-version transitions. Store the calculated result with the policy version and calculation details used at decision time.
 
-Use a single server-side calculation path and Asia/Bangkok date semantics. Do not infer entitlement days from a chart, an old request, or a different personnel category. If the governing policy is missing, ambiguous, or not verified, stop automatic calculation and route the request for authorized HR review. Keep approved leave-day totals distinct from elapsed absence/overdue-return days.
+Use a single server-side calculation path and Asia/Bangkok date semantics. Do not infer entitlement days from a chart, an old request, or a personnel category. If the shared governing policy is missing, ambiguous, or not verified, stop automatic calculation and route the request for authorized HR review. Keep approved leave-day totals distinct from elapsed absence/overdue-return days.
 
 The supplied BICT/MOE manual concerns civil-servant leave; do not automatically apply its rules to contract teachers or government employees. For civil-servant teachers, verify applicable authority against current official circulars, including OTEPC ว 14/2568 dated 3 April 2025, and retain source/page/version references for every configured rule.
 
