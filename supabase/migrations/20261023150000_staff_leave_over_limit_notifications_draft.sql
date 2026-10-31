@@ -82,10 +82,16 @@ begin
     if v_counting_basis = 'calendar_days' then
       v_day_count := (p_ends_on - p_starts_on + 1)::numeric;
     elsif v_counting_basis = 'working_days'
+       and coalesce((v_policy_rules->'calendar'->>'verified')::boolean, false) is true
+       and jsonb_typeof(v_policy_rules->'calendar'->'weekend_days') = 'array'
        and jsonb_typeof(v_policy_rules->'calendar'->'non_working_dates') = 'array' then
       select count(*)::numeric into v_day_count
       from generate_series(p_starts_on, p_ends_on, interval '1 day') as day_value
-      where extract(isodow from day_value) between 1 and 5
+      where not exists (
+          select 1
+          from jsonb_array_elements_text(v_policy_rules->'calendar'->'weekend_days') as weekend(value)
+          where weekend.value::integer = extract(isodow from day_value)::integer
+        )
         and not exists (
           select 1
           from jsonb_array_elements_text(v_policy_rules->'calendar'->'non_working_dates') as holiday(value)
