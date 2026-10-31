@@ -16,7 +16,7 @@ declare
   v_definition text;
 begin
   select pg_get_functiondef(
-    'public.staff_leave_create_draft(uuid,date,date,text)'::regprocedure
+    'public.staff_leave_create_draft(uuid,date,date,text,date)'::regprocedure
   ) into v_definition;
 
   if lower(v_definition) !~ 'policy_code[[:space:]]*=[[:space:]]*''school-wide''' then
