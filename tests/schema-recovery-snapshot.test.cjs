@@ -18,7 +18,7 @@ const branchCandidateReview = read("recovery/catalog/branch-candidate-review.md"
 const authorizationSemanticReview = read("recovery/catalog/authorization-semantic-review.md");
 const productionReadOnlyValidation = read("recovery/catalog/production-readonly-validation-2026-10-16.md");
 const authorizationCandidate = read("recovery/catalog/candidate-has-department-permission-active-department.sql");
-const activeDepartmentMigration = read("supabase/migrations/20261030150000_require_active_department_for_scoped_permissions.sql");
+const activeDepartmentMigration = read("supabase/migrations/20261030094941_require_active_department_for_scoped_permissions.sql");
 const replayWorkflow = read(".github/workflows/schema-recovery-postgres-replay.yml");
 const rlsBehavior = read("tests/schema-recovery-rls-behavior.sql");
 
