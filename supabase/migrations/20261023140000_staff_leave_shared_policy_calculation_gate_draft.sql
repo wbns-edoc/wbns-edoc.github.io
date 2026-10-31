@@ -238,6 +238,8 @@ insert into public.staff_leave_policy_versions (
         "exceptional_extension_max_days": 60,
         "certificate_from_day": 3,
         "mandatory_certificate_from_day": 30,
+        "certificate_threshold_conflict": true,
+        "certificate_threshold_source_note": "Printed page 5 summary says 3 days or more; detailed clause 1.2 says 30 days or more. Keep calculation/approval blocked pending school authority confirmation.",
         "exceptional_extension_requires_higher_authority": true,
         "requires_annual_usage_accumulator": true
       },
@@ -252,8 +254,9 @@ insert into public.staff_leave_policy_versions (
         "counting_basis": "working_days",
         "max_days_per_event": 15,
         "allow_non_consecutive_periods": true,
-        "use_within_calendar_days_after_childbirth": 90,
+        "use_within_calendar_days_after_childbirth": 60,
         "file_within_calendar_days_after_childbirth": 30,
+        "deadline_source_note": "Printed page 6 says submit before/on leave date within 60 days; procedure says submit within 30 days after childbirth. Preserve both and require authority confirmation.",
         "requires_childbirth_event_date": true
       },
       "personal_leave": {
@@ -276,7 +279,7 @@ insert into public.staff_leave_policy_versions (
         "carryover_total_cap_days": 20,
         "carryover_total_cap_after_service_years": 10,
         "carryover_total_cap_after_10_service_years": 30,
-        "first_year_minimum_service_months": 2,
+        "first_year_minimum_service_months": 6,
         "requires_service_start_date": true,
         "requires_carryover_balance": true,
         "requires_fiscal_year_accumulator": true
