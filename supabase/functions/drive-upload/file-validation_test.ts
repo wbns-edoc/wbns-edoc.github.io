@@ -19,7 +19,7 @@ Deno.test("rejects empty or non-finite file sizes", () => {
   }
 });
 
-Deno.test("rejects files above the existing 25 MiB limit", () => {
+Deno.test("rejects files above the deployed 20 MiB limit", () => {
   if (validateUploadInput({ name: "document.pdf", size: MAX_UPLOAD_BYTES + 1 }) !== "FILE_TOO_LARGE") {
     throw new Error("expected oversized file to be rejected");
   }

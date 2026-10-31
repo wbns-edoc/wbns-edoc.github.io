@@ -10,6 +10,8 @@ on:
       - "supabase/functions/permanent-delete-incoming/**"
       - "supabase/functions/user-import/**"
       - "supabase/functions/delete-document-attachment/**"
+      - "supabase/functions/drive-health/**"
+      - "tests/drive-health-ui-contract.test.cjs"
       - "supabase/config.toml"
       - ".github/workflows/drive-upload-ci.yml"
       - "package.json"
@@ -21,6 +23,7 @@ on:
       - "supabase/functions/drive-upload/**"
       - "supabase/functions/permanent-delete-incoming/**"
       - "supabase/functions/user-import/**"
+      - "supabase/functions/drive-health/**"
       - "supabase/config.toml"
       - ".github/workflows/drive-upload-ci.yml"
       - "package.json"
@@ -34,6 +37,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verify Drive health UI/Edge Function contract
+        run: node tests/drive-health-ui-contract.test.cjs
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -42,6 +47,16 @@ jobs:
           grep -F -A1 '[functions.drive-upload]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
           grep -F -A1 '[functions.permanent-delete-incoming]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
           grep -F -A1 '[functions.delete-document-attachment]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
+          grep -F -A1 '[functions.drive-health]' supabase/config.toml | grep -Fqx 'verify_jwt = true'
+      - name: Require the school Apps Script Bridge and 20 MiB upload limit
+        run: |
+          grep -Fq 'GOOGLE_APPS_SCRIPT_BRIDGE_URL' supabase/functions/drive-upload/index.ts
+          grep -Fq 'GOOGLE_APPS_SCRIPT_BRIDGE_SECRET' supabase/functions/drive-upload/index.ts
+          grep -Fq 'GOOGLE_APPS_SCRIPT_BRIDGE_URL' supabase/functions/permanent-delete-incoming/index.ts
+          grep -Fq 'GOOGLE_APPS_SCRIPT_BRIDGE_SECRET' supabase/functions/permanent-delete-incoming/index.ts
+          ! grep -R -n 'GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON' supabase/functions/drive-upload supabase/functions/permanent-delete-incoming
+          grep -Fq 'MAX_UPLOAD_BYTES = 20 * 1024 * 1024' supabase/functions/drive-upload/file-validation.ts
+          grep -Fq 'BRIDGE_MAX_FILE_BYTES = 20 * 1024 * 1024' supabase/functions/drive-upload/index.ts
       - name: Prevent server secrets in frontend source
         run: "! grep -R -n -E 'SUPABASE_SERVICE_ROLE_KEY|GOOGLE_DRIVE_SERVICE_ACCOUNT_JSON' src"
       - name: Install frontend dependencies
@@ -74,3 +89,5 @@ jobs:
         run: deno check --node-modules-dir=auto supabase/functions/user-import/index.ts
       - name: Type-check attachment deletion Edge Function
         run: deno check --node-modules-dir=auto supabase/functions/delete-document-attachment/index.ts
+      - name: Type-check Drive health Edge Function
+        run: deno check --node-modules-dir=auto supabase/functions/drive-health/index.ts

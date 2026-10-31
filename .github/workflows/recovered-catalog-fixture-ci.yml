@@ -3,17 +3,80 @@ name: Recovered Catalog Fixture CI
 on:
   pull_request:
     paths:
+      - "recovery/catalog/relations-and-security.sql"
+      - "recovery/catalog/private-functions.sql"
+      - "recovery/catalog/public-functions.sql"
+      - "recovery/catalog/candidate-has-department-permission-active-department.sql"
+      - "tests/schema-recovery-replay.test.py"
+      - "tests/schema-recovery-replay-bootstrap.sql"
+      - "tests/schema-recovery-rls-behavior.sql"
       - "supabase/tests/fixtures/recovered-production-catalog.sql"
       - "supabase/tests/database/recovered_catalog_fixture_smoke.sql"
       - "supabase/tests/database/workflow_rpc_wrappers.sql"
       - "supabase/tests/database/automatic_admin_document_permissions.sql"
       - "supabase/tests/database/department_scoped_document_access.sql"
       - "supabase/tests/database/department_scope_behavior.sql"
+      - "supabase/tests/database/department_scoped_access_final_correction.sql"
+      - "supabase/tests/database/explicit_active_department_membership.test.sql"
+      - "supabase/tests/database/approval_authorization_denials.test.sql"
+      - "supabase/tests/database/department_scoped_identity_permissions.test.sql"
       - "supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql"
       - "supabase/migrations/20261010150000_grant_director_document_update.sql"
+      - "supabase/migrations/20261010160000_multi_department_membership_v1.sql"
       - "supabase/migrations/20261010170000_department_scoped_document_access_v1.sql"
       - "supabase/migrations/20261010180000_scope_workflow_assignment_and_status.sql"
       - "supabase/migrations/20261010190000_department_aware_document_registration_v1.sql"
+      - "supabase/migrations/20261011100000_department_scoped_roles_permissions_v1.sql"
+      - "supabase/migrations/20261011120000_department_role_matrix_seed_fix.sql"
+      - "supabase/migrations/20261011121000_department_scoped_read_rpc_fix.sql"
+      - "supabase/migrations/20261011140000_department_scoped_write_rpc_guards.sql"
+      - "supabase/migrations/20261011143751_prevent_global_role_escalation.sql"
+      - "supabase/migrations/20261011144307_grant_director_global_document_create.sql"
+      - "supabase/migrations/20261011150000_department_scoped_access_final_correction.sql"
+      - "supabase/migrations/20261011160000_department_scoped_approval_guards.sql"
+      - "supabase/migrations/20261011170000_department_scoped_rls_and_file_guards.sql"
+      - "supabase/migrations/20261011180000_close_remaining_department_rls_bypasses.sql"
+      - "supabase/migrations/20261011190000_separate_document_edit_from_approve_assign.sql"
+      - "supabase/migrations/20261011200000_guard_document_file_attachment.sql"
+      - "supabase/migrations/20261011210000_require_department_membership_for_scoped_permissions.sql"
+      - "supabase/migrations/20261030110000_notifications_realtime_publication_draft.sql"
+      - "supabase/migrations/20261031100000_staff_leave_confirmed_rules_enforcement_draft.sql"
+      - "supabase/migrations/20261030094941_require_active_department_for_scoped_permissions.sql"
+      - "supabase/migrations/20261011231000_require_active_membership_for_approvers.sql"
+      - "supabase/migrations/20261011232000_require_explicit_active_department_membership.sql"
+      - "supabase/migrations/20261013001230_include_department_scoped_permissions_in_identity.sql"
+      - "supabase/migrations/20261011230000_manage_department_membership_rpc.sql"
+      - "supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql"
+      - "supabase/migrations/20261020230000_staff_leave_workflow_foundation_draft.sql"
+      - "supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql"
+      - "supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql"
+      - "supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql"
+      - "supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql"
+      - "supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql"
+      - "supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql"
+      - "supabase/migrations/20261022210000_staff_leave_submit_two_stage_route_draft.sql"
+      - "supabase/migrations/20261023100000_staff_leave_immutable_route_snapshot_draft.sql"
+      - "supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql"
+      - "supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql"
+      - "supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql"
+      - "supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql"
+      - "supabase/migrations/20261023160000_staff_leave_approver_dashboard_summary_draft.sql"
+      - "supabase/migrations/20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql"
+      - "tests/leave-auth-users-fixture.sql"
+      - "tests/leave-schema-rls.test.sql"
+      - "tests/leave-create-draft-rpc.test.sql"
+      - "tests/leave-submit-rpc.test.sql"
+      - "tests/leave-cancel-rpc.test.sql"
+      - "tests/leave-decide-rpc.test.sql"
+      - "tests/leave-notification-outbox.test.sql"
+      - "tests/leave-responsibility-route-bridge.test.sql"
+      - "tests/leave-responsibility-submit-e2e.test.sql"
+      - "tests/leave-policy-calculation-gate.test.sql"
+      - "tests/leave-over-limit-notification.test.sql"
+      - "tests/leave-dashboard-summary.test.sql"
+      - "tests/leave-direct-vice-absence-evidence.test.sql"
+      - "supabase/tests/database/department_membership_management.test.sql"
+      - "supabase/tests/database/global_role_assignment_guard.test.sql"
       - ".github/workflows/recovered-catalog-fixture-ci.yml"
   push:
     branches:
@@ -25,12 +88,27 @@ on:
       - "supabase/tests/database/automatic_admin_document_permissions.sql"
       - "supabase/tests/database/department_scoped_document_access.sql"
       - "supabase/tests/database/department_scope_behavior.sql"
+      - "supabase/tests/database/department_scoped_access_final_correction.sql"
       - "supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql"
       - "supabase/migrations/20261010150000_grant_director_document_update.sql"
+      - "supabase/migrations/20261010160000_multi_department_membership_v1.sql"
       - "supabase/migrations/20261010170000_department_scoped_document_access_v1.sql"
       - "supabase/migrations/20261010180000_scope_workflow_assignment_and_status.sql"
       - "supabase/migrations/20261010190000_department_aware_document_registration_v1.sql"
+      - "supabase/migrations/20261011100000_department_scoped_roles_permissions_v1.sql"
+      - "supabase/migrations/20261011120000_department_role_matrix_seed_fix.sql"
+      - "supabase/migrations/20261011121000_department_scoped_read_rpc_fix.sql"
+      - "supabase/migrations/20261011140000_department_scoped_write_rpc_guards.sql"
+      - "supabase/migrations/20261011150000_department_scoped_access_final_correction.sql"
+      - "supabase/migrations/20261011160000_department_scoped_approval_guards.sql"
+      - "supabase/migrations/20261011170000_department_scoped_rls_and_file_guards.sql"
+      - "supabase/migrations/20261011180000_close_remaining_department_rls_bypasses.sql"
+      - "supabase/migrations/20261011190000_separate_document_edit_from_approve_assign.sql"
+      - "supabase/migrations/20261011200000_guard_document_file_attachment.sql"
+      - "supabase/migrations/20261011210000_require_department_membership_for_scoped_permissions.sql"
+      - "supabase/migrations/20261011231000_require_active_membership_for_approvers.sql"
       - ".github/workflows/recovered-catalog-fixture-ci.yml"
+
   workflow_dispatch:
 
 permissions:
@@ -38,7 +116,7 @@ permissions:
 
 concurrency:
   group: recovered-catalog-fixture-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   recovered-catalog-fixture:
@@ -56,25 +134,107 @@ jobs:
         run: |
           set -euo pipefail
           test_dir="$RUNNER_TEMP/wbns-catalog-fixture"
-          mkdir -p "$test_dir/supabase/migrations" "$test_dir/supabase/tests"
+          mkdir -p "$test_dir/supabase/migrations" "$test_dir/supabase/tests" "$test_dir/leave-tests"
           cp supabase/config.toml "$test_dir/supabase/config.toml"
           sed -i 's/^project_id = .*/project_id = "wbns-edoc-catalog-fixture-ci"/' "$test_dir/supabase/config.toml"
           cp supabase/tests/fixtures/recovered-production-catalog.sql "$test_dir/supabase/migrations/20261010120000_recovered_production_catalog.sql"
           cp supabase/migrations/20261010130000_secure_public_workflow_rpc_wrappers_v1.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261010150000_grant_director_document_update.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261010160000_multi_department_membership_v1.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261010170000_department_scoped_document_access_v1.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261010180000_scope_workflow_assignment_and_status.sql "$test_dir/supabase/migrations/"
           cp supabase/migrations/20261010190000_department_aware_document_registration_v1.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011100000_department_scoped_roles_permissions_v1.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011120000_department_role_matrix_seed_fix.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011121000_department_scoped_read_rpc_fix.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011140000_department_scoped_write_rpc_guards.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011143751_prevent_global_role_escalation.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011144307_grant_director_global_document_create.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011150000_department_scoped_access_final_correction.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011160000_department_scoped_approval_guards.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011170000_department_scoped_rls_and_file_guards.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011180000_close_remaining_department_rls_bypasses.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011190000_separate_document_edit_from_approve_assign.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011200000_guard_document_file_attachment.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011210000_require_department_membership_for_scoped_permissions.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011230000_manage_department_membership_rpc.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011231000_require_active_membership_for_approvers.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011232000_require_explicit_active_department_membership.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261013001230_include_department_scoped_permissions_in_identity.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261020230000_staff_leave_workflow_foundation_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261021140000_staff_leave_cancel_rpc_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261021160000_staff_leave_submit_rpc_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261021180000_staff_leave_decide_rpc_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261022100000_staff_leave_two_stage_approval_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261022210000_staff_leave_submit_two_stage_route_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023100000_staff_leave_immutable_route_snapshot_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023160000_staff_leave_approver_dashboard_summary_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261030110000_notifications_realtime_publication_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261031100000_staff_leave_confirmed_rules_enforcement_draft.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261030094941_require_active_department_for_scoped_permissions.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011231000_require_active_membership_for_approvers.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261011232000_require_explicit_active_department_membership.sql "$test_dir/supabase/migrations/"
+          cp supabase/migrations/20261013001230_include_department_scoped_permissions_in_identity.sql "$test_dir/supabase/migrations/"
           cp supabase/tests/database/recovered_catalog_fixture_smoke.sql "$test_dir/supabase/tests/recovered_catalog_fixture_smoke.sql"
           cp supabase/tests/database/workflow_rpc_wrappers.sql "$test_dir/supabase/tests/workflow_rpc_wrappers.sql"
           cp supabase/tests/database/automatic_admin_document_permissions.sql "$test_dir/supabase/tests/automatic_admin_document_permissions.sql"
           cp supabase/tests/database/department_scoped_document_access.sql "$test_dir/supabase/tests/department_scoped_document_access.sql"
           cp supabase/tests/database/department_scope_behavior.sql "$test_dir/supabase/tests/department_scope_behavior.sql"
+          cp supabase/tests/database/department_scoped_access_final_correction.sql "$test_dir/supabase/tests/department_scoped_access_final_correction.sql"
+          cp supabase/tests/database/explicit_active_department_membership.test.sql "$test_dir/supabase/tests/explicit_active_department_membership.test.sql"
+          cp supabase/tests/database/approval_authorization_denials.test.sql "$test_dir/supabase/tests/approval_authorization_denials.test.sql"
+          cp supabase/tests/database/department_scoped_identity_permissions.test.sql "$test_dir/supabase/tests/department_scoped_identity_permissions.test.sql"
+          cp tests/leave-auth-users-fixture.sql "$test_dir/leave-tests/leave-auth-users-fixture.sql"
+          cp tests/leave-schema-rls.test.sql "$test_dir/leave-tests/leave-schema-rls.test.sql"
+          cp tests/leave-create-draft-rpc.test.sql "$test_dir/leave-tests/leave-create-draft-rpc.test.sql"
+          cp tests/leave-submit-rpc.test.sql "$test_dir/leave-tests/leave-submit-rpc.test.sql"
+          cp tests/leave-cancel-rpc.test.sql "$test_dir/leave-tests/leave-cancel-rpc.test.sql"
+          cp tests/leave-decide-rpc.test.sql "$test_dir/leave-tests/leave-decide-rpc.test.sql"
+          cp tests/leave-notification-outbox.test.sql "$test_dir/leave-tests/leave-notification-outbox.test.sql"
+          cp tests/leave-responsibility-route-bridge.test.sql "$test_dir/leave-tests/leave-responsibility-route-bridge.test.sql"
+          cp tests/leave-responsibility-submit-e2e.test.sql "$test_dir/leave-tests/leave-responsibility-submit-e2e.test.sql"
+          cp tests/leave-policy-calculation-gate.test.sql "$test_dir/leave-tests/leave-policy-calculation-gate.test.sql"
+          cp tests/leave-over-limit-notification.test.sql "$test_dir/leave-tests/leave-over-limit-notification.test.sql"
+          cp tests/leave-dashboard-summary.test.sql "$test_dir/leave-tests/leave-dashboard-summary.test.sql"
+          cp tests/leave-direct-vice-absence-evidence.test.sql "$test_dir/leave-tests/leave-direct-vice-absence-evidence.test.sql"
           echo "TEST_DIR=$test_dir" >> "$GITHUB_ENV"
 
       - name: Apply recovered catalog and forward migration to disposable local database
         working-directory: ${{ env.TEST_DIR }}
         run: supabase start -x gotrue,realtime,storage-api,imgproxy,kong,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+
+      - name: Run staff leave regression suite against recovered Production catalog
+        working-directory: ${{ env.TEST_DIR }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_URL="$(supabase status -o env | sed -n 's/^DB_URL=//p' | sed 's/^"//;s/"$//')"
+          if [ -z "$DB_URL" ]; then DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"; fi
+          psql "$DB_URL" -v ON_ERROR_STOP=1 -f "leave-tests/leave-auth-users-fixture.sql"
+          for test_file in \
+            leave-schema-rls.test.sql \
+            leave-create-draft-rpc.test.sql \
+            leave-submit-rpc.test.sql \
+            leave-cancel-rpc.test.sql \
+            leave-decide-rpc.test.sql \
+            leave-notification-outbox.test.sql \
+            leave-responsibility-route-bridge.test.sql \
+            leave-responsibility-submit-e2e.test.sql \
+            leave-policy-calculation-gate.test.sql \
+            leave-over-limit-notification.test.sql \
+            leave-dashboard-summary.test.sql \
+            leave-direct-vice-absence-evidence.test.sql; do
+            echo "Running $test_file"
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "leave-tests/$test_file"
+          done
 
       - name: Lint recovered catalog and forward migration
         id: lint
@@ -96,3 +256,88 @@ jobs:
         if: always()
         working-directory: ${{ env.TEST_DIR }}
         run: supabase stop --no-backup
+
+  production-catalog-snapshot-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: replay
+          POSTGRES_PASSWORD: replay-only-password
+          POSTGRES_DB: recovery_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U replay -d recovery_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: replay
+      PGPASSWORD: replay-only-password
+      PGDATABASE: recovery_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Confirm isolated PostgreSQL 17
+        run: psql -v ON_ERROR_STOP=1 -c 'SELECT version();'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pinned SQL parser
+        run: python -m pip install --disable-pip-version-check pglast==7.21
+      - name: Parse and generate dependency-ordered SQL phases
+        run: python tests/schema-recovery-replay.test.py --out-dir "$RUNNER_TEMP/wbns-replay"
+      - name: Bootstrap disposable compatibility objects
+        run: psql -v ON_ERROR_STOP=1 -f tests/schema-recovery-replay-bootstrap.sql
+      - name: Replay October 15 catalog phases on disposable PostgreSQL only
+        shell: bash
+        run: |
+          set -euo pipefail
+          for phase in "$RUNNER_TEMP"/wbns-replay/*.sql; do
+            echo "::group::Applying $(basename "$phase") to disposable database"
+            psql -v ON_ERROR_STOP=1 -f "$phase"
+            echo "::endgroup::"
+          done
+      - name: Apply isolated authorization correction candidate (disposable DB only)
+        run: psql -v ON_ERROR_STOP=1 -f recovery/catalog/candidate-has-department-permission-active-department.sql
+      - name: Verify reconstructed object inventory and security options
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          DECLARE
+            table_count integer;
+            type_count integer;
+            policy_count integer;
+            trigger_count integer;
+            function_count integer;
+            view_count integer;
+            tables_without_rls integer;
+            views_without_invoker integer;
+            broad_policies integer;
+          BEGIN
+            SELECT count(*) INTO table_count FROM pg_tables WHERE schemaname = 'public';
+            SELECT count(*) INTO type_count FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname='public' AND t.typtype='e';
+            SELECT count(*) INTO policy_count FROM pg_policies WHERE schemaname='public';
+            SELECT count(*) INTO trigger_count FROM pg_trigger tr JOIN pg_class c ON c.oid=tr.tgrelid JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND NOT tr.tgisinternal;
+            SELECT count(*) INTO function_count FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('public','private') AND NOT EXISTS (SELECT 1 FROM pg_depend d WHERE d.classid = 'pg_proc'::regclass AND d.objid = p.oid AND d.deptype = 'e');
+            SELECT count(*) INTO view_count FROM pg_views WHERE schemaname='public';
+            SELECT count(*) INTO tables_without_rls FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind IN ('r','p') AND NOT c.relrowsecurity;
+            SELECT count(*) INTO views_without_invoker FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relkind='v' AND (c.reloptions IS NULL OR NOT ('security_invoker=true' = ANY(c.reloptions)));
+            SELECT count(*) INTO broad_policies FROM pg_policies WHERE schemaname='public' AND ('anon' = ANY(roles) OR 'public' = ANY(roles));
+            IF table_count <> 25 THEN RAISE EXCEPTION 'expected 25 public tables, got %', table_count; END IF;
+            IF type_count <> 5 THEN RAISE EXCEPTION 'expected 5 public enums, got %', type_count; END IF;
+            IF policy_count <> 45 THEN RAISE EXCEPTION 'expected 45 public policies, got %', policy_count; END IF;
+            IF trigger_count <> 12 THEN RAISE EXCEPTION 'expected 12 public triggers, got %', trigger_count; END IF;
+            IF function_count <> 54 THEN RAISE EXCEPTION 'expected 54 public/private functions, got %', function_count; END IF;
+            IF view_count <> 2 THEN RAISE EXCEPTION 'expected 2 public views, got %', view_count; END IF;
+            IF tables_without_rls <> 0 THEN RAISE EXCEPTION 'expected all public tables to enable RLS, found % without RLS', tables_without_rls; END IF;
+            IF views_without_invoker <> 0 THEN RAISE EXCEPTION 'expected all public views to use security_invoker=true, found % without it', views_without_invoker; END IF;
+            IF broad_policies <> 0 THEN RAISE EXCEPTION 'expected no public policies targeting anon/PUBLIC, found %', broad_policies; END IF;
+          END $$;
+          SQL
+      - name: Test admin, department, and RLS behavior
+        run: psql -v ON_ERROR_STOP=1 -f tests/schema-recovery-rls-behavior.sql
