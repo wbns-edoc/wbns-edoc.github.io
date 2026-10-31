@@ -32,7 +32,7 @@ insert into public.staff_leave_policy_versions(
  '30000000-0000-0000-0000-000000000001', 'school-wide', 2, 'approved',
  '10000000-0000-0000-0000-000000000001', now(),
  '{"fixture":true,"verification_status":"approved","calculation_ready":true,
-   "calendar":{"verified":true,"non_working_dates":[]},"implementation_gaps":[]}'::jsonb
+   "calendar":{"verified":true,"weekend_days":[6,7],"non_working_dates":[]},"implementation_gaps":[]}'::jsonb
 );
 
 insert into public.staff_leave_requests(
