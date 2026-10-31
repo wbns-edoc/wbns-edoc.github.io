@@ -14,6 +14,7 @@ on conflict(code) do update set is_active=true;
 create temporary table test_leave_type_ids on commit drop as
 select code,id from public.staff_leave_types
 where code in ('sick_leave','assist_spouse_childbirth');
+grant select on test_leave_type_ids to authenticated;
 
 insert into public.staff_leave_policy_versions(
  id,policy_code,version,status,effective_from,policy_rules,reviewed_by,reviewed_at
