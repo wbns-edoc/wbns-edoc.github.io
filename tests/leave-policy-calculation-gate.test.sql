@@ -37,6 +37,16 @@ begin
   select status, policy_rules into v_status, v_rules
   from public.staff_leave_policy_versions
   where policy_code='school-wide' and version=1;
+  if v_rules->'leave_types'->'maternity_leave'->>'max_days_per_request' <> '90'
+     or v_rules->'leave_types'->'assist_spouse_childbirth'->>'max_days_per_event' <> '15'
+     or v_rules->'leave_types'->'assist_spouse_childbirth'->>'use_within_calendar_days_after_childbirth' <> '60'
+     or v_rules->'leave_types'->'personal_leave'->>'max_days_per_year' <> '45'
+     or v_rules->'leave_types'->'annual_leave'->>'first_year_minimum_service_months' <> '6'
+     or v_rules->'leave_types'->'ordination_hajj'->>'minimum_notice_days' <> '60'
+     or v_rules->'leave_types'->'military_selection_training'->>'notify_supervisor_within_hours' <> '48'
+     or v_rules->'leave_types'->'sick_leave'->>'certificate_threshold_conflict' <> 'true' then
+    raise exception 'handbook extraction values or unresolved conflicts do not match source';
+  end if;
   if v_status is distinct from 'draft'
      or v_rules->>'verification_status' is distinct from 'pending'
      or v_rules->>'calculation_ready' is distinct from 'false'
