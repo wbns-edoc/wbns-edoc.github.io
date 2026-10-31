@@ -23,6 +23,8 @@ on:
       - 'tests/leave-dashboard-summary.test.sql'
       - 'supabase/migrations/20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql'
       - 'supabase/migrations/20261030110000_notifications_realtime_publication_draft.sql'
+      - 'supabase/migrations/20261031100000_staff_leave_confirmed_rules_enforcement_draft.sql'
+      - 'tests/leave-confirmed-rules-enforcement.test.sql'
       - 'tests/leave-direct-vice-absence-evidence.test.sql'
       - 'tests/leave-schema-rls.test.sql'
       - 'tests/leave-create-draft-rpc.test.sql'
