@@ -98,6 +98,30 @@ begin
 end
 $missing_gaps_guard$;
 
+-- A policy cannot be approved with a verified flag alone: the school must
+-- explicitly define which ISO weekdays are weekends.
+do $calendar_shape_guard$
+begin
+  begin
+    insert into public.staff_leave_policy_versions(
+      id,policy_code,version,status,effective_from,
+      policy_rules,reviewed_by,reviewed_at
+    ) values (
+      '83000000-0000-0000-0000-000000000006',
+      'school-wide',4,'approved',date '2026-01-01',
+      '{"verification_status":"approved","calculation_ready":true,
+        "calendar":{"non_working_dates":[],"verified":true},
+        "implementation_gaps":[],
+        "leave_types":{"policy_test":{"counting_basis":"working_days"}}}'::jsonb,
+      '83000000-0000-0000-0000-000000000002',now()
+    );
+    raise exception 'expected missing weekend_days to fail';
+  exception when sqlstate '55000' then
+    if sqlerrm <> 'staff_leave_policy_has_unresolved_implementation_gaps' then raise; end if;
+  end;
+end
+$calendar_shape_guard$;
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub','83000000-0000-0000-0000-000000000001',true);
 
