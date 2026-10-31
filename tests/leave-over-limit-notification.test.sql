@@ -17,7 +17,7 @@ insert into public.staff_leave_policy_versions(
  '84000000-0000-0000-0000-000000000005',
  'school-wide',4,'approved',date '2026-01-01',
  '{"fixture":true,"verification_status":"approved","calculation_ready":true,
-   "calendar":{"verified":true,"non_working_dates":[]},"implementation_gaps":[],
+   "calendar":{"verified":true,"weekend_days":[6,7],"non_working_dates":[]},"implementation_gaps":[],
    "leave_types":{"over_limit_test":{"counting_basis":"calendar_days","max_days_per_request":1}}}'::jsonb,
  '84000000-0000-0000-0000-000000000003',now()
 );
