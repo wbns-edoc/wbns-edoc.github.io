@@ -84,6 +84,7 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
  const [selectedType,setSelectedType]=React.useState('');
  const [startsOn,setStartsOn]=React.useState('');
  const [endsOn,setEndsOn]=React.useState('');
+ const [childbirthEventDate,setChildbirthEventDate]=React.useState('');
  const [reason,setReason]=React.useState('');
  const [loading,setLoading]=React.useState(true);
  const [busy,setBusy]=React.useState(false);
@@ -167,8 +168,11 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
   e.preventDefault();if(!profile||busy||!available)return;
   if(!selectedType||!startsOn||!endsOn||!reason.trim()){setError('กรุณากรอกประเภทการลา วันที่เริ่มต้น วันที่สิ้นสุด และเหตุผล');return}
   if(endsOn<startsOn){setError('วันที่สิ้นสุดต้องไม่ก่อนวันที่เริ่มลา');return}
+  const selectedLeaveType=types.find(t=>t.id===selectedType);
+  const isChildbirthLeave=selectedLeaveType?.code==='assist_spouse_childbirth';
+  if(isChildbirthLeave&&(!childbirthEventDate||childbirthEventDate>startsOn)){setError('กรุณาระบุวันที่คลอดบุตร และวันที่คลอดต้องไม่หลังวันเริ่มลา');return}
   setBusy(true);setError('');setNotice('');
-  const {data,error}=await supabase.rpc('staff_leave_create_draft',{p_leave_type_id:selectedType,p_starts_on:startsOn,p_ends_on:endsOn,p_reason:reason.trim()});
+  const {data,error}=await supabase.rpc('staff_leave_create_draft',{p_leave_type_id:selectedType,p_starts_on:startsOn,p_ends_on:endsOn,p_reason:reason.trim(),p_childbirth_event_date:isChildbirthLeave?childbirthEventDate:null});
   if(error)setError('บันทึกร่างใบลาไม่สำเร็จ: '+error.message);
   else{setNotice('บันทึกร่างใบลาแล้ว ระบบจะยังไม่ส่งให้ผู้อนุมัติจนกว่านโยบายกลางและการคำนวณวันลาจะผ่านการตรวจสอบ');setReason('');await load();}
   setBusy(false);
@@ -199,6 +203,7 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
     <label className="wide">ประเภทการลา<select value={selectedType} onChange={e=>setSelectedType(e.target.value)} required><option value="">— เลือกประเภทการลา —</option>{types.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
     <label>วันที่เริ่มลา<input type="date" value={startsOn} onChange={e=>setStartsOn(e.target.value)} required/></label>
     <label>วันที่สิ้นสุด<input type="date" value={endsOn} min={startsOn||undefined} onChange={e=>setEndsOn(e.target.value)} required/></label>
+    {types.find(t=>t.id===selectedType)?.code==='assist_spouse_childbirth'&&<label>วันที่คลอดบุตร<input type="date" value={childbirthEventDate} max={startsOn||undefined} onChange={e=>setChildbirthEventDate(e.target.value)} required/></label>}
     <label className="wide">เหตุผลการลา<textarea value={reason} onChange={e=>setReason(e.target.value)} maxLength={4000} rows={3} required placeholder="ระบุเหตุผลที่จำเป็นต่อการพิจารณาเท่านั้น"/></label>
     {notice&&<div className="success wide">{notice}</div>}
     <div className="form-actions"><button type="submit" disabled={busy||loading||types.length===0}>{busy?'กำลังบันทึก…':'บันทึกร่างใบลา'}</button></div>
