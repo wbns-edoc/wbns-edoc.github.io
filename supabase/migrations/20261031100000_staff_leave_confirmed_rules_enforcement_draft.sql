@@ -49,6 +49,8 @@ declare
   v_type_rules jsonb;
   v_counting_basis text;
   v_day_count numeric(7,2);
+  v_max_days numeric(7,2);
+  v_is_over_limit boolean := false;
   v_policy_snapshot jsonb;
 begin
   v_actor := auth.uid();
@@ -119,6 +121,10 @@ begin
   end if;
 
   if v_policy_id is not null then
+    if nullif(v_type_rules->>'max_days_per_request','') is not null then
+      v_max_days := (v_type_rules->>'max_days_per_request')::numeric;
+      v_is_over_limit := v_day_count > v_max_days;
+    end if;
     v_policy_snapshot:=jsonb_build_object(
       'policy_code','school-wide','policy_version_id',v_policy_id,
       'policy_version',v_policy_version,'leave_type_code',v_type_code,
@@ -135,10 +141,10 @@ begin
 
   insert into public.staff_leave_requests(
     applicant_id,leave_type_id,policy_version_id,starts_on,ends_on,
-    day_count,reason,policy_snapshot,status,childbirth_event_date
+    day_count,is_over_limit,reason,policy_snapshot,status,childbirth_event_date
   ) values (
     v_actor,p_leave_type_id,v_policy_id,p_starts_on,p_ends_on,
-    v_day_count,btrim(p_reason),v_policy_snapshot,'draft',p_childbirth_event_date
+    v_day_count,v_is_over_limit,btrim(p_reason),v_policy_snapshot,'draft',p_childbirth_event_date
   ) returning id into v_request_id;
   return v_request_id;
 exception
