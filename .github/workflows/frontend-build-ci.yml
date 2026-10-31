@@ -26,5 +26,6 @@ jobs:
       - run: node tests/staff-leave-role-visibility.test.cjs
       - run: node tests/drive-health-ui-contract.test.cjs
       - name: Guard GitHub Pages deployment to main only
-        run: grep -Fq "if: github.ref == 'refs/heads/main'" .github/workflows/deploy.yml
+        run: |
+          grep -Fq "if: github.ref == 'refs/heads/main'" .github/workflows/deploy.yml
       - run: npm run build
