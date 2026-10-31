@@ -39,14 +39,14 @@ Provide separate dashboard views for the **school director** and **deputy direct
 - Show the metric definition, data freshness/last refresh time, and whether the count represents requests, calendar days, working days, or person-days.
 - A click-through to individual requests must recheck authorization. Aggregated statistics must not become a route to read another person's confidential leave reason or attachment.
 - The director and deputy director see only records they are authorized to review under the approved authority matrix. Do not assume that a dashboard role alone grants unrestricted access to every sensitive field.
-- No entitlement, “excess leave,” or misconduct conclusion may be inferred solely from a chart. Compare usage against the applicable, verified policy version for that personnel category and leave type.
+- No entitlement, “excess leave,” or misconduct conclusion may be inferred solely from a chart. Compare usage against the applicable, verified policy version for that school-wide policy version and leave type.
 
 ## 3. Policy-based leave-day counting
 
-**Do not hard-code one universal day-counting rule.** Day counting must be derived from the applicable approved policy version, personnel category, leave type, and the official source in force for the relevant dates.
+**Use the single school-wide policy confirmed by the school owner.** Day counting must be derived from the applicable approved school-wide policy version, leave type, and official source in force for the relevant dates. Personnel category is reporting metadata only and must never select a different entitlement or formula.
 
 Each policy version should record:
-- personnel category and leave type;
+- school-wide policy version and leave type; personnel category is retained only as optional reporting metadata;
 - official source name, circular/order number, issue/effective dates, and source URL or retained reference;
 - whether counting uses calendar days, working days, or another explicitly authorized basis;
 - treatment of weekends, public holidays, half-days, start/end dates, and cross-year/cross-policy periods;
@@ -54,7 +54,7 @@ Each policy version should record:
 - reviewer, verification date, approval status, and policy version identifier.
 
 Calculation rules:
-1. Resolve the policy version by personnel category, leave type, and leave start date (and apply any legally required transition rule for periods crossing an effective-date boundary).
+1. Resolve the single school-wide policy version by leave type and leave start date (and apply any legally required transition rule for periods crossing an effective-date boundary).
 2. Calculate days through one tested server-side function; use Asia/Bangkok for date-only business rules and avoid UTC date shifts.
 3. Store the submitted date range and the calculated result separately, together with the policy version and calculation details, so later policy changes do not silently rewrite historical decisions.
 4. Recalculate only through an explicit audited action when a correction is required.
