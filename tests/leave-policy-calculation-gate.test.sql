@@ -38,13 +38,21 @@ begin
   from public.staff_leave_policy_versions
   where policy_code='school-wide' and version=1;
   if v_rules->'leave_types'->'maternity_leave'->>'max_days_per_request' <> '90'
-     or v_rules->'leave_types'->'assist_spouse_childbirth'->>'max_days_per_event' <> '15'
+     or v_rules->'leave_types'->'assist_spouse_childbirth'->>'max_working_days_per_event' <> '15'
+     or v_rules->'leave_types'->'assist_spouse_childbirth'->>'allow_non_consecutive_periods' <> 'false'
+     or v_rules->'leave_types'->'assist_spouse_childbirth'->>'one_continuous_period_required' <> 'true'
+     or v_rules->'leave_types'->'assist_spouse_childbirth'->>'one_entitlement_per_childbirth_event' <> 'true'
      or v_rules->'leave_types'->'assist_spouse_childbirth'->>'use_within_calendar_days_after_childbirth' <> '60'
+     or v_rules->'leave_types'->'sick_leave'->>'certificate_from_working_day' <> '3'
+     or v_rules->'leave_types'->'sick_leave'->>'medical_certificate_required' <> 'true'
+     or v_rules->'leave_types'->'sick_leave'->>'certificate_threshold_confirmed_by_school' <> 'true'
+     or v_rules->'leave_types'->'assist_spouse_childbirth'->>'file_within_calendar_days_after_childbirth' <> '30'
+     or v_rules->'leave_types'->'assist_spouse_childbirth'->>'deadline_source_note' not like '%remains unresolved%'
      or v_rules->'leave_types'->'personal_leave'->>'max_days_per_year' <> '45'
      or v_rules->'leave_types'->'annual_leave'->>'first_year_minimum_service_months' <> '6'
      or v_rules->'leave_types'->'ordination_hajj'->>'minimum_notice_days' <> '60'
      or v_rules->'leave_types'->'military_selection_training'->>'notify_supervisor_within_hours' <> '48'
-     or v_rules->'leave_types'->'sick_leave'->>'certificate_threshold_conflict' <> 'true' then
+     or v_rules->'leave_types'->'sick_leave' ? 'certificate_threshold_conflict' then
     raise exception 'handbook extraction values or unresolved conflicts do not match source';
   end if;
   if v_status is distinct from 'draft'
