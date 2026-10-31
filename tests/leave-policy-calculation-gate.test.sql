@@ -19,7 +19,7 @@ begin
     'public.staff_leave_create_draft(uuid,date,date,text)'::regprocedure
   ) into v_definition;
 
-  if position('policy_code = ''school-wide''' in lower(v_definition)) = 0 then
+  if lower(v_definition) !~ 'policy_code[[:space:]]*=[[:space:]]*''school-wide''' then
     raise exception 'leave calculation must bind only to the school-wide policy';
   end if;
   if position('personnel_category' in lower(v_definition)) > 0 then
