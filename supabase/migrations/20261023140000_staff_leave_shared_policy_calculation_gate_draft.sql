@@ -389,77 +389,37 @@ begin
        or new.policy_rules->>'calculation_ready' is distinct from 'true'
        or coalesce((new.policy_rules->'calendar'->>'verified')::boolean, false) is not true
        or jsonb_typeof(new.policy_rules->'calendar'->'weekend_days') is distinct from 'array'
-       or jsonb_array_length(coalesce(new.policy_rules->'calendar'->'weekend_days','[]'::jsonb)) = 0
+       or jsonb_array_length(
+         case
+           when jsonb_typeof(new.policy_rules->'calendar'->'weekend_days') = 'array'
+             then new.policy_rules->'calendar'->'weekend_days'
+           else '[]'::jsonb
+         end
+       ) = 0
        or exists (
          select 1
          from jsonb_array_elements_text(
-           case when jsonb_typeof(new.policy_rules->'calendar'->'weekend_days') = 'array'
-             then new.policy_rules->'calendar'->'weekend_days' else '[]'::jsonb end
+           case
+             when jsonb_typeof(new.policy_rules->'calendar'->'weekend_days') = 'array'
+               then new.policy_rules->'calendar'->'weekend_days'
+             else '[]'::jsonb
+           end
          ) as weekend(value)
-         where weekend.value !~ '^[1-7]
-       or jsonb_array_length(
-         case
-           when jsonb_typeof(new.policy_rules->'implementation_gaps') = 'array'
-             then new.policy_rules->'implementation_gaps'
-           else '[]'::jsonb
-         end
-       ) > 0 then
-      raise exception 'staff_leave_policy_has_unresolved_implementation_gaps'
-        using errcode = '55000';
-    end if;
-  end if;
-  return new;
-end;
-$policy_guard$;
-
-drop trigger if exists staff_leave_policy_review_guard
-  on public.staff_leave_policy_versions;
-create trigger staff_leave_policy_review_guard
-before insert or update of status, policy_rules
-on public.staff_leave_policy_versions
-for each row execute function public.staff_leave_policy_review_guard();
-
-revoke all on function public.staff_leave_policy_review_guard()
-  from public, anon, authenticated;
-
-commit;
-
+         where length(weekend.value) <> 1
+            or weekend.value not in ('1','2','3','4','5','6','7')
        )
        or jsonb_typeof(new.policy_rules->'calendar'->'non_working_dates') is distinct from 'array'
        or exists (
          select 1
          from jsonb_array_elements_text(
-           case when jsonb_typeof(new.policy_rules->'calendar'->'non_working_dates') = 'array'
-             then new.policy_rules->'calendar'->'non_working_dates' else '[]'::jsonb end
+           case
+             when jsonb_typeof(new.policy_rules->'calendar'->'non_working_dates') = 'array'
+               then new.policy_rules->'calendar'->'non_working_dates'
+             else '[]'::jsonb
+           end
          ) as holiday(value)
-         where holiday.value !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}
-       or jsonb_array_length(
-         case
-           when jsonb_typeof(new.policy_rules->'implementation_gaps') = 'array'
-             then new.policy_rules->'implementation_gaps'
-           else '[]'::jsonb
-         end
-       ) > 0 then
-      raise exception 'staff_leave_policy_has_unresolved_implementation_gaps'
-        using errcode = '55000';
-    end if;
-  end if;
-  return new;
-end;
-$policy_guard$;
-
-drop trigger if exists staff_leave_policy_review_guard
-  on public.staff_leave_policy_versions;
-create trigger staff_leave_policy_review_guard
-before insert or update of status, policy_rules
-on public.staff_leave_policy_versions
-for each row execute function public.staff_leave_policy_review_guard();
-
-revoke all on function public.staff_leave_policy_review_guard()
-  from public, anon, authenticated;
-
-commit;
-
+         where length(holiday.value) <> 10
+            or holiday.value !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}'
        )
        or jsonb_typeof(new.policy_rules->'implementation_gaps') is distinct from 'array'
        or jsonb_array_length(
