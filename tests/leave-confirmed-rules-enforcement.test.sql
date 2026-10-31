@@ -40,7 +40,7 @@ select public.staff_leave_create_draft(
 );
 -- PASS: 3-day sick leave with medical certificate is allowed through rule trigger.
 select public.staff_leave_create_draft(
- '84000000-0000-0000-0000-000000000003',date '2026-11-02',date '2026-11-04',
+ (select id from test_leave_type_ids where code='sick_leave'),date '2026-11-02',date '2026-11-04',
  'three day sick leave with certificate',null
 );
 reset role;
