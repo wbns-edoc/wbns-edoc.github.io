@@ -177,7 +177,6 @@ as $$
 declare
   v_code text;
   v_rules jsonb;
-  v_certificate_threshold integer;
 begin
   if new.status in ('draft','rejected','cancelled','withdrawn') then
     return new;
@@ -195,10 +194,8 @@ begin
     from public.staff_leave_policy_versions pv
     where pv.id=new.policy_version_id and pv.policy_code='school-wide'
       and pv.status='approved';
-    v_certificate_threshold:=coalesce(
-      (v_rules->'leave_types'->'sick_leave'->>'certificate_from_working_day')::integer,3
-    );
-    if new.day_count>=v_certificate_threshold and not exists(
+    -- The threshold is school-confirmed and fixed here; policy JSON cannot weaken it.
+    if new.day_count>=3 and not exists(
       select 1 from public.staff_leave_attachments a
       where a.request_id=new.id and a.attachment_kind='medical_certificate'
         and a.size_bytes>0 and nullif(btrim(a.storage_object_key),'') is not null
