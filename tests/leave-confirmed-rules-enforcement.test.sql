@@ -9,7 +9,11 @@ on conflict(id) do update set is_active=excluded.is_active;
 insert into public.staff_leave_types(id,code,name,is_active) values
  ('84000000-0000-0000-0000-000000000003','sick_leave','Sick leave',true),
  ('84000000-0000-0000-0000-000000000004','assist_spouse_childbirth','Assist spouse childbirth',true)
-on conflict(id) do update set is_active=true;
+on conflict(code) do update set is_active=true;
+
+create temporary table test_leave_type_ids on commit drop as
+select code,id from public.staff_leave_types
+where code in ('sick_leave','assist_spouse_childbirth');
 
 insert into public.staff_leave_policy_versions(
  id,policy_code,version,status,effective_from,policy_rules,reviewed_by,reviewed_at
@@ -31,7 +35,7 @@ select set_config('request.jwt.claim.sub','84000000-0000-0000-0000-000000000001'
 
 -- PASS: two-day sick leave does not require a certificate.
 select public.staff_leave_create_draft(
- '84000000-0000-0000-0000-000000000003',date '2026-11-02',date '2026-11-03',
+ (select id from test_leave_type_ids where code='sick_leave'),date '2026-11-02',date '2026-11-03',
  'two day sick leave',null
 );
 -- PASS: 3-day sick leave with medical certificate is allowed through rule trigger.
@@ -62,7 +66,7 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub','84000000-0000-0000-0000-000000000001',true);
 -- PASS: one 15-working-day continuous period, tied to one childbirth event.
 select public.staff_leave_create_draft(
- '84000000-0000-0000-0000-000000000004',date '2026-11-02',date '2026-11-20',
+ (select id from test_leave_type_ids where code='assist_spouse_childbirth'),date '2026-11-02',date '2026-11-20',
  'childbirth event entitlement','2026-11-01'
 );
 reset role;
@@ -85,7 +89,7 @@ begin
       applicant_id,leave_type_id,starts_on,ends_on,reason,status,childbirth_event_date
     ) values (
       '84000000-0000-0000-0000-000000000001',
-      '84000000-0000-0000-0000-000000000004',
+      (select id from test_leave_type_ids where code='assist_spouse_childbirth'),
       date '2026-11-23',date '2026-11-23','duplicate event','draft',date '2026-11-01'
     );
     raise exception 'expected_duplicate_childbirth_event_denial';
@@ -97,7 +101,7 @@ begin
     reason,status,policy_snapshot
   ) values (
     '84000000-0000-0000-0000-000000000001',
-    '84000000-0000-0000-0000-000000000003',
+    (select id from test_leave_type_ids where code='sick_leave'),
     '84000000-0000-0000-0000-000000000005',
     date '2026-11-02',date '2026-11-04',3,'missing medical certificate','draft',
     '{"verification_status":"approved","calculation_ready":true}'::jsonb
