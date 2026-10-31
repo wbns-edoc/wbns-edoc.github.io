@@ -24,6 +24,7 @@ on:
       - "supabase/migrations/20261023160000_staff_leave_approver_dashboard_summary_draft.sql"
       - "supabase/migrations/20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql"
       - "supabase/migrations/20261030110000_notifications_realtime_publication_draft.sql"
+      - "supabase/migrations/20261031100000_staff_leave_confirmed_rules_enforcement_draft.sql"
       - "supabase/migrations/20261030094941_require_active_department_for_scoped_permissions.sql"
       - "tests/leave-auth-users-fixture.sql"
       - "tests/leave-schema-rls.test.sql"
@@ -198,7 +199,8 @@ jobs:
             20261023150000_staff_leave_over_limit_notifications_draft.sql \
             20261023160000_staff_leave_approver_dashboard_summary_draft.sql \
             20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql \
-            20261030110000_notifications_realtime_publication_draft.sql; do
+            20261030110000_notifications_realtime_publication_draft.sql \\
+            20261031100000_staff_leave_confirmed_rules_enforcement_draft.sql; do
             echo "::group::Applying $migration to disposable PostgreSQL catalog"
             psql -v ON_ERROR_STOP=1 -f "supabase/migrations/$migration"
             echo "::endgroup::"
