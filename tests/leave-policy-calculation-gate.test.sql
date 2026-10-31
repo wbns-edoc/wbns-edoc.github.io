@@ -142,7 +142,7 @@ insert into public.staff_leave_policy_versions(
  '83000000-0000-0000-0000-000000000004',
  'school-wide',2,'approved',date '2026-01-01',null,
  '{"verification_status":"approved","calculation_ready":true,
-   "calendar":{"non_working_dates":["2026-11-11"],"verified":true},
+   "calendar":{"weekend_days":[5,6],"non_working_dates":["2026-11-11"],"verified":true},
    "implementation_gaps":[],
    "leave_types":{"policy_test":{"counting_basis":"working_days"}}}'::jsonb,
  '83000000-0000-0000-0000-000000000002',now()
@@ -167,10 +167,10 @@ begin
   from public.staff_leave_requests
   where applicant_id='83000000-0000-0000-0000-000000000001' and reason='synthetic verified policy test';
   if v_policy_id <> '83000000-0000-0000-0000-000000000004'
-     or v_day_count <> 4
+     or v_day_count <> 3
      or v_snapshot->>'verification_status'<>'approved'
      or v_snapshot->>'counting_basis'<>'working_days' then
-    raise exception 'shared policy binding or weekday/holiday calculation failed: %, %, %',
+    raise exception 'shared policy binding or configured weekend/holiday calculation failed: %, %, %',
       v_policy_id,v_day_count,v_snapshot;
   end if;
 
