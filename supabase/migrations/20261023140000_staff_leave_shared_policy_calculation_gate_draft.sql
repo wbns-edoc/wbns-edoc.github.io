@@ -290,7 +290,7 @@ insert into public.staff_leave_policy_versions (
         "paid_days": 120,
         "minimum_service_months": 12,
         "once_per_service_lifetime": true,
-        "minimum_notice_days": 20,
+        "minimum_notice_days": 60,
         "complete_ordination_or_departure_within_days": 10,
         "return_report_within_days": 5,
         "requires_prior_use_history": true
@@ -307,7 +307,7 @@ insert into public.staff_leave_policy_versions (
         "counting_basis": "calendar_days",
         "must_pass_probation": true,
         "minimum_service_years": 1,
-        "max_paid_years": 4,
+        "max_paid_years": 5,
         "max_total_years_with_extension": 5,
         "course_duration_years": {
           "below_bachelor": "course_duration",
