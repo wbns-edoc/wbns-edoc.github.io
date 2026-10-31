@@ -189,3 +189,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-dashboard-summary.test.sql
       - name: Run Director absence evidence and direct Vice approval tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-direct-vice-absence-evidence.test.sql
+      - name: Apply confirmed staff leave rules enforcement migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261031100000_staff_leave_confirmed_rules_enforcement_draft.sql
+      - name: Run confirmed staff leave rules positive and negative tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-confirmed-rules-enforcement.test.sql
