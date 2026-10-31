@@ -53,13 +53,13 @@ Do not automatically add/drop indexes or consolidate policies. Usage statistics 
 
 ## CI evidence
 
-At Integration commit `c66029e965c8acea63d407e6ea22c38e5fd89efa` on 2026-10-30, all eight required CI workflows passed. The Workflow RPC Security job ran 12 SQL test files / 104 assertions successfully. The leave schema/RLS job ran the 12 leave SQL regression files against disposable PostgreSQL 17; the Supabase snapshot/replay job ran on an isolated local Supabase database.
+At Integration head `fdb4f62b4f411190f7604864a4d2f5e6d1c839af` on 2026-10-31, all eight required CI workflows passed. The Workflow RPC Security job ran 12 SQL test files / 104 assertions successfully. The leave schema/RLS job ran the 12 leave SQL regression files against disposable PostgreSQL 17; the Supabase snapshot/replay job ran on an isolated local Supabase database. The follow-up CI also verified the Pages deployment guard and the deployment workflow path trigger.
 
 A follow-up hardening change on Integration:
 - restricts the GitHub Pages deployment job to `refs/heads/main`, preventing a manual `workflow_dispatch` on a feature branch from publishing that branch;
 - adds `.github/workflows/deploy.yml` to Frontend Build CI path filters so changes to the deployment workflow trigger a pull-request build.
 
-These follow-up commits are under CI at the time of this report. The guard is on the Draft PR branch only and is not active on `main` until reviewed and merged.
+The deployment guard is on the Draft PR branch only and is not active on `main` until reviewed and merged.
 
 ## Release blockers that remain
 
