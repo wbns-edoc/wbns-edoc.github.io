@@ -142,7 +142,7 @@ jobs:
             leave-policy-calculation-gate.test.sql \
             leave-over-limit-notification.test.sql \
             leave-dashboard-summary.test.sql \
-            leave-direct-vice-absence-evidence.test.sql; do
+            leave-direct-vice-absence-evidence.test.sql \\\n            leave-confirmed-rules-enforcement.test.sql; do
             echo "::group::Running $test_file on local Supabase"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "tests/$test_file"
             echo "::endgroup::"
