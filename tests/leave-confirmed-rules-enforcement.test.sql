@@ -74,7 +74,7 @@ begin
    where reason='childbirth event entitlement';
   -- A 16th working day must be refused.
   begin
-    update public.staff_leave_requests set day_count=16 where id=v_id;
+    update public.staff_leave_requests set day_count=16,status='pending_approval' where id=v_id;
     raise exception 'expected_16_day_childbirth_denial';
   exception when check_violation then
     if sqlerrm not in ('childbirth_leave_rule_violation') then raise; end if;
