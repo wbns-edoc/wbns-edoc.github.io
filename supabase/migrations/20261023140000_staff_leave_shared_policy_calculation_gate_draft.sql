@@ -242,10 +242,10 @@ insert into public.staff_leave_policy_versions (
         "counting_basis": "working_days",
         "max_days_per_year": 60,
         "exceptional_extension_max_days": 60,
-        "certificate_from_day": 3,
-        "mandatory_certificate_from_day": 30,
-        "certificate_threshold_conflict": true,
-        "certificate_threshold_source_note": "Printed page 5 summary says 3 days or more; detailed clause 1.2 says 30 days or more. Keep calculation/approval blocked pending school authority confirmation.",
+        "certificate_from_working_day": 3,
+        "medical_certificate_required": true,
+        "certificate_threshold_confirmed_by_school": true,
+        "certificate_threshold_confirmation_date": "2026-10-31",
         "exceptional_extension_requires_higher_authority": true,
         "requires_annual_usage_accumulator": true
       },
@@ -258,11 +258,13 @@ insert into public.staff_leave_policy_versions (
       },
       "assist_spouse_childbirth": {
         "counting_basis": "working_days",
-        "max_days_per_event": 15,
-        "allow_non_consecutive_periods": true,
+        "max_working_days_per_event": 15,
+        "allow_non_consecutive_periods": false,
+        "one_continuous_period_required": true,
+        "one_entitlement_per_childbirth_event": true,
         "use_within_calendar_days_after_childbirth": 60,
         "file_within_calendar_days_after_childbirth": 30,
-        "deadline_source_note": "Printed page 6 says submit before/on leave date within 60 days; procedure says submit within 30 days after childbirth. Preserve both and require authority confirmation.",
+        "deadline_source_note": "Filing deadline remains unresolved: source text states 60 days in one clause and 30 days in the procedure. School confirmation on 2026-10-31 confirmed consecutive use and 15 working days per childbirth event only; do not auto-configure the filing deadline.",
         "requires_childbirth_event_date": true
       },
       "personal_leave": {
