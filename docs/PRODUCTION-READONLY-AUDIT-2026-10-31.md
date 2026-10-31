@@ -1,6 +1,6 @@
 # Production read-only audit — 2026-10-31
 
-**Scope:** read-only Supabase inspection of `wbns-edoc` (`iigzzwyfxxtqbgjawyom`) and GitHub migration inventory at Integration head `274400abba0e42ee40967152a2dffac9f0b8754f`.
+**Scope:** read-only Supabase inspection of `wbns-edoc` (`iigzzwyfxxtqbgjawyom`) and GitHub migration inventory at Integration code commit `4e5481206d638d5ac42eae96692c38c8857e0907`.
 
 **No Production DDL, DML, migration repair, function deployment, or project-setting change was performed.**
 
@@ -9,6 +9,7 @@
 - Production migration ledger: **76 applied entries** (read from Supabase migration history).
 - Integration branch: **85 SQL migration files**.
 - Exact normalized migration-name matches (timestamp prefix removed): **47**.
+- Exact Production version + migration-name matches: **9**.
 - Production history entries without an exact repository filename-stem match: **29**.
 - Repository migration files not represented by an exact Production migration name: **38**.
 
@@ -16,6 +17,8 @@ The 29 unmatched Production rows are not all proof of missing SQL. Some have res
 
 Latest Production migration row observed:
 - `20261030094941` — `require_active_department_for_scoped_permissions`
+
+The Integration file is now named `20261030094941_require_active_department_for_scoped_permissions.sql`, matching the already-applied Production version. The previous Integration timestamp was removed only after comparing the migration's sole `private.has_department_permission(text,uuid)` function body with Production's `pg_get_functiondef`; the bodies match exactly after whitespace normalization (1,177 characters). The migration contains no additional DDL/DML. The snapshot CI assertion and workflow references were updated to this exact applied version. This reconciles one applied migration without running `migration repair` or changing Production.
 
 The original Foundation migration remains a placeholder in the repository. The October 15 recovered-catalog fixture and the current Production schema export are not interchangeable with the missing historical Foundation SQL. Do not substitute an end-state snapshot at the beginning of the migration chain.
 
@@ -69,7 +72,7 @@ The Integration branch was corrected using the exact source returned by the depl
 
 ## CI evidence
 
-At Integration commit `c053322a96c1188d3ba8b918ec6c125b6b1744c6` on 2026-10-31, all eight required CI workflows passed. The Workflow RPC Security job ran 12 SQL test files / 104 assertions successfully. The leave schema/RLS job ran the 12 leave SQL regression files against disposable PostgreSQL 17; the Supabase snapshot/replay job ran on an isolated local Supabase database. Drive Upload CI passed 31 Deno unit tests across upload error mapping, cleanup policy, file validation, and user-import authorization/normalization. Frontend Build CI passed the main-only deployment guard assertion.
+At Integration commit `4e5481206d638d5ac42eae96692c38c8857e0907` on 2026-10-31, all eight required CI workflows passed. The Workflow RPC Security job ran 12 SQL test files / 104 assertions successfully. The leave schema/RLS job ran the 12 leave SQL regression files against disposable PostgreSQL 17; the Supabase snapshot/replay job ran on an isolated local Supabase database. Drive Upload CI passed 32 Deno unit tests across Apps Script Bridge error mapping, cleanup policy, the 20 MiB file limit, and user-import authorization/normalization. Schema Recovery PostgreSQL Replay and Recovered Catalog Fixture CI both passed after aligning the applied Production migration filename and its regression assertion. Frontend Build CI passed the main-only deployment guard assertion.
 
 A follow-up hardening change on Integration:
 - restricts the GitHub Pages deployment job to `refs/heads/main`, preventing a manual `workflow_dispatch` on a feature branch from publishing that branch;
