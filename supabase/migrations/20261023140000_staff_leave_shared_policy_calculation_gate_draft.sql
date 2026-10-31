@@ -72,10 +72,16 @@ begin
     if v_counting_basis = 'calendar_days' then
       v_day_count := (p_ends_on - p_starts_on + 1)::numeric;
     elsif v_counting_basis = 'working_days'
+       and coalesce((v_policy_rules->'calendar'->>'verified')::boolean, false) is true
+       and jsonb_typeof(v_policy_rules->'calendar'->'weekend_days') = 'array'
        and jsonb_typeof(v_policy_rules->'calendar'->'non_working_dates') = 'array' then
       select count(*)::numeric into v_day_count
       from generate_series(p_starts_on, p_ends_on, interval '1 day') as day_value
-      where extract(isodow from day_value) between 1 and 5
+      where not exists (
+          select 1
+          from jsonb_array_elements_text(v_policy_rules->'calendar'->'weekend_days') as weekend(value)
+          where weekend.value::integer = extract(isodow from day_value)::integer
+        )
         and not exists (
           select 1
           from jsonb_array_elements_text(v_policy_rules->'calendar'->'non_working_dates') as holiday(value)
@@ -382,6 +388,79 @@ begin
     if new.policy_rules->>'verification_status' is distinct from 'approved'
        or new.policy_rules->>'calculation_ready' is distinct from 'true'
        or coalesce((new.policy_rules->'calendar'->>'verified')::boolean, false) is not true
+       or jsonb_typeof(new.policy_rules->'calendar'->'weekend_days') is distinct from 'array'
+       or jsonb_array_length(coalesce(new.policy_rules->'calendar'->'weekend_days','[]'::jsonb)) = 0
+       or exists (
+         select 1
+         from jsonb_array_elements_text(
+           case when jsonb_typeof(new.policy_rules->'calendar'->'weekend_days') = 'array'
+             then new.policy_rules->'calendar'->'weekend_days' else '[]'::jsonb end
+         ) as weekend(value)
+         where weekend.value !~ '^[1-7]
+       or jsonb_array_length(
+         case
+           when jsonb_typeof(new.policy_rules->'implementation_gaps') = 'array'
+             then new.policy_rules->'implementation_gaps'
+           else '[]'::jsonb
+         end
+       ) > 0 then
+      raise exception 'staff_leave_policy_has_unresolved_implementation_gaps'
+        using errcode = '55000';
+    end if;
+  end if;
+  return new;
+end;
+$policy_guard$;
+
+drop trigger if exists staff_leave_policy_review_guard
+  on public.staff_leave_policy_versions;
+create trigger staff_leave_policy_review_guard
+before insert or update of status, policy_rules
+on public.staff_leave_policy_versions
+for each row execute function public.staff_leave_policy_review_guard();
+
+revoke all on function public.staff_leave_policy_review_guard()
+  from public, anon, authenticated;
+
+commit;
+
+       )
+       or jsonb_typeof(new.policy_rules->'calendar'->'non_working_dates') is distinct from 'array'
+       or exists (
+         select 1
+         from jsonb_array_elements_text(
+           case when jsonb_typeof(new.policy_rules->'calendar'->'non_working_dates') = 'array'
+             then new.policy_rules->'calendar'->'non_working_dates' else '[]'::jsonb end
+         ) as holiday(value)
+         where holiday.value !~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}
+       or jsonb_array_length(
+         case
+           when jsonb_typeof(new.policy_rules->'implementation_gaps') = 'array'
+             then new.policy_rules->'implementation_gaps'
+           else '[]'::jsonb
+         end
+       ) > 0 then
+      raise exception 'staff_leave_policy_has_unresolved_implementation_gaps'
+        using errcode = '55000';
+    end if;
+  end if;
+  return new;
+end;
+$policy_guard$;
+
+drop trigger if exists staff_leave_policy_review_guard
+  on public.staff_leave_policy_versions;
+create trigger staff_leave_policy_review_guard
+before insert or update of status, policy_rules
+on public.staff_leave_policy_versions
+for each row execute function public.staff_leave_policy_review_guard();
+
+revoke all on function public.staff_leave_policy_review_guard()
+  from public, anon, authenticated;
+
+commit;
+
+       )
        or jsonb_typeof(new.policy_rules->'implementation_gaps') is distinct from 'array'
        or jsonb_array_length(
          case
