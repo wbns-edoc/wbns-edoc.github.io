@@ -13,6 +13,7 @@ on:
       - "tests/leave-*.test.sql"
       - "tests/assert-notifications-realtime-publication.sql"
       - "tests/leave-auth-users-fixture.sql"
+      - "tests/staff-leave-storage-bootstrap.sql"
       - "supabase/migrations/*.sql"
       - ".github/workflows/supabase-snapshot-leave-replay-ci.yml"
   workflow_dispatch:
