@@ -30,3 +30,28 @@ The proposed additive schema must be reviewed and tested in an isolated database
 ## Known limitations
 
 A schema draft alone does not implement workflow transitions, notification delivery, dashboard aggregates, attachment upload/download, holiday/partial-day calculation, or official approver resolution. RLS is necessary but not sufficient for a live feature. No Production data/schema was changed while authoring this document.
+
+
+## 2026-11-02 evidence-verification hardening (Integration draft only)
+
+The confirmed-rules draft migration now adds nullable `storage_bucket_id` and
+`storage_verified_at` fields to `staff_leave_attachments`. A medical
+certificate satisfies the three-working-day sick-leave guard only when its
+metadata identifies the `staff-leave-private` bucket and has a non-null
+verification timestamp. A plausible object key, filename, MIME type, or
+positive byte count alone is insufficient.
+
+These fields are a trusted-backend assertion, not proof that an upload service
+or private bucket exists. The current browser role has no direct attachment
+write grant; the future upload backend must verify the authenticated user,
+active profile, request ownership and draft state, private object existence,
+bucket, MIME/size limits, and server-derived object path before inserting
+verified metadata. Signed downloads must independently re-check the applicant
+or current-approver authorization. No Storage bucket or upload/download
+endpoint is deployed by this draft.
+
+The SQL regression test includes a forged metadata row with an unverified
+storage key and expects submission to fail. Its positive fixture simulates
+metadata written by a trusted backend; it does not exercise real Storage.
+Therefore attachment upload, private-object authorization, signed-download,
+orphan cleanup, and browser end-to-end tests remain release blockers.
