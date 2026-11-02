@@ -27,5 +27,14 @@ begin
   if has_table_privilege('anon', 'public.notifications', 'UPDATE') then
     raise exception 'anon must not UPDATE notifications';
   end if;
+  if not exists (
+    select 1
+    from pg_catalog.pg_publication_tables
+    where pubname = 'supabase_realtime'
+      and schemaname = 'public'
+      and tablename = 'notifications'
+  ) then
+    raise exception 'notifications must be published to supabase_realtime';
+  end if;
 end;
 $assert$;
