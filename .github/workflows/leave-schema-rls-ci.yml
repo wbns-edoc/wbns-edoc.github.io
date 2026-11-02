@@ -26,6 +26,9 @@ on:
       - 'supabase/migrations/20261102100000_notifications_least_privilege_grants_draft.sql'
       - 'tests/notifications-least-privilege-grants.test.sql'
       - 'supabase/migrations/20261031100000_staff_leave_confirmed_rules_enforcement_draft.sql'
+      - 'supabase/migrations/20261102130000_staff_leave_private_storage_draft.sql'
+      - 'tests/leave-private-storage.test.sql'
+      - 'tests/staff-leave-storage-bootstrap.sql'
       - 'tests/leave-confirmed-rules-enforcement.test.sql'
       - 'tests/leave-direct-vice-absence-evidence.test.sql'
       - 'tests/leave-schema-rls.test.sql'
@@ -143,6 +146,8 @@ jobs:
           );
           grant select on public.profiles to authenticated;
           SQL
+      - name: Prepare disposable Storage compatibility tables
+        run: psql -v ON_ERROR_STOP=1 -f tests/staff-leave-storage-bootstrap.sql
       - name: Apply schema draft to disposable PostgreSQL
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql
       - name: Apply draft RPC migration to disposable PostgreSQL
@@ -209,3 +214,7 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-direct-vice-absence-evidence.test.sql
       - name: Run confirmed staff leave rules positive and negative tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-confirmed-rules-enforcement.test.sql
+      - name: Apply private staff leave Storage migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261102130000_staff_leave_private_storage_draft.sql
+      - name: Run private staff leave Storage isolation tests
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-private-storage.test.sql
