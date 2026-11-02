@@ -108,6 +108,13 @@ begin
     date '2026-11-02',date '2026-11-04',3,'missing medical certificate','draft',
     '{"verification_status":"approved","calculation_ready":true}'::jsonb
   ) returning id into v_id;
+  -- A forged/non-verified metadata row with a plausible object key must not count.
+  insert into public.staff_leave_attachments(
+    request_id,uploaded_by,storage_object_key,original_filename,mime_type,size_bytes,attachment_kind
+  ) values (
+    v_id,'84000000-0000-0000-0000-000000000001',
+    'fake/private/medical-certificate.pdf','certificate.pdf','application/pdf',100,'medical_certificate'
+  );
   begin
     update public.staff_leave_requests set status='pending_approval' where id=v_id;
     raise exception 'expected_missing_certificate_denial';
