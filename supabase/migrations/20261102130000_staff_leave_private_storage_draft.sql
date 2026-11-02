@@ -66,15 +66,12 @@ create policy staff_leave_private_objects_select_parties
 on storage.objects for select to authenticated
 using (
   bucket_id='staff-leave-private'
-  and name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+  and name ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
   and exists (
     select 1
-    from public.staff_leave_attachments a
-    join public.staff_leave_requests r on r.id=a.request_id
+    from public.staff_leave_requests r
     join public.profiles p on p.id=(select auth.uid()) and p.is_active=true
-    where a.storage_bucket_id='staff-leave-private'
-      and a.storage_object_key=storage.objects.name
-      and r.id=split_part(storage.objects.name,'/',1)::uuid
+    where r.id::text=split_part(name,'/',1)
       and (
         r.applicant_id=(select auth.uid())
         or r.current_approver_user_id=(select auth.uid())
