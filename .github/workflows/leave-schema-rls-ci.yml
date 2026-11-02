@@ -121,6 +121,15 @@ jobs:
             read_at timestamptz,
             created_at timestamptz not null default now()
           );
+          alter table public.notifications enable row level security;
+          create policy notifications_own on public.notifications
+            for select to authenticated
+            using (recipient_id = auth.uid());
+          create policy notifications_update_own on public.notifications
+            for update to authenticated
+            using (recipient_id = auth.uid())
+            with check (recipient_id = auth.uid());
+          grant all privileges on public.notifications to anon, authenticated;
           create table public.roles (
             id uuid primary key,
             code text not null unique,
