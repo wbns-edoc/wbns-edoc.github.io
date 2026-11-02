@@ -47,10 +47,11 @@ select public.staff_leave_create_draft(
 reset role;
 
 insert into public.staff_leave_attachments(
- request_id,uploaded_by,storage_object_key,original_filename,mime_type,size_bytes,attachment_kind
+ request_id,uploaded_by,storage_object_key,original_filename,mime_type,size_bytes,attachment_kind,storage_bucket_id,storage_verified_at
 )
 select id,'84000000-0000-0000-0000-000000000001',
  'test/medical-certificate/'||id::text,'certificate.pdf','application/pdf',100,'medical_certificate'
+ , 'staff-leave-private', now()
 from public.staff_leave_requests where reason='three day sick leave with certificate';
 
 do $positive$
