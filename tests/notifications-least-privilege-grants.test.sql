@@ -1,4 +1,6 @@
 do $assert$
+declare
+  v_column text;
 begin
   if not (select relrowsecurity from pg_class where oid = 'public.notifications'::regclass) then
     raise exception 'notifications RLS must remain enabled';
@@ -9,60 +11,48 @@ begin
   if not has_column_privilege('authenticated', 'public.notifications', 'read_at', 'UPDATE') then
     raise exception 'authenticated must update read_at';
   end if;
-  if has_table_privilege('authenticated', 'public.notifications', 'INSERT') then
-    raise exception 'authenticated must not INSERT notifications directly';
+  if has_table_privilege('authenticated', 'public.notifications', 'INSERT')
+     or has_table_privilege('authenticated', 'public.notifications', 'DELETE')
+     or has_table_privilege('authenticated', 'public.notifications', 'UPDATE')
+     or has_table_privilege('authenticated', 'public.notifications', 'TRUNCATE')
+     or has_table_privilege('authenticated', 'public.notifications', 'REFERENCES')
+     or has_table_privilege('authenticated', 'public.notifications', 'TRIGGER')
+     or has_table_privilege('authenticated', 'public.notifications', 'MAINTAIN') then
+    raise exception 'authenticated has an unintended table-level privilege';
   end if;
-  if has_table_privilege('authenticated', 'public.notifications', 'DELETE') then
-    raise exception 'authenticated must not DELETE notifications';
+
+  for v_column in
+    select a.attname from pg_catalog.pg_attribute a
+    where a.attrelid = 'public.notifications'::regclass
+      and a.attnum > 0 and not a.attisdropped
+  loop
+    if v_column <> 'read_at'
+       and has_column_privilege('authenticated', 'public.notifications', v_column, 'UPDATE') then
+      raise exception 'authenticated must not UPDATE column %', v_column;
+    end if;
+    if has_column_privilege('anon', 'public.notifications', v_column, 'SELECT')
+       or has_column_privilege('anon', 'public.notifications', v_column, 'INSERT')
+       or has_column_privilege('anon', 'public.notifications', v_column, 'UPDATE')
+       or has_column_privilege('anon', 'public.notifications', v_column, 'REFERENCES') then
+      raise exception 'anon has an unintended column privilege on %', v_column;
+    end if;
+  end loop;
+
+  if has_table_privilege('anon', 'public.notifications', 'SELECT')
+     or has_table_privilege('anon', 'public.notifications', 'INSERT')
+     or has_table_privilege('anon', 'public.notifications', 'UPDATE')
+     or has_table_privilege('anon', 'public.notifications', 'DELETE')
+     or has_table_privilege('anon', 'public.notifications', 'TRUNCATE')
+     or has_table_privilege('anon', 'public.notifications', 'REFERENCES')
+     or has_table_privilege('anon', 'public.notifications', 'TRIGGER')
+     or has_table_privilege('anon', 'public.notifications', 'MAINTAIN') then
+    raise exception 'anon has an unintended table-level privilege';
   end if;
-  if has_table_privilege('authenticated', 'public.notifications', 'UPDATE') then
-    raise exception 'authenticated must not have table-level UPDATE';
-  end if;
-  if has_table_privilege('authenticated', 'public.notifications', 'TRUNCATE') then
-    raise exception 'authenticated must not TRUNCATE notifications';
-  end if;
-  if has_table_privilege('authenticated', 'public.notifications', 'REFERENCES') then
-    raise exception 'authenticated must not create REFERENCES on notifications';
-  end if;
-  if has_table_privilege('authenticated', 'public.notifications', 'TRIGGER') then
-    raise exception 'authenticated must not create triggers on notifications';
-  end if;
-  if has_table_privilege('authenticated', 'public.notifications', 'MAINTAIN') then
-    raise exception 'authenticated must not MAINTAIN notifications';
-  end if;
-  if has_column_privilege('authenticated', 'public.notifications', 'title', 'UPDATE') then
-    raise exception 'authenticated must not update notification content';
-  end if;
-  if has_table_privilege('anon', 'public.notifications', 'SELECT') then
-    raise exception 'anon must not SELECT notifications';
-  end if;
-  if has_table_privilege('anon', 'public.notifications', 'INSERT') then
-    raise exception 'anon must not INSERT notifications';
-  end if;
-  if has_table_privilege('anon', 'public.notifications', 'UPDATE') then
-    raise exception 'anon must not UPDATE notifications';
-  end if;
-  if has_table_privilege('anon', 'public.notifications', 'DELETE') then
-    raise exception 'anon must not DELETE notifications';
-  end if;
-  if has_table_privilege('anon', 'public.notifications', 'TRUNCATE') then
-    raise exception 'anon must not TRUNCATE notifications';
-  end if;
-  if has_table_privilege('anon', 'public.notifications', 'REFERENCES') then
-    raise exception 'anon must not create REFERENCES on notifications';
-  end if;
-  if has_table_privilege('anon', 'public.notifications', 'TRIGGER') then
-    raise exception 'anon must not create triggers on notifications';
-  end if;
-  if has_table_privilege('anon', 'public.notifications', 'MAINTAIN') then
-    raise exception 'anon must not MAINTAIN notifications';
-  end if;
+
   if not exists (
-    select 1
-    from pg_catalog.pg_publication_tables
+    select 1 from pg_catalog.pg_publication_tables
     where pubname = 'supabase_realtime'
-      and schemaname = 'public'
-      and tablename = 'notifications'
+      and schemaname = 'public' and tablename = 'notifications'
   ) then
     raise exception 'notifications must be published to supabase_realtime';
   end if;
