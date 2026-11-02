@@ -8,6 +8,16 @@ alter table public.staff_leave_requests
 alter table public.staff_leave_attachments
   add column if not exists attachment_kind text not null default 'supporting_document';
 
+-- Server-controlled evidence that the private Storage upload was verified.
+-- No client write policy exists; the future upload backend must set these only
+-- after confirming the object in the private bucket. Null means unverified.
+alter table public.staff_leave_attachments
+  add column if not exists storage_bucket_id text;
+alter table public.staff_leave_attachments
+  add column if not exists storage_verified_at timestamptz;
+comment on column public.staff_leave_attachments.storage_verified_at is
+  'Set only by trusted upload backend after verifying the private Storage object; null is unverified.';
+
 alter table public.staff_leave_attachments
   drop constraint if exists staff_leave_attachments_kind_chk;
 alter table public.staff_leave_attachments
@@ -205,6 +215,8 @@ begin
       select 1 from public.staff_leave_attachments a
       where a.request_id=new.id and a.attachment_kind='medical_certificate'
         and a.size_bytes>0 and nullif(btrim(a.storage_object_key),'') is not null
+        and a.storage_bucket_id='staff-leave-private'
+        and a.storage_verified_at is not null
     ) then
       raise exception 'medical_certificate_required_for_sick_leave' using errcode='23514';
     end if;
