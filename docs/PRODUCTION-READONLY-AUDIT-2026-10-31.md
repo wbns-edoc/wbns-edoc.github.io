@@ -99,3 +99,11 @@ The deployment guard is on the Draft PR branch only and is not active on `main` 
 - Archive set includes the exact Foundation source, individual SQL archives for the recovered early entries, and two consolidated archives covering the remaining ledger rows. Each archive is labeled as already-applied Production source and not executable rollout input.
 - Current normalized comparison against the Integration `supabase/migrations` directory: 76 Production ledger entries, 87 repository migration SQL files, 42 exact normalized name matches, 34 Production ledger names without an exact filename match, and 45 repository filename stems not exactly represented in Production history. Similar names are candidates only; no mapping is accepted without SQL/effect review.
 - This closes the **missing historical SQL evidence** gap, not the migration reconciliation or current catalog parity gate. No Production DDL/DML, migration repair, function deployment, merge, or Pages deployment was performed.
+
+
+## 2026-11-02 latest CI and live Production leave readiness spot-check
+
+- On Integration head `863df5645026be7d65749173d9223ad865aa0a37`, all 8 required workflows completed successfully: Frontend Build, Staff Leave Schema RLS, School Responsibility Settings, Schema Recovery PostgreSQL Replay, Supabase Snapshot and Staff Leave Replay, Drive Upload, Workflow RPC Security, and Recovered Catalog Fixture CI.
+- Read-only live Production SQL spot-check (project `iigzzwyfxxtqbgjawyom`) returned: 76 applied migration ledger rows; `staff-leave-private` Storage bucket absent (0); `public.notifications` absent from `supabase_realtime` publication (0); `public.staff_leave_director_absences` table absent (0); and `public.staff_leave_attachments` table absent (0).
+- These findings confirm that staff-leave private file storage, Realtime notification publication, and Director-absence evidence workflow are not deployed in Production. Do not claim these capabilities are live or expose a go-live path for staff leave until secure implementations and browser/role tests are complete.
+- Production project status remains `ACTIVE_HEALTHY`. No Production write, schema change, Storage bucket creation, publication change, merge, or deployment was performed.
