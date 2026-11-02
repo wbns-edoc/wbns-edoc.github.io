@@ -82,8 +82,8 @@ The deployment guard is on the Draft PR branch only and is not active on `main` 
 
 ## Release blockers that remain
 
-1. Recover or formally reconstruct the historical Foundation migration; validate against the current Production catalog including ownership, grants, default ACLs, extensions, Auth/Storage objects, views, triggers, and publication settings.
-2. Reconcile the 29 unmatched Production history rows using exact historical SQL or reviewed catalog-effect mappings.
+1. **Foundation source recovered.** Exact SQL for Production migration `20261007133831` is archived at `recovery/production-migrations/20261007133831_foundation_schema_rbac_rls.sql` and its isolated PostgreSQL 17 replay passed. Full evolved Production catalog parity remains to be proven, including ownership, grants, default ACLs, extensions, Auth/Storage objects, views, triggers, and publication settings.
+2. **All 76 Production migration ledger SQL statements recovered and archived read-only** on the Integration branch: individual archives plus `production-ledger-batch-01.md` and `production-ledger-batch-02.md`. A fresh normalized-name comparison found 42 exact filename-stem matches and 34 Production names without an exact current filename match; candidate historical files need SQL/effect comparison before the rows can be reconciled. The archives are evidence only and must not be copied into `supabase/migrations`, executed, or migration-repaired.
 3. Complete the leave policy implementation for school holidays, service history, carry-over balances, childcare subtype, prior-use checks, and evidence/eligibility rules. The school-wide leave policy must remain draft and calculation-disabled until approved.
 4. Complete browser E2E using school accounts and verify deployed notification/Realtime delivery and real role authorization.
 5. Review the 18 callable SECURITY DEFINER functions and the 4 no-policy RLS tables in the live role context; keep direct table access denied where intended.
@@ -91,3 +91,11 @@ The deployment guard is on the Draft PR branch only and is not active on `main` 
 7. Obtain a final school acceptance decision and an approved maintenance window before any Production rollout.
 
 **Release decision: NOT APPROVED. Keep PR #55 Draft. Keep Production unchanged.**
+
+
+## 2026-11-02 Production migration ledger recovery update
+
+- Read-only query returned all 76 applied Production history rows; each row contains exactly one recorded SQL statement. All statement text has been archived outside `supabase/migrations` under `recovery/production-migrations/`.
+- Archive set includes the exact Foundation source, individual SQL archives for the recovered early entries, and two consolidated archives covering the remaining ledger rows. Each archive is labeled as already-applied Production source and not executable rollout input.
+- Current normalized comparison against the Integration `supabase/migrations` directory: 76 Production ledger entries, 87 repository migration SQL files, 42 exact normalized name matches, 34 Production ledger names without an exact filename match, and 45 repository filename stems not exactly represented in Production history. Similar names are candidates only; no mapping is accepted without SQL/effect review.
+- This closes the **missing historical SQL evidence** gap, not the migration reconciliation or current catalog parity gate. No Production DDL/DML, migration repair, function deployment, merge, or Pages deployment was performed.
