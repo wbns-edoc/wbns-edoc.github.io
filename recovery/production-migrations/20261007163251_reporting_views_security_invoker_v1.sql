@@ -1,0 +1,19 @@
+-- RECOVERED SOURCE ARCHIVE — NOT A NEW MIGRATION
+-- Read-only extraction from Production supabase_migrations.schema_migrations.statements
+-- Production project: iigzzwyfxxtqbgjawyom
+-- Applied version: 20261007163251
+-- Ledger name: reporting_views_security_invoker_v1
+-- DO NOT place in supabase/migrations or replay against Production.
+
+create or replace view public.document_report_summary with (security_invoker=true) as
+select document_type,status,urgency,count(*) as total_documents,count(*) filter (where created_at>=date_trunc('month',now())) as current_month
+from public.documents
+group by document_type,status,urgency;
+
+create or replace view public.document_monthly_summary with (security_invoker=true) as
+select date_trunc('month',created_at)::date as month,document_type,count(*) as total_documents,
+count(*) filter (where status='completed'::document_status) as completed_documents,
+count(*) filter (where urgency in ('urgent'::urgency_level,'very_urgent'::urgency_level,'critical'::urgency_level)) as urgent_documents
+from public.documents
+group by date_trunc('month',created_at)::date,document_type
+order by date_trunc('month',created_at)::date desc;
