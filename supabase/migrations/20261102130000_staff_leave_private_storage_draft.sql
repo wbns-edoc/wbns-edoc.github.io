@@ -53,7 +53,7 @@ with check (
     select 1
     from public.staff_leave_requests r
     join public.profiles p on p.id=r.applicant_id
-    where r.id=split_part(storage.objects.name,'/',1)::uuid
+    where r.id::text=split_part(storage.objects.name,'/',1)
       and r.applicant_id=(select auth.uid())
       and r.status='draft'
       and p.is_active=true
