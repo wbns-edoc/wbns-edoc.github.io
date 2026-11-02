@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "recovery/catalog/**"
+      - "recovery/production-migrations/20261007133831_foundation_schema_rbac_rls.sql"
+      - "tests/foundation-source-replay-assertions.sql"
       - "tests/schema-recovery-*.test.*"
       - "tests/schema-recovery-replay-bootstrap.sql"
       - "tests/schema-recovery-rls-behavior.sql"
@@ -121,6 +123,14 @@ jobs:
         run: python tests/schema-recovery-replay.test.py --out-dir "$RUNNER_TEMP/wbns-replay"
       - name: Bootstrap disposable compatibility objects
         run: psql -v ON_ERROR_STOP=1 -f tests/schema-recovery-replay-bootstrap.sql
+      - name: Replay recovered Foundation source in a separate disposable database
+        shell: bash
+        run: |
+          set -euo pipefail
+          createdb foundation_recovery
+          PGDATABASE=foundation_recovery psql -v ON_ERROR_STOP=1 -f tests/schema-recovery-replay-bootstrap.sql
+          PGDATABASE=foundation_recovery psql -v ON_ERROR_STOP=1 -f recovery/production-migrations/20261007133831_foundation_schema_rbac_rls.sql
+          PGDATABASE=foundation_recovery psql -v ON_ERROR_STOP=1 -f tests/foundation-source-replay-assertions.sql
       - name: Replay phases on disposable PostgreSQL only
         shell: bash
         run: |
