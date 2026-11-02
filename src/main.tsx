@@ -122,7 +122,14 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
   setBusy(true);setError('');setNotice('');
   const {error}=await supabase.rpc('staff_leave_submit',{p_request_id:row.id,p_idempotency_key:'leave-submit-'+row.id+'-'+crypto.randomUUID()});
   if(error)setError('ส่งคำขอลาไม่สำเร็จ: '+error.message);
-  else{setNotice('ส่งคำขอลาแล้ว หรือระบบบันทึกสถานะรอตรวจสอบผู้อนุมัติ');await load();}
+  else{
+   const {data:latest,error:statusError}=await supabase.from('staff_leave_requests').select('status').eq('id',row.id).single();
+   if(statusError)setError('บันทึกคำขอแล้ว แต่ตรวจสอบสถานะล่าสุดไม่สำเร็จ กรุณากดรีเฟรชก่อนดำเนินการต่อ: '+statusError.message);
+   else if(latest?.status==='blocked_approver_resolution')setNotice('บันทึกคำขอแล้ว แต่ยังไม่ได้ส่งให้ผู้อนุมัติ เนื่องจากต้องตรวจสอบและยืนยันผู้มีอำนาจอนุมัติก่อน');
+   else if(latest?.status==='pending_approval')setNotice('ส่งคำขอลาให้ผู้อนุมัติในขั้นตอนแรกแล้ว');
+   else setNotice('ระบบรับคำขอแล้ว แต่สถานะยังไม่ใช่รอพิจารณา กรุณารีเฟรชและตรวจสอบก่อนดำเนินการต่อ');
+   await load();
+  }
   setBusy(false);
  }
  async function recordDirectorAbsence(e:React.FormEvent){
