@@ -92,6 +92,8 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
  const [available,setAvailable]=React.useState(true);
  const [summary,setSummary]=React.useState<any>(null);
  const [absenceRecords,setAbsenceRecords]=React.useState<any[]>([]);
+ const [attachments,setAttachments]=React.useState<any[]>([]);
+ const [attachmentKinds,setAttachmentKinds]=React.useState<Record<string,string>>({});
  const [absenceStart,setAbsenceStart]=React.useState('');
  const [absenceEnd,setAbsenceEnd]=React.useState('');
  const [absenceReason,setAbsenceReason]=React.useState('');
@@ -104,19 +106,44 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
  async function load(){
   if(!profile){setLoading(false);return}
   setLoading(true);setError('');
-  const [t,r,dashboard,absence]=await Promise.all([
+  const [t,r,dashboard,absence,attachmentResult]=await Promise.all([
    supabase.from('staff_leave_types').select('id,code,name').eq('is_active',true).order('name'),
    supabase.from('staff_leave_requests').select('id,applicant_id,leave_type_id,starts_on,ends_on,day_count,is_over_limit,reason,status,created_at,policy_version_id,current_approver_user_id,staff_leave_types(name)').order('created_at',{ascending:false}).limit(50),
    canViewDashboard?supabase.rpc('staff_leave_dashboard_summary'):Promise.resolve({data:null,error:null}),
-   canManageAbsence?supabase.rpc('admin_list_staff_leave_director_absences'):Promise.resolve({data:null,error:null})
+   canManageAbsence?supabase.rpc('admin_list_staff_leave_director_absences'):Promise.resolve({data:null,error:null}),
+   supabase.from('staff_leave_attachments').select('id,request_id,original_filename,mime_type,size_bytes,attachment_kind,storage_object_key,storage_bucket_id').order('created_at',{ascending:false})
   ]);
   if(t.error||r.error){setAvailable(false);setTypes([]);setRows([]);setError('ระบบการลายังไม่พร้อมใช้งานในฐานข้อมูลนี้ กรุณารอการตรวจสอบและเผยแพร่ Migration');}
-  else{setAvailable(true);setTypes(t.data||[]);setRows(r.data||[]);if(!selectedType&&t.data?.length)setSelectedType(t.data[0].id);}
+  else{setAvailable(true);setTypes(t.data||[]);setRows(r.data||[]);setAttachments(!attachmentResult.error&&attachmentResult.data?attachmentResult.data:[]);if(!selectedType&&t.data?.length)setSelectedType(t.data[0].id);}
   setSummary(!dashboard.error&&dashboard.data?dashboard.data:null);
   setAbsenceRecords(!absence.error&&absence.data?absence.data:[]);
   setLoading(false);
  }
  React.useEffect(()=>{load()},[profile?.id,canViewDashboard,canManageAbsence]);
+ async function uploadLeaveAttachment(row:any,file:File,kind:string){
+  if(!profile||row.applicant_id!==profile.id||row.status!=='draft'||busy)return;
+  const allowed=['application/pdf','image/jpeg','image/png'];
+  if(!allowed.includes(file.type)||file.size<1||file.size>20*1024*1024){
+   setError('ไฟล์ประกอบการลาต้องเป็น PDF, JPG หรือ PNG และมีขนาดไม่เกิน 20 MiB');return;
+  }
+  setBusy(true);setError('');setNotice('');
+  const objectKey=row.id+'/'+crypto.randomUUID();
+  const {error:uploadError}=await supabase.storage.from('staff-leave-private').upload(objectKey,file,{contentType:file.type,upsert:false});
+  if(uploadError){setError('อัปโหลดเอกสารลาไม่สำเร็จ: '+uploadError.message);setBusy(false);return;}
+  const {error:registerError}=await supabase.rpc('staff_leave_register_private_attachment',{
+   p_request_id:row.id,p_object_key:objectKey,p_original_filename:file.name,
+   p_mime_type:file.type,p_size_bytes:file.size,p_attachment_kind:kind
+  });
+  if(registerError)setError('อัปโหลดไฟล์แล้ว แต่ลงทะเบียนหลักฐานไม่สำเร็จ กรุณาติดต่อผู้ดูแลระบบพร้อมแจ้งรหัสคำขอ '+row.id+': '+registerError.message);
+  else{setNotice('บันทึกเอกสารประกอบการลาในพื้นที่ส่วนตัวแล้ว');await load();}
+  setBusy(false);
+ }
+ async function openLeaveAttachment(attachment:any){
+  setError('');
+  const {data,error}=await supabase.storage.from('staff-leave-private').createSignedUrl(attachment.storage_object_key,60);
+  if(error||!data?.signedUrl){setError('ไม่สามารถเปิดเอกสารได้ หรือบัญชีนี้ไม่มีสิทธิ์เข้าถึง');return;}
+  window.open(data.signedUrl,'_blank','noopener,noreferrer');
+ }
  async function submitDraft(row:any){
   if(!row.policy_version_id||row.day_count==null||busy)return;
   setBusy(true);setError('');setNotice('');
@@ -217,7 +244,7 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
    </form>}
   </div>
   <div className="panel"><div className="panel-head"><div><h2>คำขอลาและประวัติ</h2><p>แสดงเฉพาะคำขอที่บัญชีนี้มีสิทธิ์เข้าถึง</p></div></div>
-   {loading?<div className="empty">กำลังโหลดคำขอลา…</div>:rows.length===0?<div className="empty">ยังไม่มีคำขอลา</div>:<div className="table-wrap"><table><thead><tr><th>ประเภท</th><th>ช่วงวันที่ลา</th><th>วันลา</th><th>สถานะ</th><th>วันที่สร้าง</th><th>การดำเนินการ</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{Array.isArray(r.staff_leave_types)?r.staff_leave_types[0]?.name:r.staff_leave_types?.name||'—'}</td><td>{r.starts_on} – {r.ends_on}</td><td>{r.day_count==null?'รอตรวจสอบ':r.day_count+' วัน'} {r.is_over_limit&&<span className="badge">เกินเกณฑ์</span>}</td><td><span className="badge">{statusLabels[r.status]||r.status}</span></td><td>{new Date(r.created_at).toLocaleDateString('th-TH')}</td><td>{r.status==='draft'?(<>{r.policy_version_id&&r.day_count!=null?<button className="ghost" disabled={busy} onClick={()=>submitDraft(r)}>ส่งคำขอ</button>:<span className="muted">รอนโยบายที่อนุมัติ</span>}{r.applicant_id===profile?.id&&<> <button className="ghost" disabled={busy} onClick={()=>cancelRequest(r)}>ยกเลิก</button></>}</>):r.status==='pending_approval'&&r.current_approver_user_id===profile?.id?<><button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'approve')}>อนุมัติ</button> <button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'reject')}>ไม่อนุมัติ</button></>:r.applicant_id===profile?.id&&['blocked_approver_resolution','submitted','pending_approval'].includes(r.status)?<button className="ghost" disabled={busy} onClick={()=>cancelRequest(r)}>ยกเลิก</button>:'—'}</td></tr>)}</tbody></table></div>}
+   {loading?<div className="empty">กำลังโหลดคำขอลา…</div>:rows.length===0?<div className="empty">ยังไม่มีคำขอลา</div>:<div className="table-wrap"><table><thead><tr><th>ประเภท</th><th>ช่วงวันที่ลา</th><th>วันลา</th><th>สถานะ</th><th>วันที่สร้าง</th><th>เอกสารประกอบ</th><th>การดำเนินการ</th></tr></thead><tbody>{rows.map(r=><tr key={r.id}><td>{Array.isArray(r.staff_leave_types)?r.staff_leave_types[0]?.name:r.staff_leave_types?.name||'—'}</td><td>{r.starts_on} – {r.ends_on}</td><td>{r.day_count==null?'รอตรวจสอบ':r.day_count+' วัน'} {r.is_over_limit&&<span className="badge">เกินเกณฑ์</span>}</td><td><span className="badge">{statusLabels[r.status]||r.status}</span></td><td>{new Date(r.created_at).toLocaleDateString('th-TH')}</td><td><div className="leave-attachments">{attachments.filter(a=>a.request_id===r.id).map(a=><button type="button" className="link-btn" key={a.id} disabled={busy} onClick={()=>openLeaveAttachment(a)}>{a.attachment_kind==='medical_certificate'?'ใบรับรองแพทย์':a.attachment_kind==='childbirth_evidence'?'หลักฐานการคลอด':'เอกสารประกอบ'} · {a.original_filename}</button>)}{r.status==='draft'&&r.applicant_id===profile?.id&&<><select aria-label="ประเภทเอกสารแนบ" value={attachmentKinds[r.id]||'supporting_document'} disabled={busy} onChange={e=>setAttachmentKinds(prev=>({...prev,[r.id]:e.target.value}))}><option value="supporting_document">เอกสารประกอบ</option><option value="medical_certificate">ใบรับรองแพทย์</option><option value="childbirth_evidence">หลักฐานการคลอด</option></select><input type="file" accept="application/pdf,image/jpeg,image/png" disabled={busy} onChange={e=>{const file=e.currentTarget.files?.[0];e.currentTarget.value='';if(file)void uploadLeaveAttachment(r,file,attachmentKinds[r.id]||'supporting_document')}}/></>}</div></td><td>{r.status==='draft'?(<>{r.policy_version_id&&r.day_count!=null?<button className="ghost" disabled={busy} onClick={()=>submitDraft(r)}>ส่งคำขอ</button>:<span className="muted">รอนโยบายที่อนุมัติ</span>}{r.applicant_id===profile?.id&&<> <button className="ghost" disabled={busy} onClick={()=>cancelRequest(r)}>ยกเลิก</button></>}</>):r.status==='pending_approval'&&r.current_approver_user_id===profile?.id?<><button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'approve')}>อนุมัติ</button> <button className="ghost" disabled={busy} onClick={()=>decideRequest(r,'reject')}>ไม่อนุมัติ</button></>:r.applicant_id===profile?.id&&['blocked_approver_resolution','submitted','pending_approval'].includes(r.status)?<button className="ghost" disabled={busy} onClick={()=>cancelRequest(r)}>ยกเลิก</button>:'—'}</td></tr>)}</tbody></table></div>}
   </div>
  </div>
 }
