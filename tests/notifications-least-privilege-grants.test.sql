@@ -15,6 +15,21 @@ begin
   if has_table_privilege('authenticated', 'public.notifications', 'DELETE') then
     raise exception 'authenticated must not DELETE notifications';
   end if;
+  if has_table_privilege('authenticated', 'public.notifications', 'UPDATE') then
+    raise exception 'authenticated must not have table-level UPDATE';
+  end if;
+  if has_table_privilege('authenticated', 'public.notifications', 'TRUNCATE') then
+    raise exception 'authenticated must not TRUNCATE notifications';
+  end if;
+  if has_table_privilege('authenticated', 'public.notifications', 'REFERENCES') then
+    raise exception 'authenticated must not create REFERENCES on notifications';
+  end if;
+  if has_table_privilege('authenticated', 'public.notifications', 'TRIGGER') then
+    raise exception 'authenticated must not create triggers on notifications';
+  end if;
+  if has_table_privilege('authenticated', 'public.notifications', 'MAINTAIN') then
+    raise exception 'authenticated must not MAINTAIN notifications';
+  end if;
   if has_column_privilege('authenticated', 'public.notifications', 'title', 'UPDATE') then
     raise exception 'authenticated must not update notification content';
   end if;
@@ -26,6 +41,21 @@ begin
   end if;
   if has_table_privilege('anon', 'public.notifications', 'UPDATE') then
     raise exception 'anon must not UPDATE notifications';
+  end if;
+  if has_table_privilege('anon', 'public.notifications', 'DELETE') then
+    raise exception 'anon must not DELETE notifications';
+  end if;
+  if has_table_privilege('anon', 'public.notifications', 'TRUNCATE') then
+    raise exception 'anon must not TRUNCATE notifications';
+  end if;
+  if has_table_privilege('anon', 'public.notifications', 'REFERENCES') then
+    raise exception 'anon must not create REFERENCES on notifications';
+  end if;
+  if has_table_privilege('anon', 'public.notifications', 'TRIGGER') then
+    raise exception 'anon must not create triggers on notifications';
+  end if;
+  if has_table_privilege('anon', 'public.notifications', 'MAINTAIN') then
+    raise exception 'anon must not MAINTAIN notifications';
   end if;
   if not exists (
     select 1
