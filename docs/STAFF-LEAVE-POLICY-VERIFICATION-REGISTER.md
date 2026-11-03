@@ -24,7 +24,7 @@
 - ลาคลอดบุตร: 90 วันรวมวันหยุดราชการ
 - ลาไปช่วยเหลือภริยาที่คลอดบุตร: **ครั้งหนึ่งไม่เกิน 15 วันทำการ ต้องลาติดต่อกันเป็นช่วงเดียว ห้ามทยอยลา และใช้สิทธิได้ต่อการคลอดบุตรของภรรยา 1 ครั้ง ตามที่โรงเรียนยืนยัน**; กำหนดเวลายื่นคำขอยังต้องตรวจยืนยันแยกต่างหาก (เอกสารเดิมมีข้อความ 60/30 วันไม่ตรงกัน)
 - ลากิจส่วนตัว: ได้รับเงินเดือนระหว่างลาไม่เกิน 45 วันทำการต่อปี; ปีแรกมีเพดาน 15 วันทำการ
-- ลาพักผ่อน: 10 วันทำการต่อปี; คู่มือ BICT ที่เป็นแหล่งหลักระบุเงื่อนไขปีแรกไม่ถึง 2 เดือน และการสะสม 20/30 วันตามอายุงาน (ต้องตรวจถ้อยคำกับระเบียบปัจจุบันก่อนอนุมัติ)
+- ลาพักผ่อน: ไม่เปิดเป็นประเภทคำขอในระบบโรงเรียนตามนโยบายที่โรงเรียนยืนยัน; ข้าราชการครูและครูอัตราจ้างถือว่าวันปิดภาคเรียน/ปิดเทอมเป็นวันพักผ่อน จึงไม่ต้องยื่นใบลาและไม่มียอดสิทธิ/ยอดสะสมในระบบ; บุคลากรกลุ่มอื่นก็ไม่มีรายการลาพักผ่อนในระบบตามข้อยืนยันก่อนหน้า
 - การลาอุปสมบท/ฮัจย์: มีเกณฑ์ระยะเวลาและการใช้สิทธิครั้งเดียว
 - การลาไปศึกษา/ฝึกอบรม/วิจัย/ดูงาน: คู่มือ BICT ระบุระยะเวลาตามหลักสูตร (ปริญญาโท 2 ปี, ปริญญาเอก 4 ปี) และกรณีขยายรวมไม่เกิน 5 ปี; คู่มือเทียบเคียงบางฉบับอาจต่างกัน
 - การลาไปปฏิบัติงานในองค์การระหว่างประเทศ: คู่มือ BICT แยกประเภทที่ 1 ไม่เกิน 5 ปี และประเภทที่ 2 ไม่เกิน 1 ปี พร้อมเงื่อนไขอายุงาน อายุ การใช้สิทธิซ้ำ และการรายงานกลับ
@@ -56,7 +56,7 @@
 
 1. เทียบ PDF BICT ฉบับเต็มกับคู่มือเทียบเคียงและระเบียบฉบับปัจจุบันทีละประเภท
 2. กำหนดปฏิทินวันหยุด/วันปิดทำการของโรงเรียน
-3. เตรียมวันเริ่มปฏิบัติงานและประวัติสิทธิที่จำเป็น เช่น วันลาพักผ่อนสะสม/การใช้สิทธิครั้งเดียว
+3. เตรียมวันเริ่มปฏิบัติงานและประวัติสิทธิที่จำเป็นสำหรับประเภทที่เปิดใช้ เช่น การใช้สิทธิครั้งเดียว (ไม่ต้องนำเข้าประวัติยอดลาพักผ่อน)
 4. แยกจำนวนวันลาออกจากสิทธิได้รับเงินเดือนระหว่างลา
 5. บันทึก Policy Version school-wide ที่ตรวจสอบครบและผ่านการอนุมัติโดยผู้มีอำนาจจริงของโรงเรียน
 6. ทดสอบตัวอย่างข้ามปีงบประมาณ วันหยุด วันทำการ สิทธิปีแรก การสะสม และกรณีเกินเกณฑ์
@@ -86,3 +86,8 @@ The school has explicitly confirmed that **civil-service teachers, contract teac
 - The school-wide policy remains draft and calculation-disabled until the remaining leave types, calendar, evidence, and authority controls are verified.
 
 **Legal boundary:** this is the confirmed scope of the school's leave workflow. It is not a legal waiver of any mandatory annual-holiday entitlement that may apply to a person under a particular employment contract or the Labour Protection Act. The Ministry of Labour describes a statutory annual-holiday minimum for employees after one year of continuous service; applicability to each school appointment/contract must be reviewed separately before making a blanket legal statement. See https://www.mol.go.th/employee/สิทธิตามกฎหมายแรงงาน . The system should not silently substitute or erase a legally required entitlement outside this workflow.
+
+
+## 2026-11-03 — clarification: teachers' term breaks are rest periods
+
+The school has clarified the rationale for excluding vacation leave for teachers: **civil-service teachers and contract teachers do not submit vacation-leave requests because school term breaks/official school closures are treated as their rest periods**. The application must therefore not create annual vacation quotas, balances, accrual, or carry-over for these two groups. Consistent with the school's earlier explicit confirmation, other school personnel also have no vacation-leave request type in this school's workflow. This is a workflow rule and does not itself determine whether a separate mandatory statutory entitlement applies to any individual employment contract.
