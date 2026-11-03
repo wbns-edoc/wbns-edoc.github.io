@@ -123,6 +123,7 @@ jobs:
             20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql \
             20261030110000_notifications_realtime_publication_draft.sql \
             20261031100000_staff_leave_confirmed_rules_enforcement_draft.sql \
+            20261103130000_school_leave_scope_excludes_annual_leave_draft.sql \
             20261102130000_staff_leave_private_storage_draft.sql; do
             echo "::group::Applying $migration to local Supabase"
             psql "$DB_URL" -v ON_ERROR_STOP=1 -f "supabase/migrations/$migration"
