@@ -32,7 +32,7 @@ insert into public.school_responsibility_audit(
  '00000000-0000-0000-0000-000000000804','assignment_changed'
 );
 
-insert into public.roles(code,name) values ('system_admin','System Admin')
+insert into public.roles(id,code,name) values ('00000000-0000-0000-0000-000000000809','system_admin','System Admin')
 on conflict(code) do nothing;
 insert into public.user_roles(user_id,role_id)
 select '00000000-0000-0000-0000-000000000808',id from public.roles where code='system_admin'
