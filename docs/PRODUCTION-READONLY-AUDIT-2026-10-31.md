@@ -123,3 +123,25 @@ A fresh read-only inspection was performed against Production project `iigzzwyfx
 - Direct table privilege inspection confirms the four no-policy tables remain row-blocked by RLS; two grant authenticated SELECT and two do not. Several other public tables have anon SELECT table grants while RLS policies are present; the effective row exposure must be tested with the anon role, not inferred from grants alone.
 
 The current Integration branch contains draft-only Realtime publication and notification least-privilege migrations with CI fixture coverage. They have not been applied to Production. Before any Production activation, test the exact deployed notification UX and authorization with real school accounts, then confirm the intended publication membership and least-privilege grants. Keep the Production database unchanged until full parity, E2E, rollback, policy, and zero-cost gates pass.
+
+
+## 2026-11-03 role-impersonation and Realtime CI follow-up
+
+A second read-only SQL probe explicitly changed the transaction role to `anon` and `authenticated` (with no JWT subject) and queried representative sensitive relations. The result sets were all zero rows for both contexts:
+
+- `anon`: `profiles`, `documents`, `notifications`, `audit_logs`, `push_subscriptions`, `google_drive_files`, and `document_files` all returned 0 visible rows.
+- `authenticated` without `auth.uid()`: `profiles`, `documents`, `notifications`, `audit_logs`, and `push_subscriptions` all returned 0 visible rows.
+
+This is useful negative evidence for those exact roles/relations and an empty JWT context. It is **not** a substitute for tests with real authenticated user IDs, and it does not prove every RLS policy or every table is correctly scoped. The broad anon table grants observed on some public relations remain subject to RLS; they must not be treated as equivalent to public row visibility.
+
+Function privilege inspection on the same Production catalog found:
+- `get_public_school_name()` is the sole inspected public SECURITY DEFINER function executable by `anon`; it returns only the configured school-name value.
+- The 18 Security Advisor authenticated-callable SECURITY DEFINER findings are callable by `authenticated`, not by `anon`. Each inspected function has a fixed `search_path`; source review shows permission/authentication/document-scope guards, but role-specific positive/negative RPC tests remain outstanding.
+- The legacy two-argument `admin_save_system_settings(text,bigint)` overload is not executable by `anon` or `authenticated` in the current privilege check. Preserve its exact grant state until its caller/dependency is reconciled.
+
+Integration CI hardening:
+- Commit `8b99d0bf00ab302c12dca10b572f6bf810a1add0` updates `.github/workflows/leave-schema-rls-ci.yml` to run `tests/assert-notifications-realtime-publication.sql` immediately after the candidate publication migration.
+- The assertion file and both notification migrations are now included in the workflow path filters so edits to the publication/grant checks trigger the CI job.
+- The change is Integration-only. Its workflow result must be fetched and reviewed before marking this check passed; the previous 8/8 CI result does not apply to this new commit.
+
+No Production DDL/DML, publication change, privilege change, Auth configuration change, merge, or deployment was performed.
