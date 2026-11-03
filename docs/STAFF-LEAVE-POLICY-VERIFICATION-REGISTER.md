@@ -73,3 +73,16 @@ A fresh public-source check located the official OTEPC circular **ว 14/2568**,
 - Government PRD publication of the Prime Minister's Regulation on Civil Servant Leave B.E. 2555: https://personal.prd.go.th/th/content/page/index/id/60391
 
 The source cross-check does not settle the school's requested school-wide policy across permanent civil servants, government employees, and contract teachers. The school authority still needs to approve that internal policy and define which rules are adopted for categories outside the cited civil-service scope. Keep the calculation gate closed until that approval and the calendar/service-history evidence are recorded. The school's already-confirmed rules (medical certificate from 3 working days; childbirth assistance leave maximum 15 consecutive working days, not split) remain encoded as school-confirmed rules, not inferred from the circular.
+
+
+## 2026-11-03 — school confirmation: no vacation leave
+
+The school has explicitly confirmed that **civil-service teachers, contract teachers, and all other school personnel do not use vacation/annual leave in this school leave workflow**. Therefore:
+
+- Do not offer the `annual_leave` request type to staff.
+- Do not calculate annual vacation entitlement, remaining balance, accrual, or carry-over for any personnel group.
+- Keep the legacy `annual_leave` catalog code inactive for historical/reference compatibility; it is not an available leave type.
+- Remove the annual-leave service-start/carry-over item from implementation gaps. Other unresolved policy gaps remain unchanged.
+- The school-wide policy remains draft and calculation-disabled until the remaining leave types, calendar, evidence, and authority controls are verified.
+
+**Legal boundary:** this is the confirmed scope of the school's leave workflow. It is not a legal waiver of any mandatory annual-holiday entitlement that may apply to a person under a particular employment contract or the Labour Protection Act. The Ministry of Labour describes a statutory annual-holiday minimum for employees after one year of continuous service; applicability to each school appointment/contract must be reviewed separately before making a blanket legal statement. See https://www.mol.go.th/employee/สิทธิตามกฎหมายแรงงาน . The system should not silently substitute or erase a legally required entitlement outside this workflow.
