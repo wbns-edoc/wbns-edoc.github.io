@@ -159,6 +159,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/staff-leave-storage-bootstrap.sql
       - name: Apply schema draft to disposable PostgreSQL
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql
+      - name: Exclude annual leave from school workflow before catalog RLS assertions
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261103130000_school_leave_scope_excludes_annual_leave_draft.sql
       - name: Apply draft RPC migration to disposable PostgreSQL
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql
       - name: Run RLS isolation and direct-write regression tests
