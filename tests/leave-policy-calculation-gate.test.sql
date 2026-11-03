@@ -139,18 +139,28 @@ begin
 end
 $calendar_shape_guard$;
 
+-- Capture the legacy catalog ID as the database owner; RLS intentionally hides inactive types from clients.
+select set_config(
+  'test.annual_leave_type_id',
+  (select id::text from public.staff_leave_types where code='annual_leave' and is_active=false),
+  true
+);
+do $annual_leave_catalog_guard$
+begin
+  if nullif(current_setting('test.annual_leave_type_id',true),'') is null then
+    raise exception 'legacy annual_leave catalog key must be retained but inactive';
+  end if;
+end
+$annual_leave_catalog_guard$;
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub','83000000-0000-0000-0000-000000000001',true);
 
 -- The inactive legacy annual_leave key must not be usable to create a request.
 do $annual_leave_rpc_guard$
 declare
-  v_annual_leave_id uuid;
+  v_annual_leave_id uuid := current_setting('test.annual_leave_type_id')::uuid;
 begin
-  select id into v_annual_leave_id from public.staff_leave_types where code='annual_leave';
-  if v_annual_leave_id is null then
-    raise exception 'legacy annual_leave catalog key must be retained for history compatibility';
-  end if;
   begin
     perform public.staff_leave_create_draft(
       v_annual_leave_id,date '2026-11-09',date '2026-11-09','annual leave must be unavailable'
