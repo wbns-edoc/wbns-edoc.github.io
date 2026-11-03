@@ -29,6 +29,7 @@ end
 $schoolwide_policy_contract$;
 
 -- The recovered handbook is present as a school-wide draft, never auto-approved.
+-- School policy explicitly excludes annual/vacation leave for all personnel in this workflow.
 do $handbook_seed$
 declare
   v_status text;
@@ -55,7 +56,10 @@ begin
      or v_rules->'leave_types'->'sick_leave' ? 'certificate_threshold_conflict' then
     raise exception 'handbook extraction values or unresolved conflicts do not match source';
   end if;
-  if v_status is distinct from 'draft'
+  if v_rules->'leave_types'->'annual_leave'->>'enabled' <> 'false'
+     or v_rules->'leave_types'->'annual_leave'->>'availability' <> 'not_applicable'
+     or coalesce((v_rules->'leave_types'->'annual_leave'->>'carryover')::boolean,true) is not false
+     or v_status is distinct from 'draft'
      or v_rules->>'verification_status' is distinct from 'pending'
      or v_rules->>'calculation_ready' is distinct from 'false'
      or jsonb_typeof(v_rules->'leave_types') is distinct from 'object'
