@@ -7,11 +7,11 @@ do $seed_assert$
 declare n integer;
 begin
   select count(*) into n from public.staff_leave_types where is_active=true;
-  if n < 11 then raise exception 'expected eleven seeded leave categories, found %', n; end if;
-  if not exists(select 1 from public.staff_leave_types where code='sick_leave')
-     or not exists(select 1 from public.staff_leave_types where code='annual_leave')
-     or not exists(select 1 from public.staff_leave_types where code='spouse_following') then
-    raise exception 'required handbook leave categories are missing';
+  if n <> 10 then raise exception 'expected ten active leave categories after school policy excludes annual leave, found %', n; end if;
+  if not exists(select 1 from public.staff_leave_types where code='sick_leave' and is_active=true)
+     or not exists(select 1 from public.staff_leave_types where code='annual_leave' and is_active=false)
+     or not exists(select 1 from public.staff_leave_types where code='spouse_following' and is_active=true) then
+    raise exception 'required handbook categories missing or annual_leave was not retained inactive';
   end if;
 end
 $seed_assert$;
