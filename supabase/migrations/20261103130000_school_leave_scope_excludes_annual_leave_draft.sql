@@ -20,8 +20,7 @@ update public.staff_leave_policy_versions
      '{scope,annual_leave}',
      '"excluded_by_school_policy"'::jsonb,
      true
-   ),
-   updated_at = statement_timestamp()
+   )
  where policy_code = 'school-wide'
    and status in ('draft','review');
 
@@ -37,8 +36,7 @@ update public.staff_leave_policy_versions p
             with ordinality as gap(value, ordinality)
        where gap.value <> 'annual leave service-start date and carry-over balance'
      ), '[]'::jsonb),
-   true),
-   updated_at = statement_timestamp()
+   true)
  where p.policy_code='school-wide'
    and p.status in ('draft','review')
    and jsonb_typeof(p.policy_rules->'implementation_gaps')='array';
