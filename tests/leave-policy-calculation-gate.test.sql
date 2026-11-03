@@ -45,7 +45,7 @@ begin
      or v_rules->'leave_types'->'assist_spouse_childbirth'->>'one_entitlement_per_childbirth_event' <> 'true'
      or v_rules->'leave_types'->'assist_spouse_childbirth' ? 'use_within_calendar_days_after_childbirth'
      or v_rules->'leave_types'->'assist_spouse_childbirth' ? 'file_within_calendar_days_after_childbirth'
-     or v_rules->'leave_types'->'assist_spouse_childbirth'->>'deadline_source_note' not like '%remains unresolved%'
+     or v_rules->'leave_types'->'assist_spouse_childbirth'->>'deadline_source_note' not like '%deadline is unresolved%'
      or v_rules->'leave_types'->'sick_leave'->>'certificate_from_working_day' <> '3'
      or v_rules->'leave_types'->'sick_leave'->>'medical_certificate_required' <> 'true'
      or v_rules->'leave_types'->'sick_leave'->>'certificate_threshold_confirmed_by_school' <> 'true'
