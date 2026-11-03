@@ -7,7 +7,8 @@ insert into public.profiles(id,is_active) values
  ('00000000-0000-0000-0000-000000000801',true), -- applicant
  ('00000000-0000-0000-0000-000000000802',true), -- director
  ('00000000-0000-0000-0000-000000000803',true), -- vice director
- ('00000000-0000-0000-0000-000000000804',true)  -- settings actor
+ ('00000000-0000-0000-0000-000000000804',true), -- settings actor
+ ('00000000-0000-0000-0000-000000000808',true)  -- System Admin attestor
 on conflict(id) do update set is_active=excluded.is_active;
 
 insert into public.staff_leave_types(id,code,name,is_active)
@@ -30,6 +31,18 @@ insert into public.school_responsibility_audit(
  'vice_director',null,'00000000-0000-0000-0000-000000000803',
  '00000000-0000-0000-0000-000000000804','assignment_changed'
 );
+
+insert into public.roles(code,name) values ('system_admin','System Admin')
+on conflict(code) do nothing;
+insert into public.user_roles(user_id,role_id)
+select '00000000-0000-0000-0000-000000000808',id from public.roles where code='system_admin'
+on conflict(user_id,role_id) do nothing;
+
+-- A real authority reference is explicitly attested by the synthetic System Admin fixture.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000808',true);
+select public.admin_verify_staff_leave_approval_route('CI-APPOINTMENT-ORDER-TEST-2026',false);
+reset role;
 
 insert into public.staff_leave_policy_versions(
  id,policy_code,version,status,effective_from,policy_rules,reviewed_by,reviewed_at
@@ -88,6 +101,12 @@ insert into public.school_responsibility_audit(
  'vice_director','00000000-0000-0000-0000-000000000804',
  'vice_director_setting_changed',true,false
 );
+
+-- Changing the school to no-Vice invalidates the previous attestation; re-attest explicitly.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000808',true);
+select public.admin_verify_staff_leave_approval_route('CI-NO-VICE-APPOINTMENT-ORDER-TEST-2026',true);
+reset role;
 
 insert into public.staff_leave_requests(id,applicant_id,leave_type_id,policy_version_id,starts_on,ends_on,day_count,reason,policy_snapshot,status)
 values (
