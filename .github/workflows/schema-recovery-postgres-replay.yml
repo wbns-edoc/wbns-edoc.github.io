@@ -9,6 +9,7 @@ on:
       - "tests/schema-recovery-*.test.*"
       - "tests/schema-recovery-replay-bootstrap.sql"
       - "tests/schema-recovery-rls-behavior.sql"
+      - "tests/production-no-policy-table-acl.test.sql"
       - "supabase/migrations/20261020230000_staff_leave_workflow_foundation_draft.sql"
       - "supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql"
       - "supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql"
@@ -179,6 +180,8 @@ jobs:
           SQL
       - name: Test admin and department document RLS behavior
         run: psql -v ON_ERROR_STOP=1 -f tests/schema-recovery-rls-behavior.sql
+      - name: Assert Production no-policy table ACL/RLS boundary (disposable PostgreSQL only)
+        run: psql -v ON_ERROR_STOP=1 -f tests/production-no-policy-table-acl.test.sql
       - name: Apply staff leave draft to recovered October 15 catalog (disposable PostgreSQL only)
         shell: bash
         run: |
