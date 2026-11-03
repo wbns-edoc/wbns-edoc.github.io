@@ -107,3 +107,19 @@ The deployment guard is on the Draft PR branch only and is not active on `main` 
 - Read-only live Production SQL spot-check (project `iigzzwyfxxtqbgjawyom`) returned: 76 applied migration ledger rows; `staff-leave-private` Storage bucket absent (0); `public.notifications` absent from `supabase_realtime` publication (0); `public.staff_leave_director_absences` table absent (0); and `public.staff_leave_attachments` table absent (0).
 - These findings confirm that staff-leave private file storage, Realtime notification publication, and Director-absence evidence workflow are not deployed in Production. Do not claim these capabilities are live or expose a go-live path for staff leave until secure implementations and browser/role tests are complete.
 - Production project status remains `ACTIVE_HEALTHY`. No Production write, schema change, Storage bucket creation, publication change, merge, or deployment was performed.
+
+
+## 2026-11-03 live read-only refresh
+
+A fresh read-only inspection was performed against Production project `iigzzwyfxxtqbgjawyom` on 2026-11-03. No SQL write, migration, repair, Storage write, project-setting change, or deployment was performed.
+
+- Project status: `ACTIVE_HEALTHY`; Postgres `17.11.0.003`; region `ap-southeast-1`.
+- Migration ledger: 76 entries.
+- Public catalog inventory: 29 relations (27 tables/partitioned tables plus 2 other relation kinds), 27 RLS-enabled public tables, 50 public RLS policies, 34 public functions, 14 non-internal public triggers, 5 public enums, and 7 installed extensions.
+- No public `staff_leave%` tables exist; private bucket `staff-leave-private` does not exist.
+- `pg_publication_tables` currently returns zero published tables, including no `public.notifications` publication for Supabase Realtime. Therefore, any Production feature that depends on Realtime push delivery is not yet verified/live; in-app notification row creation and Realtime delivery must be treated as separate gates.
+- Security Advisor refresh at 2026-11-03 01:42 UTC: 4 RLS-enabled public tables without policies (`department_role_permissions`, `system_settings`, `user_department_roles`, `user_departments`); 18 authenticated-callable SECURITY DEFINER functions; 1 anon-callable SECURITY DEFINER function (`get_public_school_name`, which is intentionally public but still needs explicit documented review); leaked-password protection disabled.
+- Performance Advisor refresh: 10 unindexed foreign-key candidates, 25 unused-index candidates, and 7 multiple-permissive-policy warnings. These are review candidates, not authorization to automatically change indexes or policies.
+- Direct table privilege inspection confirms the four no-policy tables remain row-blocked by RLS; two grant authenticated SELECT and two do not. Several other public tables have anon SELECT table grants while RLS policies are present; the effective row exposure must be tested with the anon role, not inferred from grants alone.
+
+The current Integration branch contains draft-only Realtime publication and notification least-privilege migrations with CI fixture coverage. They have not been applied to Production. Before any Production activation, test the exact deployed notification UX and authorization with real school accounts, then confirm the intended publication membership and least-privilege grants. Keep the Production database unchanged until full parity, E2E, rollback, policy, and zero-cost gates pass.
