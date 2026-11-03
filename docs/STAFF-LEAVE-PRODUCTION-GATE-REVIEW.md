@@ -56,3 +56,12 @@ No Production migration, migration repair, schema/data write, Storage bucket cre
 - CI runs were triggered on code commit `8ac8b50dc011439a9aec4809222d90039bc51c7d`; results must be reviewed before this work is considered passed. The test Supabase project remains inactive, so no live staging deployment was performed.
 - MIME/size metadata is validated, but this does not establish file-content authenticity or prove that a medical certificate is genuine. The feature must not claim such verification.
 - No Production changes, PR merge, or GitHub Pages deployment were made.
+
+
+## 2026-11-03 CI and release-gate refresh
+
+- Integration commit `e50d63378e3b40dc3449c8168966a727d5f3b896` completed all eight required PR workflows successfully: Frontend Build, Staff Leave Schema RLS, Schema Recovery PostgreSQL Replay, Drive Upload, School Responsibility Settings, Supabase Snapshot and Staff Leave Replay, Recovered Catalog Fixture, and Workflow RPC Security.
+- The CI run proves the configured automated checks on the Integration fixture; it does not prove real-account browser acceptance, live notification delivery, school calendar correctness, policy approval, Production migration parity, backup/restore, or zero-cost service operation.
+- Production remains read-only. The last verified Production probe found the project active/healthy with 76 migration-ledger entries and no staff-leave tables or private leave bucket. No Production migration, Storage write, Edge Function deployment, PR merge, or Pages deployment was performed.
+- The test Supabase project was last reported inactive. No project reactivation, project creation, or paid upgrade was attempted.
+- Release disposition remains **NO-GO** until the blockers in this review are evidenced and separately authorized. PR #55 remains Draft and unmerged.
