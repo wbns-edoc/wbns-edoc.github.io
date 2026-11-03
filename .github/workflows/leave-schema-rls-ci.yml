@@ -14,6 +14,10 @@ on:
       - 'supabase/migrations/20261022130000_school_responsibility_assignments_draft.sql'
       - 'supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql'
       - 'supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql'
+      - 'supabase/migrations/20261030110000_notifications_realtime_publication_draft.sql'
+      - 'supabase/migrations/20261102100000_notifications_least_privilege_grants_draft.sql'
+      - 'tests/assert-notifications-realtime-publication.sql'
+      - 'tests/notifications-least-privilege-grants.test.sql'
       - 'tests/leave-notification-outbox.test.sql'
       - 'supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql'
       - 'tests/leave-policy-calculation-gate.test.sql'
@@ -25,6 +29,7 @@ on:
       - 'supabase/migrations/20261030110000_notifications_realtime_publication_draft.sql'
       - 'supabase/migrations/20261102100000_notifications_least_privilege_grants_draft.sql'
       - 'tests/notifications-least-privilege-grants.test.sql'
+      - 'tests/assert-notifications-realtime-publication.sql'
       - 'supabase/migrations/20261031100000_staff_leave_confirmed_rules_enforcement_draft.sql'
       - 'supabase/migrations/20261102130000_staff_leave_private_storage_draft.sql'
       - 'tests/leave-private-storage.test.sql'
@@ -112,8 +117,7 @@ jobs:
           language sql stable
           as $$
             select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-          $$;
-          create table public.profiles (id uuid primary key, full_name text not null default 'CI Fixture', is_active boolean not null default true);
+          $$;          create table public.profiles (id uuid primary key, full_name text not null default 'CI Fixture', is_active boolean not null default true);
           create table public.notifications (
             id uuid primary key default gen_random_uuid(),
             recipient_id uuid not null references public.profiles(id),
@@ -188,6 +192,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql
       - name: Apply notification realtime publication migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261030110000_notifications_realtime_publication_draft.sql
+      - name: Assert notifications are in the Realtime publication
+        run: psql -v ON_ERROR_STOP=1 -f tests/assert-notifications-realtime-publication.sql
       - name: Apply notification least-privilege grants migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261102100000_notifications_least_privilege_grants_draft.sql
       - name: Run notification least-privilege grants assertions
