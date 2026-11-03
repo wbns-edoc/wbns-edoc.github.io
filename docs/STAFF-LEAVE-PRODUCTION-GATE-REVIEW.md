@@ -65,3 +65,23 @@ No Production migration, migration repair, schema/data write, Storage bucket cre
 - Production remains read-only. The last verified Production probe found the project active/healthy with 76 migration-ledger entries and no staff-leave tables or private leave bucket. No Production migration, Storage write, Edge Function deployment, PR merge, or Pages deployment was performed.
 - The test Supabase project was last reported inactive. No project reactivation, project creation, or paid upgrade was attempted.
 - Release disposition remains **NO-GO** until the blockers in this review are evidenced and separately authorized. PR #55 remains Draft and unmerged.
+
+
+## 2026-11-03 follow-up — verified current PR head and CI
+
+- Current PR #55 head at time of review: `6c0800535d28e57e315df51d72ce8b75608928b7` (documentation follow-up commit). PR remains open, Draft, unmerged; base main SHA `f88b165e5f8c4ef3c564389d003f4029122c3eb5`.
+- Re-fetched the eight PR-triggered workflow runs associated with this exact head and inspected each run's jobs. **All 8/8 workflows and all reported jobs completed with conclusion `success`**:
+  1. Schema Recovery PostgreSQL Replay
+  2. Frontend Build CI
+  3. Staff Leave Schema RLS CI
+  4. School Responsibility Settings CI
+  5. Drive Upload CI
+  6. Supabase Snapshot and Staff Leave Replay CI
+  7. Workflow RPC Security CI
+  8. Recovered Catalog Fixture CI (both jobs successful)
+- The Supabase Snapshot and Staff Leave Replay workflow includes a successful step asserting that `notifications` is in the Realtime publication. Staff Leave Schema RLS CI also passed.
+- Read-only Supabase project lookup still reports Production `ACTIVE_HEALTHY` on PostgreSQL 17.11.0.003 in Singapore. Migration listing confirms exactly 76 applied entries; newest listed version is `20261030094941` (`require_active_department_for_scoped_permissions`). The staff-leave migrations remain Integration-only and have not been applied to Production.
+- The official BICT/MOE handbook PDF remains the source already supplied by the school. The handbook extraction and policy register identify unresolved prerequisites: the source scope is civil servants while the school wants one school-wide rule for all personnel; a competent school authority must approve that internal policy application, current regulations must be checked, and the school calendar/service history/accumulators/one-time entitlements must be verified. The BICT PDF endpoint timed out during this follow-up fetch; the already-recorded extraction was not silently treated as a new verification.
+- Realtime publication assertion passing in disposable/local CI proves the draft migration behavior on the test fixture only. Production publication remains unchanged and still has no published `public.notifications` table.
+- Release decision remains **NO-GO**. CI 8/8 is closed as a gate; the following are not: exact migration/catalog/ACL parity, real authenticated multi-role and two-user Realtime E2E, real school approver identity/authority, handbook/current-regulation and calendar sign-off, browser E2E for leave and private attachments, backup/restore/rollback rehearsal, and auditable zero-baht cost verification.
+- No Production DDL/DML, migration repair, Storage bucket creation, publication/grant/Auth change, Edge Function deployment, PR merge, or Pages deployment was performed.
