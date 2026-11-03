@@ -88,3 +88,10 @@ A targeted production SQL review refined the Security Advisor observations witho
 - The initial advisor warning count of 30 authenticated-callable functions is not itself proof of an authorization defect: callable RPCs require function-by-function guard and role-matrix verification. No mass REVOKE, policy relaxation, or direct-table grant change is justified by this read-only review.
 
 This narrows the immediate exposure assessment but does not close the full security gate: real JWT positive/negative role tests, browser-level cross-user denial, Auth recovery planning, and review of all callable SECURITY DEFINER bodies remain required. Production remained unchanged; release decision remains **NO-GO**.
+
+
+### Follow-up: RPC wrapper and public reader body inspection
+
+- The four-argument overload `staff_leave_create_draft(uuid,date,date,text)` is SECURITY DEFINER and authenticated-callable, but its complete SQL body only delegates to the five-argument overload with a NULL childbirth-event date. The delegated PL/pgSQL implementation checks `auth.uid()`, active profile, date/reason validity, and inserts the draft with `applicant_id=v_actor`; the overload does not bypass the owner check or create a draft for a caller-supplied identity. This explains why the simple source-pattern scan did not find an auth guard in the wrapper itself.
+- `get_public_school_name()` is the only anon-executable SECURITY DEFINER function found. Its complete SQL body returns only `system_settings.school_name` with the fixed Wat Bueng Nam Sai fallback; it does not return other settings or personal data. Its public access is consistent with the public school-name display use case.
+- This targeted inspection did not identify an authorization bypass in these two functions. It is not a substitute for the remaining authenticated RPC role matrix or real-user E2E. No Production writes were made.
