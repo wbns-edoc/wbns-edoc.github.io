@@ -2,6 +2,24 @@
 -- Runs ONLY in the disposable PostgreSQL replay; never run against Production.
 BEGIN;
 
+-- The October 15 recovered catalog predates the current system_settings shape
+-- and does not preserve every later RLS flag. Add minimal test-only shells where
+-- absent and normalize RLS for the four live Production no-policy tables.
+-- This is an ACL/RLS behavior fixture, NOT evidence of historical schema parity.
+CREATE TABLE IF NOT EXISTS public.system_settings (
+  setting_key text PRIMARY KEY,
+  setting_value jsonb
+);
+ALTER TABLE public.system_settings ENABLE ROW LEVEL SECURITY;
+
+CREATE TABLE IF NOT EXISTS public.user_departments (
+  user_id uuid NOT NULL,
+  department_id uuid NOT NULL,
+  is_primary boolean NOT NULL DEFAULT false,
+  PRIMARY KEY (user_id, department_id)
+);
+ALTER TABLE public.user_departments ENABLE ROW LEVEL SECURITY;
+
 -- Reproduce only the verified Production API-role grants inside this disposable transaction.
 GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT SELECT ON public.department_role_permissions, public.user_department_roles TO authenticated;
