@@ -27,6 +27,7 @@ on:
       - 'tests/leave-dashboard-summary.test.sql'
       - 'supabase/migrations/20261023170000_staff_leave_direct_vice_absence_evidence_draft.sql'
       - 'supabase/migrations/20261103120000_staff_leave_explicit_approver_authority_draft.sql'
+      - 'supabase/migrations/20261103130000_school_leave_scope_excludes_annual_leave_draft.sql'
       - 'tests/leave-approval-authority-verification.test.sql'
       - 'supabase/migrations/20261030110000_notifications_realtime_publication_draft.sql'
       - 'supabase/migrations/20261102100000_notifications_least_privilege_grants_draft.sql'
@@ -226,6 +227,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-confirmed-rules-enforcement.test.sql
       - name: Apply private staff leave Storage migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261102130000_staff_leave_private_storage_draft.sql
+      - name: Apply school-confirmed no-vacation-leave scope migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261103130000_school_leave_scope_excludes_annual_leave_draft.sql
       - name: Apply explicit approver authority verification migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261103120000_staff_leave_explicit_approver_authority_draft.sql
       - name: Test explicit approver authority verification and invalidation
