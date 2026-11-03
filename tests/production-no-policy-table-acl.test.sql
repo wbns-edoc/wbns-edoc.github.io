@@ -2,6 +2,10 @@
 -- Runs ONLY in the disposable PostgreSQL replay; never run against Production.
 BEGIN;
 
+-- Reproduce only the verified Production API-role grants inside this disposable transaction.
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT SELECT ON public.department_role_permissions, public.user_department_roles TO authenticated;
+
 DO $catalog$
 DECLARE
   t text;
