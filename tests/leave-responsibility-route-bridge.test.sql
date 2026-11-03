@@ -26,12 +26,12 @@ do $test$
 begin
  if not exists (
    select 1 from public.staff_leave_approval_route_config
-   where singleton=true and authority_verified
+   where singleton=true and not authority_verified
      and director_user_id='00000000-0000-0000-0000-000000000701'
      and vice_director_user_id='00000000-0000-0000-0000-000000000702'
      and not no_vice_director_confirmed
-     and authority_reference like 'school_responsibility_audit:%'
- ) then raise exception 'responsibility_mapping_did_not_sync_two_stage_route'; end if;
+     and authority_reference is null and verified_by is null and verified_at is null
+ ) then raise exception 'responsibility_mapping_must_sync_candidates_but_not_invent_authority'; end if;
 end
 $test$;
 
@@ -51,11 +51,12 @@ do $test$
 begin
  if not exists (
    select 1 from public.staff_leave_approval_route_config
-   where singleton=true and authority_verified
+   where singleton=true and not authority_verified
      and director_user_id='00000000-0000-0000-0000-000000000701'
      and vice_director_user_id is null
-     and no_vice_director_confirmed
- ) then raise exception 'explicit_no_vice_confirmation_did_not_sync_director_only_route'; end if;
+     and not no_vice_director_confirmed
+     and authority_reference is null
+ ) then raise exception 'no_vice_setting_change_must_invalidate_prior_attestation'; end if;
 end
 $test$;
 
