@@ -7,7 +7,7 @@ Disposition: **NO-GO for Production; continue Integration only.**
 
 ## Verified state
 
-- PR #55 is Draft, open, and unmerged. Its head is `31d6352e76695dfcd33a864423710446d23ef05d`.
+- PR #55 is Draft, open, and unmerged. Its head was refreshed on 2026-11-03 by the CI evidence update; the documentation-only follow-up commit is `706ca4d7e13a65c7fc489ea94c49bbfa15abe181`.
 - Eight required CI workflows are reported successful on that exact PR head. CI success is necessary but does not establish Production readiness.
 - Wat Bueng Nam Sai Production Supabase project `iigzzwyfxxtqbgjawyom` is `ACTIVE_HEALTHY`.
 - A fresh read-only Production probe found 76 migration-ledger entries, zero public `staff_leave%` tables, and zero Storage buckets whose IDs contain `leave`. No Production writes were performed.
