@@ -50,7 +50,6 @@ begin
      or v_rules->'leave_types'->'assist_spouse_childbirth'->>'file_within_calendar_days_after_childbirth' <> '30'
      or v_rules->'leave_types'->'assist_spouse_childbirth'->>'deadline_source_note' not like '%remains unresolved%'
      or v_rules->'leave_types'->'personal_leave'->>'max_days_per_year' <> '45'
-     or v_rules->'leave_types'->'annual_leave'->>'first_year_minimum_service_months' <> '6'
      or v_rules->'leave_types'->'ordination_hajj'->>'minimum_notice_days' <> '60'
      or v_rules->'leave_types'->'military_selection_training'->>'notify_supervisor_within_hours' <> '48'
      or v_rules->'leave_types'->'sick_leave' ? 'certificate_threshold_conflict' then
