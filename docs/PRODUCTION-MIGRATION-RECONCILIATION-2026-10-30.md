@@ -279,3 +279,49 @@ The Integration branch now contains draft migration `20261030110000_notification
 The Integration branch's `supabase/config.toml` already declared `[functions.drive-health]` with `verify_jwt = true`, but the corresponding `supabase/functions/drive-health/index.ts` source was missing. The source has been restored from the archived `recovery/restore-drive-health-source-20261029` branch.
 
 The restored Edge Function signs the Apps Script bridge health request with HMAC, requires an HTTPS bridge URL and configured server-side secret, uses a 45-second timeout, returns only the bridge folder name and a read-only status, and keeps JWT verification enabled. The UI was corrected to consume `folder_name` (rather than a non-existent `root_folder` object) and to state that the check performs no write. Drive Upload CI now type-checks this Edge Function and runs a UI/Edge Function response-contract test. This source restoration has not been deployed.
+
+
+## 2026-11-03 refreshed read-only Production reconciliation
+
+The migration ledger, repository tree, public relation ACLs, RLS policies, and SECURITY DEFINER function catalog were queried again on 2026-11-03. These checks were read-only; no Production schema or data was changed.
+
+| Inventory | Refreshed result |
+|---|---:|
+| Production migration-ledger entries | 76 |
+| Integration `supabase/migrations/*.sql` files | 88 |
+| Production names matching a repository migration suffix after removing the repository timestamp prefix | 47 |
+| Production ledger names without an exact normalized suffix match | 29 |
+| Repository migration files without an exact normalized Production ledger name | 41 |
+| Public tables / partitioned tables | 27 |
+| Public tables with RLS enabled | 27 |
+| Public RLS policies | 50 |
+| RLS-enabled public tables with no policy | 4 |
+| Public SECURITY DEFINER functions | 19 |
+| SECURITY DEFINER functions missing a fixed `search_path` | 0 |
+
+The 47 normalized name matches are only filename/name evidence, not proof that the repository SQL is byte-for-byte the SQL applied in Production. The 29 unmatched Production entries and 41 unmatched repository files remain unresolved; some unmatched repository files are Integration-only leave drafts. No migration mapping is upgraded to “verified” from this count alone.
+
+The four intentionally policy-less RLS tables remain:
+- `department_role_permissions`
+- `system_settings`
+- `user_department_roles`
+- `user_departments`
+
+The live ACL probe showed that `authenticated` has SELECT privilege on `department_role_permissions` and `user_department_roles`, but not on `system_settings` or `user_departments`. All four have RLS enabled and no policies. The two SELECT-granted tables therefore rely on default-deny RLS; the other two also have no direct SELECT grant. Keep this design closed; do not add broad policies to clear Advisor warnings.
+
+All 19 Production public SECURITY DEFINER functions currently expose a fixed `search_path` in `pg_proc.proconfig`. This is a catalog-level check only; it does not replace function-by-function authorization tests under real authenticated JWT subjects. The public school-name reader remains the only intentionally anonymous SECURITY DEFINER reader identified in the prior ACL review.
+
+### New Integration regression guard
+
+Added `tests/production-no-policy-table-acl.test.sql` and wired it into Schema Recovery PostgreSQL Replay CI. It models only the verified Production grants inside a rollback-protected disposable transaction and asserts:
+- all four tables remain RLS-enabled with no policies;
+- authenticated SELECT is granted only to the two RPC-only reference tables;
+- direct authenticated reads of those two tables return no rows;
+- authenticated direct SELECT on `system_settings` and `user_departments` is denied;
+- anon has no SELECT grant on any of the four tables.
+
+This is an Integration/CI regression check, not a Production change. Its result must be confirmed on the new PR head before it is treated as passed.
+
+### Remaining Foundation and historical-source blocker
+
+The original Foundation SQL remains unrecovered. The current Production schema dump and October 15 catalog snapshot are not safe substitutes for historical migration source. A clean, exact Supabase baseline still requires separation of school-owned objects from Supabase-managed Auth/Storage/extension objects, preservation of owners/grants/default ACLs, and disposable Supabase catalog comparison. Do not repair or rewrite Production migration history to make counts line up.
