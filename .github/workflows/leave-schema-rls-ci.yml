@@ -215,6 +215,8 @@ jobs:
 
       - name: Apply confirmed staff leave rules enforcement migration before regression suite
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261031100000_staff_leave_confirmed_rules_enforcement_draft.sql
+      - name: Apply school-confirmed no-vacation-leave scope migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261103130000_school_leave_scope_excludes_annual_leave_draft.sql
       - name: Run shared policy calculation and fail-closed submission tests
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-policy-calculation-gate.test.sql
       - name: Run over-limit notification fan-out tests
@@ -227,8 +229,6 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-confirmed-rules-enforcement.test.sql
       - name: Apply private staff leave Storage migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261102130000_staff_leave_private_storage_draft.sql
-      - name: Apply school-confirmed no-vacation-leave scope migration
-        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261103130000_school_leave_scope_excludes_annual_leave_draft.sql
       - name: Apply explicit approver authority verification migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261103120000_staff_leave_explicit_approver_authority_draft.sql
       - name: Test explicit approver authority verification and invalidation
