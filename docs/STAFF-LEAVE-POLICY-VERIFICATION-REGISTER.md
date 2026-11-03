@@ -62,3 +62,14 @@
 6. ทดสอบตัวอย่างข้ามปีงบประมาณ วันหยุด วันทำการ สิทธิปีแรก การสะสม และกรณีเกินเกณฑ์
 
 ข้อสำคัญ: หากคู่มือ BICT กับคู่มือเทียบเคียงมีตัวเลขหรือเงื่อนไขต่างกัน ให้ยึดคู่มือ BICT เป็นเอกสารต้นทางที่โรงเรียนส่งไว้เพื่อร่าง Policy Matrix และให้ผู้มีอำนาจตรวจระเบียบปัจจุบันก่อนอนุมัติ Policy Version; ห้ามเลือกค่าที่เข้มงวด/ผ่อนปรนกว่าเอง และไม่ควรนำไปเปิดใช้กับบุคลากรทุกประเภทโดยอัตโนมัติจนกว่าจะบันทึกเป็นนโยบายโรงเรียนอย่างตรวจสอบย้อนหลังได้
+
+
+## 2026-11-03 official-source cross-check
+
+A fresh public-source check located the official OTEPC circular **ว 14/2568**, dated 3 April 2025, titled “ผู้มีอำนาจพิจารณาหรืออนุญาต และอำนาจพิจารณาหรืออนุญาตการลาของข้าราชการครูและบุคลากรทางการศึกษา”. The OTEPC circular registry marks it active and explicitly records that circular 42/2555 is repealed. This is relevant to approval-authority mapping for teacher civil servants/educational personnel; it is **not** an entitlement rule authorizing automatic extension of civil-service leave entitlements to every contract/personnel category at the school.
+
+- OTEPC circular registry (ว14/2568, active; supersedes 42/2555): https://circular.otepc.go.th/v1_t_circualr_book_view.php?editid1=657
+- OTEPC announcement and attached circular PDF: https://www.otepc.go.th/en/content_page/item/5332-14-2568.html
+- Government PRD publication of the Prime Minister's Regulation on Civil Servant Leave B.E. 2555: https://personal.prd.go.th/th/content/page/index/id/60391
+
+The source cross-check does not settle the school's requested school-wide policy across permanent civil servants, government employees, and contract teachers. The school authority still needs to approve that internal policy and define which rules are adopted for categories outside the cited civil-service scope. Keep the calculation gate closed until that approval and the calendar/service-history evidence are recorded. The school's already-confirmed rules (medical certificate from 3 working days; childbirth assistance leave maximum 15 consecutive working days, not split) remain encoded as school-confirmed rules, not inferred from the circular.
