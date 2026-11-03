@@ -55,6 +55,12 @@ begin
      or v_rules->'leave_types'->'sick_leave' ? 'certificate_threshold_conflict' then
     raise exception 'handbook extraction values or unresolved conflicts do not match source';
   end if;
+  if not exists (
+       select 1 from public.staff_leave_types
+       where code='annual_leave' and is_active=false
+     ) then
+    raise exception 'legacy annual_leave catalog entry must remain present but inactive';
+  end if;
   if v_rules->'leave_types'->'annual_leave'->>'enabled' <> 'false'
      or v_rules->'leave_types'->'annual_leave'->>'availability' <> 'not_applicable'
      or coalesce((v_rules->'leave_types'->'annual_leave'->>'carryover')::boolean,true) is not false
@@ -135,6 +141,26 @@ $calendar_shape_guard$;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub','83000000-0000-0000-0000-000000000001',true);
+
+-- The inactive legacy annual_leave key must not be usable to create a request.
+do $annual_leave_rpc_guard$
+declare
+  v_annual_leave_id uuid;
+begin
+  select id into v_annual_leave_id from public.staff_leave_types where code='annual_leave';
+  if v_annual_leave_id is null then
+    raise exception 'legacy annual_leave catalog key must be retained for history compatibility';
+  end if;
+  begin
+    perform public.staff_leave_create_draft(
+      v_annual_leave_id,date '2026-11-09',date '2026-11-09','annual leave must be unavailable'
+    );
+    raise exception 'expected inactive annual_leave request creation to fail';
+  exception when sqlstate '22023' then
+    if sqlerrm <> 'active_leave_type_required' then raise; end if;
+  end;
+end
+$annual_leave_rpc_guard$;
 
 -- No approved shared policy: create a draft, but never invent a day count.
 select public.staff_leave_create_draft(
