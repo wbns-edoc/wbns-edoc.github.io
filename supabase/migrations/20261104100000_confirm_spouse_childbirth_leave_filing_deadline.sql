@@ -5,9 +5,9 @@ begin
   update public.staff_leave_policy_versions
   set policy_rules =
     jsonb_set(
-      policy_rules #- '{leave_types,assist_spouse_childbirth,use_within_calendar_days_after_childbirth}',
+      policy_rules,
       '{leave_types,assist_spouse_childbirth}',
-      (policy_rules #> '{leave_types,assist_spouse_childbirth}') ||
+      ((policy_rules #> '{leave_types,assist_spouse_childbirth}') - 'use_within_calendar_days_after_childbirth') ||
       jsonb_build_object(
         'filing_deadline_calendar_days_after_childbirth', 90,
         'filing_may_be_before_or_on_leave_start', true,
@@ -17,8 +17,7 @@ begin
         'deadline_source_note', 'School-provided authoritative excerpt confirmed: submit before or on the leave date, no later than 90 days from childbirth. One continuous period, maximum 15 working days.'
       ),
       true
-    ),
-    created_at = created_at
+    )
   where policy_code = 'school-wide'
     and version = 1
     and status = 'draft';
