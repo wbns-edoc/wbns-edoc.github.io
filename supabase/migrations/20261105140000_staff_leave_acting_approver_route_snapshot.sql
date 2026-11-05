@@ -108,6 +108,9 @@ begin
 
   -- Resolve the active acting approver once, at submission time. A later
   -- revocation/expiry must not rewrite the route of this submitted request.
+  select null::uuid as delegation_id,null::uuid as acting_approver_user_id,
+    null::timestamptz as valid_from,null::timestamptz as valid_until
+    into v_delegation;
   if v_route.no_vice_director_confirmed then
     select * into v_delegation
     from public.staff_leave_active_acting_approver(v_route.director_user_id, statement_timestamp());
