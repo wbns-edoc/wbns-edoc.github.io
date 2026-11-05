@@ -33,6 +33,7 @@ on:
       - 'supabase/migrations/20261105120000_staff_leave_generalized_approver_delegation.sql'
       - 'tests/leave-generalized-approver-delegation.test.sql'
       - 'supabase/migrations/20261105140000_staff_leave_acting_approver_route_snapshot.sql'
+      - 'supabase/migrations/20261105150000_remove_annual_leave_from_school_policy_rules.sql'
       - 'tests/leave-acting-approver-route-snapshot.test.sql'
       - 'tests/school-responsibility-rpc-search-path.test.sql'
       - 'tests/leave-approval-authority-verification.test.sql'
@@ -208,6 +209,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql
       - name: Apply shared policy calculation and submission gate migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql
+      - name: Remove excluded annual leave from school policy rules
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261105150000_remove_annual_leave_from_school_policy_rules.sql
       - name: Apply over-limit marking and notification migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql
       - name: Apply approver dashboard summary migration
