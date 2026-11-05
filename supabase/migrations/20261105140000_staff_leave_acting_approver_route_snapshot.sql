@@ -192,6 +192,10 @@ declare
   v_next_approver uuid;
   v_effective_approver uuid;
   v_acting_approver uuid;
+  v_absence_id uuid;
+  v_absence_reference text;
+  v_absence_start date;
+  v_absence_end date;
 begin
   v_actor := auth.uid();
   if v_actor is null then
@@ -304,6 +308,39 @@ begin
       if v_actor <> v_route.vice_director_user_id
          or v_request.current_approver_user_id is distinct from v_actor then
         raise exception 'leave_request_not_found_or_not_assigned' using errcode = '42501';
+      end if;
+      -- Preserve the legacy, evidence-backed Vice Director exception for schools
+      -- that actually have a Vice Director. It does not apply to the acting-staff
+      -- route, which is captured separately as director_acting_approver.
+      select e.id,e.authority_reference,e.absence_start,e.absence_end
+        into v_absence_id,v_absence_reference,v_absence_start,v_absence_end
+      from public.staff_leave_director_absence_evidence e
+      where e.director_user_id=v_route.director_user_id
+        and e.vice_director_user_id=v_actor
+        and e.revoked_at is null
+        and e.absence_start <= (statement_timestamp() at time zone 'Asia/Bangkok')::date
+        and e.absence_end >= (statement_timestamp() at time zone 'Asia/Bangkok')::date
+      order by e.recorded_at desc
+      limit 1;
+      if found then
+        v_action := 'approved';
+        update public.staff_leave_requests
+           set status='approved',approval_stage='completed',current_approver_user_id=null,
+               decided_at=statement_timestamp(),updated_at=statement_timestamp()
+         where id=v_request.id;
+        insert into public.staff_leave_approval_actions(request_id,actor_id,action,reason,metadata)
+        values(v_request.id,v_actor,'approved',nullif(btrim(coalesce(p_reason,'')),''),jsonb_build_object(
+          'idempotency_key',v_key,'decision','approve','stage','vice_director_review',
+          'director_absence_override',true,'absence_evidence_id',v_absence_id,
+          'absence_authority_reference',v_absence_reference,
+          'absence_start',v_absence_start,'absence_end',v_absence_end));
+        v_event_key := 'leave-decision:'||v_request.id::text||':approved:'||v_key;
+        insert into public.staff_leave_notification_outbox(
+          event_key,request_id,recipient_id,event_type,channel,safe_payload,status
+        ) values(v_event_key,v_request.id,v_request.applicant_id,'approved','in_app',
+          jsonb_build_object('event','leave_approved','request_id',v_request.id::text),'pending')
+        on conflict(event_key) do nothing;
+        return v_request.id;
       end if;
       update public.staff_leave_requests set approval_stage='director_final_review',
         current_approver_user_id=v_route.director_user_id, updated_at=statement_timestamp()
