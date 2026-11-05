@@ -32,6 +32,8 @@ on:
       - 'supabase/migrations/20261104100000_harden_school_responsibility_rpc_search_path.sql'
       - 'supabase/migrations/20261105120000_staff_leave_generalized_approver_delegation.sql'
       - 'tests/leave-generalized-approver-delegation.test.sql'
+      - 'supabase/migrations/20261105140000_staff_leave_acting_approver_route_snapshot.sql'
+      - 'tests/leave-acting-approver-route-snapshot.test.sql'
       - 'tests/school-responsibility-rpc-search-path.test.sql'
       - 'tests/leave-approval-authority-verification.test.sql'
       - 'supabase/migrations/20261030110000_notifications_realtime_publication_draft.sql'
@@ -198,6 +200,10 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261105120000_staff_leave_generalized_approver_delegation.sql
       - name: Test generalized acting approver delegation lifecycle
         run: psql -v ON_ERROR_STOP=1 -f tests/leave-generalized-approver-delegation.test.sql
+      - name: Apply acting approver immutable route integration migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261105140000_staff_leave_acting_approver_route_snapshot.sql
+      - name: Test acting approver immutable route and revocation semantics
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-acting-approver-route-snapshot.test.sql
       - name: Pin SECURITY DEFINER school responsibility RPC search paths
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261104100000_harden_school_responsibility_rpc_search_path.sql
       - name: Assert pinned SECURITY DEFINER school responsibility RPC search paths
