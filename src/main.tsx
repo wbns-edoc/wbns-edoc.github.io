@@ -105,6 +105,12 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
  const [actingValidUntil,setActingValidUntil]=React.useState('');
  const [actingReason,setActingReason]=React.useState('');
  const [actingReference,setActingReference]=React.useState('');
+ const [schoolResponsibilityAssignments,setSchoolResponsibilityAssignments]=React.useState<any>({});
+ const [schoolHasViceDirector,setSchoolHasViceDirector]=React.useState(false);
+ const [schoolDirectorId,setSchoolDirectorId]=React.useState('');
+ const [schoolViceDirectorId,setSchoolViceDirectorId]=React.useState('');
+ const [schoolAuthorityReference,setSchoolAuthorityReference]=React.useState('');
+ const [confirmNoViceDirector,setConfirmNoViceDirector]=React.useState(false);
  // loadIdentity currently returns role.name before role.code; support both persisted codes and Thai display names.
  const roleKeys=new Set(roles.map(role=>String(role).trim().toLocaleLowerCase().replace(/\s+/g,'_')));
  const canViewDashboard=['director','deputy_director','system_admin','ผู้อำนวยการโรงเรียน','ผู้อำนวยการ','รองผู้อำนวยการโรงเรียน','รองผู้อำนวยการ','ผู้ดูแลระบบ'].some(role=>roleKeys.has(role));
@@ -113,14 +119,15 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
  async function load(){
   if(!profile){setLoading(false);return}
   setLoading(true);setError('');
-  const [t,r,dashboard,absence,attachmentResult,eligible,delegationRows]=await Promise.all([
+  const [t,r,dashboard,absence,attachmentResult,eligible,delegationRows,responsibilities]=await Promise.all([
    supabase.from('staff_leave_types').select('id,code,name').eq('is_active',true).order('name'),
    supabase.from('staff_leave_requests').select('id,applicant_id,leave_type_id,starts_on,ends_on,day_count,is_over_limit,reason,status,created_at,policy_version_id,current_approver_user_id,staff_leave_types(name)').order('created_at',{ascending:false}).limit(50),
    canViewDashboard?supabase.rpc('staff_leave_dashboard_summary'):Promise.resolve({data:null,error:null}),
    canManageAbsence?supabase.rpc('admin_list_staff_leave_director_absences'):Promise.resolve({data:null,error:null}),
    supabase.from('staff_leave_attachments').select('id,request_id,original_filename,mime_type,size_bytes,attachment_kind,storage_object_key,storage_bucket_id').order('created_at',{ascending:false}),
    canManageAbsence?supabase.rpc('admin_list_eligible_staff_leave_approvers'):Promise.resolve({data:null,error:null}),
-   canManageAbsence?supabase.rpc('admin_list_staff_leave_approver_delegations'):Promise.resolve({data:null,error:null})
+   canManageAbsence?supabase.rpc('admin_list_staff_leave_approver_delegations'):Promise.resolve({data:null,error:null}),
+   canManageAbsence?supabase.rpc('admin_get_school_responsibilities'):Promise.resolve({data:null,error:null})
   ]);
   if(t.error||r.error){setAvailable(false);setTypes([]);setRows([]);setError('ระบบการลายังไม่พร้อมใช้งานในฐานข้อมูลนี้ กรุณารอการตรวจสอบและเผยแพร่ Migration');}
   else{setAvailable(true);setTypes(t.data||[]);setRows(r.data||[]);setAttachments(!attachmentResult.error&&attachmentResult.data?attachmentResult.data:[]);if(!selectedType&&t.data?.length)setSelectedType(t.data[0].id);}
@@ -128,6 +135,13 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
   setAbsenceRecords(!absence.error&&absence.data?absence.data:[]);
   setEligibleApprovers(!eligible.error&&eligible.data?eligible.data:[]);
   setDelegations(!delegationRows.error&&delegationRows.data?delegationRows.data:[]);
+  if(!responsibilities.error&&responsibilities.data){
+   const assignmentMap=responsibilities.data.assignments||{};
+   setSchoolResponsibilityAssignments(assignmentMap);
+   setSchoolHasViceDirector(responsibilities.data.has_vice_director===true);
+   setSchoolDirectorId(assignmentMap.director?.user_id||'');
+   setSchoolViceDirectorId(assignmentMap.vice_director?.user_id||'');
+  }
   setLoading(false);
  }
  React.useEffect(()=>{load()},[profile?.id,canViewDashboard,canManageAbsence]);
@@ -231,6 +245,33 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
    <div className="stat-card"><span>รอผู้อำนวยการ</span><strong>{summary.waiting_director??0}</strong></div>
    <div className="stat-card"><span>อนุมัติแล้ว</span><strong>{summary.approved??0}</strong></div>
    <div className="stat-card"><span>เกินเกณฑ์</span><strong>{summary.over_limit??0}</strong></div>
+  </div>}
+  {canManageAbsence&&<div className="panel"><div className="panel-head"><div><h2>กำหนดผู้มีอำนาจอนุมัติการลา</h2><p>เลือกผู้อำนวยการจากบัญชีบุคลากรที่ได้รับแต่งตั้งจริง และยืนยันสถานะรองผู้อำนวยการก่อนเปิดเส้นทางอนุมัติ การบันทึกนี้จะทำให้ระบบตรวจสอบอำนาจอนุมัติได้</p></div></div>
+   <form className="form-grid" onSubmit={async e=>{
+    e.preventDefault();if(busy)return;
+    if(!schoolDirectorId||!schoolAuthorityReference.trim()){setError('กรุณาเลือกผู้อำนวยการและกรอกเลขที่เอกสารอ้างอิงจริง');return}
+    if(schoolHasViceDirector&&!schoolViceDirectorId){setError('กรุณาเลือกบัญชีรองผู้อำนวยการ');return}
+    if(!schoolHasViceDirector&&!confirmNoViceDirector){setError('กรุณายืนยันว่าโรงเรียนไม่มีรองผู้อำนวยการ');return}
+    if(schoolHasViceDirector&&schoolViceDirectorId===schoolDirectorId){setError('ผู้อำนวยการและรองผู้อำนวยการต้องเป็นคนละบัญชี');return}
+    setBusy(true);setError('');setNotice('');
+    const assignments:any={};
+    for(const key of ['director','vice_director','personnel_head','budget_head','academic_head','general_head'])assignments[key]=schoolResponsibilityAssignments[key]?.user_id||null;
+    assignments.director=schoolDirectorId;
+    assignments.vice_director=schoolHasViceDirector?schoolViceDirectorId:null;
+    const {error:saveError}=await supabase.rpc('admin_save_school_responsibilities',{p_assignments:assignments,p_has_vice_director:schoolHasViceDirector});
+    if(saveError){setError('บันทึกผู้รับผิดชอบโรงเรียนไม่สำเร็จ: '+saveError.message);setBusy(false);return}
+    const {data:verified,error:verifyError}=await supabase.rpc('admin_verify_staff_leave_approval_route',{p_authority_reference:schoolAuthorityReference.trim(),p_confirm_no_vice_director:!schoolHasViceDirector});
+    if(verifyError){setError('บันทึกผู้รับผิดชอบแล้ว แต่ยังยืนยันเส้นทางอนุมัติไม่สำเร็จ: '+verifyError.message+' กรุณาตรวจเอกสารอ้างอิงและสถานะรองผู้อำนวยการ');}
+    else{setNotice('บันทึกและยืนยันเส้นทางผู้อนุมัติแล้ว ระบบจะใช้ผู้อำนวยการตามบัญชีที่เลือก'+(!schoolHasViceDirector?' และยืนยันว่าโรงเรียนไม่มีรองผู้อำนวยการ':' และใช้ลำดับรองผู้อำนวยการก่อนผู้อำนวยการ'));setSchoolAuthorityReference('');setConfirmNoViceDirector(false);await load();}
+    setBusy(false);
+   }}>
+    <label className="wide">ผู้อำนวยการโรงเรียน<select value={schoolDirectorId} onChange={e=>setSchoolDirectorId(e.target.value)} required><option value="">— เลือกบัญชีผู้อำนวยการ —</option>{eligibleApprovers.map(p=><option key={p.user_id} value={p.user_id}>{p.full_name||p.user_id}</option>)}</select></label>
+    <label className="wide"><span className="inline-check"><input type="checkbox" checked={schoolHasViceDirector} onChange={e=>{setSchoolHasViceDirector(e.target.checked);setConfirmNoViceDirector(false)}}/> โรงเรียนมีรองผู้อำนวยการ</span></label>
+    {schoolHasViceDirector?<label className="wide">รองผู้อำนวยการโรงเรียน<select value={schoolViceDirectorId} onChange={e=>setSchoolViceDirectorId(e.target.value)} required><option value="">— เลือกบัญชีรองผู้อำนวยการ —</option>{eligibleApprovers.filter(p=>p.user_id!==schoolDirectorId).map(p=><option key={p.user_id} value={p.user_id}>{p.full_name||p.user_id}</option>)}</select></label>:<label className="wide"><span className="inline-check"><input type="checkbox" checked={confirmNoViceDirector} onChange={e=>setConfirmNoViceDirector(e.target.checked)}/> ยืนยันว่าโรงเรียนไม่มีรองผู้อำนวยการในปัจจุบัน</span></label>}
+    <label className="wide">เลขที่คำสั่งแต่งตั้ง/เอกสารอ้างอิงอำนาจหน้าที่<input value={schoolAuthorityReference} onChange={e=>setSchoolAuthorityReference(e.target.value)} maxLength={500} required placeholder="กรอกเลขที่คำสั่งจริงที่ตรวจสอบย้อนหลังได้"/></label>
+    <div className="notice wide">ห้ามกรอกเลขที่สมมติ การกดยืนยันถือเป็นการรับรองโดย System Admin ว่าบัญชีและเอกสารอ้างอิงตรงกับคำสั่งของโรงเรียน</div>
+    <div className="form-actions"><button type="submit" disabled={busy||eligibleApprovers.length===0}>บันทึกและยืนยันเส้นทางอนุมัติ</button></div>
+   </form>
   </div>}
   {canManageAbsence&&<div className="panel"><div className="panel-head"><div><h2>กำหนดผู้ปฏิบัติหน้าที่แทนผู้อำนวยการ</h2><p>ผู้ดูแลระบบเลือกบัญชีบุคลากรที่ใช้งานได้ กำหนดช่วงเวลา และระบุเหตุผลพร้อมเลขที่คำสั่ง/หลักฐาน ระบบจะตรึงผู้อนุมัติไว้เมื่อมีการส่งคำขอ</p></div></div>
    <form className="form-grid" onSubmit={async e=>{e.preventDefault();if(busy)return;if(!actingApproverId||!actingValidFrom||!actingValidUntil||!actingReason.trim()||!actingReference.trim()){setError('กรุณากรอกผู้ปฏิบัติหน้าที่ ช่วงเวลา เหตุผล และเลขที่หลักฐานครบถ้วน');return}const from=new Date(actingValidFrom),until=new Date(actingValidUntil);if(Number.isNaN(from.getTime())||Number.isNaN(until.getTime())||until<=from){setError('ช่วงเวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น');return}setBusy(true);setError('');setNotice('');const {error}=await supabase.rpc('admin_create_staff_leave_approver_delegation',{p_acting_approver_user_id:actingApproverId,p_valid_from:from.toISOString(),p_valid_until:until.toISOString(),p_reason:actingReason.trim(),p_authority_reference:actingReference.trim()});if(error)setError('กำหนดผู้ปฏิบัติหน้าที่แทนไม่สำเร็จ: '+error.message);else{setNotice('บันทึกการมอบหมายผู้ปฏิบัติหน้าที่แทนแล้ว');setActingReason('');setActingReference('');await load()}setBusy(false)}}>
