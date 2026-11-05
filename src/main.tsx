@@ -106,6 +106,7 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
  const [actingReason,setActingReason]=React.useState('');
  const [actingReference,setActingReference]=React.useState('');
  const [schoolResponsibilityAssignments,setSchoolResponsibilityAssignments]=React.useState<any>({});
+ const [responsibilityReady,setResponsibilityReady]=React.useState(false);
  const [schoolHasViceDirector,setSchoolHasViceDirector]=React.useState(false);
  const [schoolDirectorId,setSchoolDirectorId]=React.useState('');
  const [schoolViceDirectorId,setSchoolViceDirectorId]=React.useState('');
@@ -141,7 +142,8 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
    setSchoolHasViceDirector(responsibilities.data.has_vice_director===true);
    setSchoolDirectorId(assignmentMap.director?.user_id||'');
    setSchoolViceDirectorId(assignmentMap.vice_director?.user_id||'');
-  }
+   setResponsibilityReady(true);
+  }else setResponsibilityReady(false);
   setLoading(false);
  }
  React.useEffect(()=>{load()},[profile?.id,canViewDashboard,canManageAbsence]);
@@ -249,6 +251,7 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
   {canManageAbsence&&<div className="panel"><div className="panel-head"><div><h2>กำหนดผู้มีอำนาจอนุมัติการลา</h2><p>เลือกผู้อำนวยการจากบัญชีบุคลากรที่ได้รับแต่งตั้งจริง และยืนยันสถานะรองผู้อำนวยการก่อนเปิดเส้นทางอนุมัติ การบันทึกนี้จะทำให้ระบบตรวจสอบอำนาจอนุมัติได้</p></div></div>
    <form className="form-grid" onSubmit={async e=>{
     e.preventDefault();if(busy)return;
+    if(!responsibilityReady){setError('ไม่สามารถโหลดการกำหนดผู้รับผิดชอบเดิมได้ กรุณารีเฟรชก่อน เพื่อป้องกันการเขียนทับข้อมูลหน้าที่อื่น');return}
     if(!schoolDirectorId||!schoolAuthorityReference.trim()){setError('กรุณาเลือกผู้อำนวยการและกรอกเลขที่เอกสารอ้างอิงจริง');return}
     if(schoolHasViceDirector&&!schoolViceDirectorId){setError('กรุณาเลือกบัญชีรองผู้อำนวยการ');return}
     if(!schoolHasViceDirector&&!confirmNoViceDirector){setError('กรุณายืนยันว่าโรงเรียนไม่มีรองผู้อำนวยการ');return}
@@ -270,7 +273,7 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
     {schoolHasViceDirector?<label className="wide">รองผู้อำนวยการโรงเรียน<select value={schoolViceDirectorId} onChange={e=>setSchoolViceDirectorId(e.target.value)} required><option value="">— เลือกบัญชีรองผู้อำนวยการ —</option>{eligibleApprovers.filter(p=>p.user_id!==schoolDirectorId).map(p=><option key={p.user_id} value={p.user_id}>{p.full_name||p.user_id}</option>)}</select></label>:<label className="wide"><span className="inline-check"><input type="checkbox" checked={confirmNoViceDirector} onChange={e=>setConfirmNoViceDirector(e.target.checked)}/> ยืนยันว่าโรงเรียนไม่มีรองผู้อำนวยการในปัจจุบัน</span></label>}
     <label className="wide">เลขที่คำสั่งแต่งตั้ง/เอกสารอ้างอิงอำนาจหน้าที่<input value={schoolAuthorityReference} onChange={e=>setSchoolAuthorityReference(e.target.value)} maxLength={500} required placeholder="กรอกเลขที่คำสั่งจริงที่ตรวจสอบย้อนหลังได้"/></label>
     <div className="notice wide">ห้ามกรอกเลขที่สมมติ การกดยืนยันถือเป็นการรับรองโดย System Admin ว่าบัญชีและเอกสารอ้างอิงตรงกับคำสั่งของโรงเรียน</div>
-    <div className="form-actions"><button type="submit" disabled={busy||eligibleApprovers.length===0}>บันทึกและยืนยันเส้นทางอนุมัติ</button></div>
+    <div className="form-actions"><button type="submit" disabled={busy||!responsibilityReady||eligibleApprovers.length===0}>บันทึกและยืนยันเส้นทางอนุมัติ</button></div>
    </form>
   </div>}
   {canManageAbsence&&<div className="panel"><div className="panel-head"><div><h2>กำหนดผู้ปฏิบัติหน้าที่แทนผู้อำนวยการ</h2><p>ผู้ดูแลระบบเลือกบัญชีบุคลากรที่ใช้งานได้ กำหนดช่วงเวลา และระบุเหตุผลพร้อมเลขที่คำสั่ง/หลักฐาน ระบบจะตรึงผู้อนุมัติไว้เมื่อมีการส่งคำขอ</p></div></div>
