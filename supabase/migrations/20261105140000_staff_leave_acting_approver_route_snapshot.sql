@@ -20,12 +20,12 @@ alter table public.staff_leave_requests
       and (
         (approval_route_snapshot->>'route_kind'='director_only_confirmed_no_vice'
           and approval_route_snapshot->'vice_director_user_id'='null'::jsonb
-          and approval_route_snapshot->'acting_approver_user_id'='null'::jsonb
-          and approval_route_snapshot->'delegation_id'='null'::jsonb)
+          and (approval_route_snapshot->'acting_approver_user_id' is null or approval_route_snapshot->'acting_approver_user_id'='null'::jsonb)
+          and (approval_route_snapshot->'delegation_id' is null or approval_route_snapshot->'delegation_id'='null'::jsonb))
         or (approval_route_snapshot->>'route_kind'='vice_director_then_director'
           and nullif(approval_route_snapshot->>'vice_director_user_id','') is not null
           and approval_route_snapshot->>'vice_director_user_id'<>approval_route_snapshot->>'director_user_id'
-          and approval_route_snapshot->'acting_approver_user_id'='null'::jsonb)
+          and (approval_route_snapshot->'acting_approver_user_id' is null or approval_route_snapshot->'acting_approver_user_id'='null'::jsonb))
         or (approval_route_snapshot->>'route_kind'='director_acting_approver'
           and approval_route_snapshot->'vice_director_user_id'='null'::jsonb
           and nullif(approval_route_snapshot->>'acting_approver_user_id','') is not null
