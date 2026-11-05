@@ -40,13 +40,14 @@ insert into public.staff_leave_policy_versions(
 ) on conflict(id) do nothing;
 
 insert into public.staff_leave_requests(
- id,applicant_id,leave_type_id,starts_on,ends_on,reason,status,policy_version_id,day_count
+ id,applicant_id,leave_type_id,starts_on,ends_on,reason,status,policy_version_id,day_count,policy_snapshot
 ) values(
  '72000000-0000-0000-0000-000000000007',
  '72000000-0000-0000-0000-000000000003',
  '72000000-0000-0000-0000-000000000006',
  date '2026-12-10',date '2026-12-10','acting route snapshot regression','draft',
- '72000000-0000-0000-0000-000000000008',1
+ '72000000-0000-0000-0000-000000000008',1,
+ '{"verification_status":"approved","calculation_ready":true,"policy_version_id":"72000000-0000-0000-0000-000000000008","calculated_day_count":1,"leave_type_code":"acting_route_test"}'::jsonb
 ) on conflict(id) do nothing;
 
 -- A System Admin creates a time-bounded delegation with an auditable reference.
