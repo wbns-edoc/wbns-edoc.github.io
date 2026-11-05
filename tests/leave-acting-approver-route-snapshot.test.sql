@@ -71,16 +71,9 @@ begin
     and current_approver_user_id='72000000-0000-0000-0000-000000000002'
     and approval_route_snapshot->>'route_kind'='director_acting_approver'
     and approval_route_snapshot->>'acting_approver_user_id'='72000000-0000-0000-0000-000000000002'
-    and approval_route_snapshot->>'delegation_id=:'||'acting_delegation_id'
+    and nullif(approval_route_snapshot->>'delegation_id','') is not null
  ) then
-  -- Compare the captured delegation id using the psql variable separately below.
-  if not exists(select 1 from public.staff_leave_requests
-    where id='72000000-0000-0000-0000-000000000007'
-      and approval_route_snapshot->>'route_kind'='director_acting_approver'
-      and approval_route_snapshot->>'acting_approver_user_id'='72000000-0000-0000-0000-000000000002'
-      and nullif(approval_route_snapshot->>'delegation_id','') is not null) then
-    raise exception 'submission_did_not_freeze_acting_approver_route';
-  end if;
+  raise exception 'submission_did_not_freeze_acting_approver_route';
  end if;
 end
 $snapshot$;
