@@ -61,14 +61,17 @@ begin
      ) then
     raise exception 'legacy annual_leave catalog entry must remain present but inactive';
   end if;
-  if v_rules->'leave_types'->'annual_leave'->>'enabled' <> 'false'
-     or v_rules->'leave_types'->'annual_leave'->>'availability' <> 'not_applicable'
-     or coalesce((v_rules->'leave_types'->'annual_leave'->>'carryover')::boolean,true) is not false
+  if v_rules->'leave_types' ? 'annual_leave'
+     or exists (
+       select 1
+       from jsonb_array_elements_text(v_rules->'implementation_gaps') gap(value)
+       where gap.value ilike '%annual leave%'
+     )
      or v_status is distinct from 'draft'
      or v_rules->>'verification_status' is distinct from 'pending'
      or v_rules->>'calculation_ready' is distinct from 'false'
      or jsonb_typeof(v_rules->'leave_types') is distinct from 'object'
-     or (select count(*) from jsonb_object_keys(v_rules->'leave_types')) <> 11
+     or (select count(*) from jsonb_object_keys(v_rules->'leave_types')) <> 10
      or coalesce((v_rules->'calendar'->>'verified')::boolean,true) then
     raise exception 'handbook seed must contain 11 leave types and remain unapproved / not calculation-ready';
   end if;
