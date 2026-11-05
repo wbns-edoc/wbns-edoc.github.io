@@ -126,7 +126,7 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
   else{setAvailable(true);setTypes(t.data||[]);setRows(r.data||[]);setAttachments(!attachmentResult.error&&attachmentResult.data?attachmentResult.data:[]);if(!selectedType&&t.data?.length)setSelectedType(t.data[0].id);}
   setSummary(!dashboard.error&&dashboard.data?dashboard.data:null);
   setAbsenceRecords(!absence.error&&absence.data?absence.data:[]);
-  setEligibleApprovers(!arguments[0]&&false?[]:(!eligible.error&&eligible.data?eligible.data:[]));
+  setEligibleApprovers(!eligible.error&&eligible.data?eligible.data:[]);
   setDelegations(!delegationRows.error&&delegationRows.data?delegationRows.data:[]);
   setLoading(false);
  }
