@@ -73,7 +73,7 @@ begin
      or jsonb_typeof(v_rules->'leave_types') is distinct from 'object'
      or (select count(*) from jsonb_object_keys(v_rules->'leave_types')) <> 10
      or coalesce((v_rules->'calendar'->>'verified')::boolean,true) then
-    raise exception 'handbook seed must contain 11 leave types and remain unapproved / not calculation-ready';
+    raise exception 'handbook seed must contain 10 enabled policy types and remain unapproved / not calculation-ready';
   end if;
 end
 $handbook_seed$;
