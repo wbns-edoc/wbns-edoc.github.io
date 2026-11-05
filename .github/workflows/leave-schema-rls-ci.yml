@@ -30,6 +30,8 @@ on:
       - 'supabase/migrations/20261103130000_school_leave_scope_excludes_annual_leave_draft.sql'
       - 'supabase/migrations/20261103140000_staff_leave_childbirth_deadline_fail_closed.sql'
       - 'supabase/migrations/20261104100000_harden_school_responsibility_rpc_search_path.sql'
+      - 'supabase/migrations/20261105120000_staff_leave_generalized_approver_delegation.sql'
+      - 'tests/leave-generalized-approver-delegation.test.sql'
       - 'tests/school-responsibility-rpc-search-path.test.sql'
       - 'tests/leave-approval-authority-verification.test.sql'
       - 'supabase/migrations/20261030110000_notifications_realtime_publication_draft.sql'
@@ -192,6 +194,10 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023120000_staff_leave_responsibility_route_bridge_draft.sql
       - name: Apply explicit approver authority verification migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261103120000_staff_leave_explicit_approver_authority_draft.sql
+      - name: Apply generalized acting approver delegation migration
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261105120000_staff_leave_generalized_approver_delegation.sql
+      - name: Test generalized acting approver delegation lifecycle
+        run: psql -v ON_ERROR_STOP=1 -f tests/leave-generalized-approver-delegation.test.sql
       - name: Pin SECURITY DEFINER school responsibility RPC search paths
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261104100000_harden_school_responsibility_rpc_search_path.sql
       - name: Assert pinned SECURITY DEFINER school responsibility RPC search paths
