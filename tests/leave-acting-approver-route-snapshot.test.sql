@@ -34,7 +34,7 @@ on conflict(id) do update set is_active=true;
 insert into public.staff_leave_policy_versions(
  id,policy_code,version,status,effective_from,policy_rules,reviewed_by,reviewed_at
 ) values(
- '72000000-0000-0000-0000-000000000008','school-wide',1,'approved',date '2026-01-01',
+ '72000000-0000-0000-0000-000000000008','school-wide',99,'approved',date '2026-01-01',
  '{"fixture":true,"verification_status":"approved","calculation_ready":true,"calendar":{"verified":true,"weekend_days":[6,7],"non_working_dates":[]},"implementation_gaps":[],"leave_types":{"acting_route_test":{"counting_basis":"calendar_days"}}}'::jsonb,
  '72000000-0000-0000-0000-000000000004',statement_timestamp()
 ) on conflict(id) do nothing;
