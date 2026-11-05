@@ -197,7 +197,7 @@ create or replace function public.admin_list_eligible_staff_leave_approvers()
 returns table(user_id uuid,full_name text)
 language plpgsql security definer
 set search_path=pg_catalog,public
-as $
+as $$
 declare v_actor uuid:=auth.uid();
 begin
   if v_actor is null then raise exception 'authentication_required' using errcode='28000'; end if;
