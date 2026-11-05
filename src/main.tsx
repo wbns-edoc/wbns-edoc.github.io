@@ -98,6 +98,13 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
  const [absenceEnd,setAbsenceEnd]=React.useState('');
  const [absenceReason,setAbsenceReason]=React.useState('');
  const [absenceReference,setAbsenceReference]=React.useState('');
+ const [eligibleApprovers,setEligibleApprovers]=React.useState<any[]>([]);
+ const [delegations,setDelegations]=React.useState<any[]>([]);
+ const [actingApproverId,setActingApproverId]=React.useState('');
+ const [actingValidFrom,setActingValidFrom]=React.useState('');
+ const [actingValidUntil,setActingValidUntil]=React.useState('');
+ const [actingReason,setActingReason]=React.useState('');
+ const [actingReference,setActingReference]=React.useState('');
  // loadIdentity currently returns role.name before role.code; support both persisted codes and Thai display names.
  const roleKeys=new Set(roles.map(role=>String(role).trim().toLocaleLowerCase().replace(/\s+/g,'_')));
  const canViewDashboard=['director','deputy_director','system_admin','ผู้อำนวยการโรงเรียน','ผู้อำนวยการ','รองผู้อำนวยการโรงเรียน','รองผู้อำนวยการ','ผู้ดูแลระบบ'].some(role=>roleKeys.has(role));
@@ -106,17 +113,21 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
  async function load(){
   if(!profile){setLoading(false);return}
   setLoading(true);setError('');
-  const [t,r,dashboard,absence,attachmentResult]=await Promise.all([
+  const [t,r,dashboard,absence,attachmentResult,eligible,delegationRows]=await Promise.all([
    supabase.from('staff_leave_types').select('id,code,name').eq('is_active',true).order('name'),
    supabase.from('staff_leave_requests').select('id,applicant_id,leave_type_id,starts_on,ends_on,day_count,is_over_limit,reason,status,created_at,policy_version_id,current_approver_user_id,staff_leave_types(name)').order('created_at',{ascending:false}).limit(50),
    canViewDashboard?supabase.rpc('staff_leave_dashboard_summary'):Promise.resolve({data:null,error:null}),
    canManageAbsence?supabase.rpc('admin_list_staff_leave_director_absences'):Promise.resolve({data:null,error:null}),
-   supabase.from('staff_leave_attachments').select('id,request_id,original_filename,mime_type,size_bytes,attachment_kind,storage_object_key,storage_bucket_id').order('created_at',{ascending:false})
+   supabase.from('staff_leave_attachments').select('id,request_id,original_filename,mime_type,size_bytes,attachment_kind,storage_object_key,storage_bucket_id').order('created_at',{ascending:false}),
+   canManageAbsence?supabase.rpc('admin_list_eligible_staff_leave_approvers'):Promise.resolve({data:null,error:null}),
+   canManageAbsence?supabase.rpc('admin_list_staff_leave_approver_delegations'):Promise.resolve({data:null,error:null})
   ]);
   if(t.error||r.error){setAvailable(false);setTypes([]);setRows([]);setError('ระบบการลายังไม่พร้อมใช้งานในฐานข้อมูลนี้ กรุณารอการตรวจสอบและเผยแพร่ Migration');}
   else{setAvailable(true);setTypes(t.data||[]);setRows(r.data||[]);setAttachments(!attachmentResult.error&&attachmentResult.data?attachmentResult.data:[]);if(!selectedType&&t.data?.length)setSelectedType(t.data[0].id);}
   setSummary(!dashboard.error&&dashboard.data?dashboard.data:null);
   setAbsenceRecords(!absence.error&&absence.data?absence.data:[]);
+  setEligibleApprovers(!arguments[0]&&false?[]:(!eligible.error&&eligible.data?eligible.data:[]));
+  setDelegations(!delegationRows.error&&delegationRows.data?delegationRows.data:[]);
   setLoading(false);
  }
  React.useEffect(()=>{load()},[profile?.id,canViewDashboard,canManageAbsence]);
@@ -221,15 +232,16 @@ function StaffLeave({profile,roles,setError}:{profile:Profile|null;roles:string[
    <div className="stat-card"><span>อนุมัติแล้ว</span><strong>{summary.approved??0}</strong></div>
    <div className="stat-card"><span>เกินเกณฑ์</span><strong>{summary.over_limit??0}</strong></div>
   </div>}
-  {canManageAbsence&&<div className="panel"><div className="panel-head"><div><h2>การไม่อยู่ของผู้อำนวยการ</h2><p>บันทึกโดยผู้ดูแลระบบพร้อมหลักฐานอ้างอิง เพื่อให้รองผู้อำนวยการอนุมัติขั้นสุดท้ายแทนได้เฉพาะช่วงที่มีหลักฐาน</p></div></div>
-   <form className="form-grid" onSubmit={recordDirectorAbsence}>
-    <label>เริ่มวันที่<input type="date" value={absenceStart} onChange={e=>setAbsenceStart(e.target.value)} required/></label>
-    <label>สิ้นสุดวันที่<input type="date" value={absenceEnd} min={absenceStart||undefined} onChange={e=>setAbsenceEnd(e.target.value)} required/></label>
-    <label className="wide">เหตุผล<input value={absenceReason} onChange={e=>setAbsenceReason(e.target.value)} maxLength={1000} required placeholder="เช่น ไปราชการ / ลาป่วย / เข้ารับการอบรม"/></label>
-    <label className="wide">เลขที่คำสั่งหรือหลักฐานอ้างอิง<input value={absenceReference} onChange={e=>setAbsenceReference(e.target.value)} maxLength={500} required placeholder="เลขที่หนังสือ/คำสั่งที่ตรวจสอบย้อนหลังได้"/></label>
-    <div className="form-actions"><button type="submit" disabled={busy}>บันทึกหลักฐานการไม่อยู่</button></div>
+  {canManageAbsence&&<div className="panel"><div className="panel-head"><div><h2>กำหนดผู้ปฏิบัติหน้าที่แทนผู้อำนวยการ</h2><p>ผู้ดูแลระบบเลือกบัญชีบุคลากรที่ใช้งานได้ กำหนดช่วงเวลา และระบุเหตุผลพร้อมเลขที่คำสั่ง/หลักฐาน ระบบจะตรึงผู้อนุมัติไว้เมื่อมีการส่งคำขอ</p></div></div>
+   <form className="form-grid" onSubmit={async e=>{e.preventDefault();if(busy)return;if(!actingApproverId||!actingValidFrom||!actingValidUntil||!actingReason.trim()||!actingReference.trim()){setError('กรุณากรอกผู้ปฏิบัติหน้าที่ ช่วงเวลา เหตุผล และเลขที่หลักฐานครบถ้วน');return}const from=new Date(actingValidFrom),until=new Date(actingValidUntil);if(Number.isNaN(from.getTime())||Number.isNaN(until.getTime())||until<=from){setError('ช่วงเวลาสิ้นสุดต้องอยู่หลังเวลาเริ่มต้น');return}setBusy(true);setError('');setNotice('');const {error}=await supabase.rpc('admin_create_staff_leave_approver_delegation',{p_acting_approver_user_id:actingApproverId,p_valid_from:from.toISOString(),p_valid_until:until.toISOString(),p_reason:actingReason.trim(),p_authority_reference:actingReference.trim()});if(error)setError('กำหนดผู้ปฏิบัติหน้าที่แทนไม่สำเร็จ: '+error.message);else{setNotice('บันทึกการมอบหมายผู้ปฏิบัติหน้าที่แทนแล้ว');setActingReason('');setActingReference('');await load()}setBusy(false)}}>
+    <label className="wide">บุคลากรผู้ปฏิบัติหน้าที่แทน<select value={actingApproverId} onChange={e=>setActingApproverId(e.target.value)} required><option value="">— เลือกบัญชีบุคลากร —</option>{eligibleApprovers.filter(p=>p.user_id!==profile?.id).map(p=><option key={p.user_id} value={p.user_id}>{p.full_name||p.user_id}</option>)}</select></label>
+    <label>เริ่มปฏิบัติหน้าที่<input type="datetime-local" value={actingValidFrom} onChange={e=>setActingValidFrom(e.target.value)} required/></label>
+    <label>สิ้นสุดการมอบหมาย<input type="datetime-local" value={actingValidUntil} min={actingValidFrom||undefined} onChange={e=>setActingValidUntil(e.target.value)} required/></label>
+    <label className="wide">เหตุผล<input value={actingReason} onChange={e=>setActingReason(e.target.value)} maxLength={1000} required placeholder="เช่น ผู้อำนวยการไม่สามารถปฏิบัติหน้าที่ในช่วงเวลาดังกล่าว"/></label>
+    <label className="wide">เลขที่คำสั่งหรือหลักฐานอ้างอิง<input value={actingReference} onChange={e=>setActingReference(e.target.value)} maxLength={500} required placeholder="เลขที่คำสั่ง/หนังสือมอบหมายที่ตรวจสอบย้อนหลังได้"/></label>
+    <div className="form-actions"><button type="submit" disabled={busy||eligibleApprovers.length===0}>บันทึกการมอบหมาย</button></div>
    </form>
-   {absenceRecords.length>0&&<div className="table-wrap"><table><thead><tr><th>ช่วงเวลา</th><th>เหตุผล</th><th>หลักฐาน</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>{absenceRecords.map(a=><tr key={a.id}><td>{a.absence_start} – {a.absence_end}</td><td>{a.reason}</td><td>{a.authority_reference}</td><td>{a.revoked_at?'ยกเลิกแล้ว':'บันทึกแล้ว'}</td><td>{!a.revoked_at?<button className="ghost" disabled={busy} onClick={()=>revokeDirectorAbsence(a)}>ยกเลิกหลักฐาน</button>:'—'}</td></tr>)}</tbody></table></div>}
+   {delegations.length>0&&<div className="table-wrap"><table><thead><tr><th>ผู้ปฏิบัติหน้าที่แทน</th><th>ช่วงเวลา</th><th>เหตุผล / หลักฐาน</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody>{delegations.map(d=><tr key={d.id}><td>{eligibleApprovers.find(p=>p.user_id===d.acting_approver_user_id)?.full_name||d.acting_approver_user_id}</td><td>{new Date(d.valid_from).toLocaleString('th-TH')} – {new Date(d.valid_until).toLocaleString('th-TH')}</td><td>{d.reason}<br/><span className="muted">{d.authority_reference}</span></td><td>{d.revoked_at?'เพิกถอนแล้ว':new Date(d.valid_until)<=new Date()?'หมดอายุ':new Date(d.valid_from)>new Date()?'ยังไม่เริ่ม':'มีผลอยู่'}</td><td>{!d.revoked_at?<button type="button" className="ghost" disabled={busy} onClick={async()=>{const why=window.prompt('ระบุเหตุผลการเพิกถอนการมอบหมาย');if(!why?.trim())return;setBusy(true);setError('');const {error}=await supabase.rpc('admin_revoke_staff_leave_approver_delegation',{p_delegation_id:d.id,p_reason:why.trim()});if(error)setError('เพิกถอนการมอบหมายไม่สำเร็จ: '+error.message);else{setNotice('เพิกถอนการมอบหมายสำหรับคำขอใหม่แล้ว คำขอที่ส่งก่อนเพิกถอนยังคงใช้เส้นทางเดิม');await load()}setBusy(false)}}>เพิกถอน</button>:'—'}</td></tr>)}</tbody></table></div>}
   </div>}
   <div className="panel"><div className="panel-head"><div><h2>ยื่นคำขอลา (บันทึกร่าง)</h2><p>ใช้กฎการลากลางชุดเดียวกันสำหรับบุคลากรทุกประเภท</p></div></div>
    <div className="notice" role="status">ระบบจะคำนวณวันลาและเปิดให้ส่งอนุมัติเฉพาะเมื่อมีนโยบายกลางที่ตรวจสอบและอนุมัติแล้วเท่านั้น คำขอที่ยังไม่มีนโยบายจะบันทึกเป็นร่างโดยไม่เดาจำนวนวันลา</div>
