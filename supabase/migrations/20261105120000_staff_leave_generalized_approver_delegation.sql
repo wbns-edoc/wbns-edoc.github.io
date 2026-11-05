@@ -211,7 +211,7 @@ begin
   return query select p.id,p.full_name from public.profiles p
     where p.is_active=true order by p.full_name limit 500;
 end;
-$;
+$$;
 
 revoke all on function public.admin_create_staff_leave_approver_delegation(uuid,timestamptz,timestamptz,text,text) from public,anon;
 grant execute on function public.admin_create_staff_leave_approver_delegation(uuid,timestamptz,timestamptz,text,text) to authenticated;
