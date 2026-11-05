@@ -3,10 +3,13 @@ on:
   pull_request:
     paths:
       - 'src/**'
+      - 'tests/staff-leave-role-visibility.test.cjs'
+      - 'tests/drive-health-ui-contract.test.cjs'
       - 'package.json'
       - 'vite.config.*'
       - 'tsconfig*.json'
       - '.github/workflows/frontend-build-ci.yml'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -20,4 +23,9 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm audit --audit-level=high
+      - run: node tests/staff-leave-role-visibility.test.cjs
+      - run: node tests/drive-health-ui-contract.test.cjs
+      - name: Guard GitHub Pages deployment to main only
+        run: |
+          grep -Fq "if: github.ref == 'refs/heads/main'" .github/workflows/deploy.yml
       - run: npm run build

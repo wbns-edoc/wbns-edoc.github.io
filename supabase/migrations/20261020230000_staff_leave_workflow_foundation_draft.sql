@@ -1,0 +1,15 @@
+-- RETIRED DRAFT — intentionally no-op.
+--
+-- This earlier draft created a second, category-keyed leave schema
+-- (personnel_categories / leave_policy_versions / leave_requests) and granted
+-- broad approver SELECT access. It conflicts with the owner's later confirmed
+-- school-wide policy and the hardened staff_leave_* schema introduced by
+-- 20261021100000_staff_leave_secure_schema_draft.sql.
+--
+-- No later staff_leave migration depends on the objects from this retired
+-- draft. Keep this timestamped file as a no-op so a fresh migration replay
+-- cannot create the obsolete tables or the over-broad RLS policies.
+--
+-- The replacement schema remains draft-only. It must pass clean-database
+-- replay, RLS/workflow tests, policy verification, and release review before
+-- any Production deployment.

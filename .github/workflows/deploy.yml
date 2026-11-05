@@ -12,6 +12,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
+    # GitHub workflow_dispatch can target any branch; publish only from main.
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
