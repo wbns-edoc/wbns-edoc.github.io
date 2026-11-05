@@ -125,6 +125,7 @@ jobs:
             20261031100000_staff_leave_confirmed_rules_enforcement_draft.sql \
             20261102130000_staff_leave_private_storage_draft.sql \
             20261103130000_school_leave_scope_excludes_annual_leave_draft.sql \
+            20261105150000_remove_annual_leave_from_school_policy_rules.sql \
             20261103140000_staff_leave_childbirth_deadline_fail_closed.sql \
             20261103120000_staff_leave_explicit_approver_authority_draft.sql; do
             echo "::group::Applying $migration to local Supabase"
