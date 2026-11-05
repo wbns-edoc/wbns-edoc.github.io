@@ -169,6 +169,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021100000_staff_leave_secure_schema_draft.sql
       - name: Exclude annual leave from school workflow before catalog RLS assertions
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261103130000_school_leave_scope_excludes_annual_leave_draft.sql
+      - name: Remove excluded annual leave from school policy rules
+        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261105150000_remove_annual_leave_from_school_policy_rules.sql
       - name: Apply draft RPC migration to disposable PostgreSQL
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261021120000_staff_leave_create_draft_rpc_draft.sql
       - name: Run RLS isolation and direct-write regression tests
@@ -209,8 +211,6 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023130000_staff_leave_in_app_notification_delivery_draft.sql
       - name: Apply shared policy calculation and submission gate migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023140000_staff_leave_shared_policy_calculation_gate_draft.sql
-      - name: Remove excluded annual leave from school policy rules
-        run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261105150000_remove_annual_leave_from_school_policy_rules.sql
       - name: Apply over-limit marking and notification migration
         run: psql -v ON_ERROR_STOP=1 -f supabase/migrations/20261023150000_staff_leave_over_limit_notifications_draft.sql
       - name: Apply approver dashboard summary migration
