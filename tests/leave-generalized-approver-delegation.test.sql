@@ -92,8 +92,7 @@ begin
 end
 $overlap$;
 select public.admin_revoke_staff_leave_approver_delegation(
- (select id from public.staff_leave_approver_delegations
-  where acting_approver_user_id='72000000-0000-0000-0000-000000000003'),
+ :'delegation_id'::uuid,
  'Revoked in regression test');
 reset role;
 
