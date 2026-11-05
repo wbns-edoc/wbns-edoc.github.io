@@ -193,11 +193,33 @@ as $$
   limit 1
 $$;
 
+create or replace function public.admin_list_eligible_staff_leave_approvers()
+returns table(user_id uuid,full_name text)
+language plpgsql security definer
+set search_path=pg_catalog,public
+as $
+declare v_actor uuid:=auth.uid();
+begin
+  if v_actor is null then raise exception 'authentication_required' using errcode='28000'; end if;
+  if not exists(select 1 from public.profiles p where p.id=v_actor and p.is_active) then
+    raise exception 'active_profile_required' using errcode='42501';
+  end if;
+  if not exists(select 1 from public.user_roles ur join public.roles r on r.id=ur.role_id
+    where ur.user_id=v_actor and r.code='system_admin') then
+    raise exception 'system_admin_required' using errcode='42501';
+  end if;
+  return query select p.id,p.full_name from public.profiles p
+    where p.is_active=true order by p.full_name limit 500;
+end;
+$;
+
 revoke all on function public.admin_create_staff_leave_approver_delegation(uuid,timestamptz,timestamptz,text,text) from public,anon;
 grant execute on function public.admin_create_staff_leave_approver_delegation(uuid,timestamptz,timestamptz,text,text) to authenticated;
 revoke all on function public.admin_revoke_staff_leave_approver_delegation(uuid,text) from public,anon;
 grant execute on function public.admin_revoke_staff_leave_approver_delegation(uuid,text) to authenticated;
 revoke all on function public.admin_list_staff_leave_approver_delegations() from public,anon;
+revoke all on function public.admin_list_eligible_staff_leave_approvers() from public,anon;
+grant execute on function public.admin_list_eligible_staff_leave_approvers() to authenticated;
 grant execute on function public.admin_list_staff_leave_approver_delegations() to authenticated;
 revoke all on function public.staff_leave_active_acting_approver(uuid,timestamptz) from public,anon,authenticated;
 
